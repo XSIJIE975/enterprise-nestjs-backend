@@ -1,0 +1,67 @@
+// 系统日志相关模型
+
+// API日志表
+model ApiLog {
+  id         String   @id @default(uuid())
+  requestId  String   @unique
+  userId     Int?
+  method     String
+  url        String
+  params     Json?
+  body       Json?
+  response   Json?
+  statusCode Int
+  duration   Int      // 响应时间（毫秒）
+  ip         String
+  userAgent  String?
+  error      String?
+  createdAt  DateTime @default(now())
+
+  // 关联关系
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([requestId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([statusCode])
+  @@map("api_logs")
+}
+
+// 错误日志表
+model ErrorLog {
+  id        String   @id @default(uuid())
+  requestId String?
+  errorCode String
+  message   String
+  stack     String?
+  context   Json?
+  userId    Int?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
+  @@index([errorCode])
+  @@index([createdAt])
+  @@map("error_logs")
+}
+
+// 审计日志表
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     Int?
+  action     String
+  resource   String
+  resourceId String?
+  oldData    Json?
+  newData    Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

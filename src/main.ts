@@ -8,6 +8,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 import { LoggerService } from './shared/logger/logger.service';
 
@@ -25,9 +26,9 @@ async function bootstrap() {
   // 全局前缀，排除根路径和API信息路径
   app.setGlobalPrefix('api/v1', {
     exclude: [
-      '',           // 根路径 /
-      'api',        // API信息路径 /api
-      'api/docs',   // Swagger文档路径
+      '', // 根路径 /
+      'api', // API信息路径 /api
+      'api/docs', // Swagger文档路径
     ],
   });
 
@@ -111,11 +112,15 @@ async function bootstrap() {
     });
   }
 
-  const port = configService.get('PORT') || 3000;
-  await app.listen(port);
+  const port =
+    configService.get('app.port') || configService.get('PORT') || 8000;
+  const host =
+    configService.get('app.host') || configService.get('HOST') || 'localhost';
 
-  loggerService.log(`🚀 Application is running on: http://localhost:${port}`);
-  loggerService.log(`📚 API Documentation: http://localhost:${port}/api/docs`);
+  await app.listen(port, host);
+
+  loggerService.log(`🚀 Application is running on: http://${host}:${port}`);
+  loggerService.log(`📚 API Documentation: http://${host}:${port}/api/docs`);
 }
 
 bootstrap().catch(error => {
