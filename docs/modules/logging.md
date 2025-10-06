@@ -1,10 +1,25 @@
 # 日志系统使用指南
 
-> 完整的日志记录、请求链路追踪和日志查询指南
+> 完整的日志记录、请求链路追踪和日志查询指### 环境变量配置
 
-## 概述
+```env
+# .env 文件
+LOG_LEVEL=info                    # 日志级别：debug, info, warn, error
+LOG_DIR=logs                      # 日志文件目录
+LOG_MAX_FILES=14d                 # 日志保留时间
+LOG_MAX_SIZE=20m                  # 单个文件大小
+LOG_ENABLE_CONSOLE=true           # 是否输出到控制台
 
-本项目实现了完整的日志和请求链路跟踪系统,包括以下功能:
+# 数据库日志配置
+LOG_ENABLE_DATABASE=false         # 是否全局启用数据库日志（默认 false）
+LOG_DB_RETENTION_DAYS=30          # 数据库日志保留天数
+```
+
+**各环境推荐配置：**
+
+- **开发环境** (`LOG_ENABLE_DATABASE=true`) - 全局启用，方便调试
+- **测试环境** (`LOG_ENABLE_DATABASE=true`) - 启用，用于集成测试验证
+- **生产环境** (`LOG_ENABLE_DATABASE=false`) - 全局禁用，只对关键接口启用目实现了完整的日志和请求链路跟踪系统,包括以下功能:
 
 - **文件日志**: 使用 Winston 记录到 `logs/` 目录
 - **数据库日志**: 将重要日志持久化到 MySQL 数据库
@@ -246,6 +261,209 @@ async updateUser(userId: number, newData: any) {
   return result;
 }
 ```
+
+---
+
+## 数据库日志优化
+
+### 问题说明
+
+默认情况下，每个 API 请求都会记录到数据库中，这在高流量场景下可能导致：
+
+- 数据量过大，占用大量存储空间
+- 数据库写入压力增加
+- 高频接口（如健康检查）产生大量无用日志
+
+### 解决方案
+
+系统提供了灵活的三层控制机制：
+
+#### 1. 环境变量全局控制
+
+通过 `LOG_ENABLE_DATABASE` 环境变量控制全局开关：
+
+```env
+# 开发环境 - 全局启用，便于调试
+LOG_ENABLE_DATABASE=true
+
+# 生产环境 - 全局禁用，按需启用
+LOG_ENABLE_DATABASE=false
+```
+
+#### 2. 装饰器精确控制
+
+使用装饰器对特定 Controller 或方法进行精确控制：
+
+##### 启用数据库日志 - @EnableDatabaseLog()
+
+```typescript
+import { EnableDatabaseLog } from '@/common/decorators/database-log.decorator';
+
+// 整个 Controller 启用
+@Controller('orders')
+@EnableDatabaseLog()
+export class OrdersController {
+  @Get()
+  findAll() {} // ✅ 会记录到数据库
+
+  @Post()
+  create() {} // ✅ 会记录到数据库
+}
+
+// 只对特定方法启用
+@Controller('payments')
+export class PaymentsController {
+  @Get()
+  findAll() {} // ❌ 不记录
+
+  @Post()
+  @EnableDatabaseLog() // ✅ 只有这个方法记录到数据库
+  create() {}
+}
+```
+
+##### 禁用数据库日志 - @DisableDatabaseLog()
+
+```typescript
+import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
+
+// 整个 Controller 禁用（高频接口）
+@Controller('health')
+@DisableDatabaseLog()
+export class HealthController {
+  @Get()
+  check() {} // ❌ 不会记录到数据库
+}
+
+// 在全局启用时排除特定方法
+@Controller('users')
+@EnableDatabaseLog()
+export class UsersController {
+  @Get()
+  findAll() {} // ✅ 记录
+
+  @Get('heartbeat')
+  @DisableDatabaseLog() // ❌ 心跳接口不记录
+  heartbeat() {}
+}
+```
+
+#### 3. 优先级规则
+
+数据库日志的判断优先级（从高到低）：
+
+```text
+方法装饰器 > 类装饰器 > 全局配置
+```
+
+**示例：**
+
+```typescript
+@Controller('example')
+@EnableDatabaseLog() // 类级：启用
+export class ExampleController {
+  @Get('always-log')
+  @EnableDatabaseLog() // 方法级：启用 → ✅ 记录
+  method1() {}
+
+  @Get('never-log')
+  @DisableDatabaseLog() // 方法级：禁用 → ❌ 不记录（优先级最高）
+  method2() {}
+
+  @Get('follow-class')
+  method3() {} // 跟随类级 → ✅ 记录
+}
+```
+
+### 使用建议
+
+#### 开发环境配置
+
+```env
+LOG_ENABLE_DATABASE=true
+```
+
+全局启用，然后排除高频接口：
+
+```typescript
+@Controller('health')
+@DisableDatabaseLog() // 健康检查不记录
+export class HealthController {}
+
+@Controller('metrics')
+@DisableDatabaseLog() // 监控指标不记录
+export class MetricsController {}
+```
+
+#### 生产环境配置
+
+```env
+LOG_ENABLE_DATABASE=false
+```
+
+全局禁用，然后只启用关键接口：
+
+```typescript
+// 重要业务操作
+@Controller('orders')
+export class OrdersController {
+  @Post()
+  @EnableDatabaseLog()
+  create() {}
+
+  @Post(':id/cancel')
+  @EnableDatabaseLog()
+  cancel() {}
+}
+
+// 安全相关操作
+@Controller('auth')
+export class AuthController {
+  @Post('login')
+  @EnableDatabaseLog()
+  login() {}
+
+  @Post('change-password')
+  @EnableDatabaseLog()
+  changePassword() {}
+}
+
+// 权限变更操作
+@Controller('users')
+export class UsersController {
+  @Post(':id/role')
+  @EnableDatabaseLog()
+  changeRole() {}
+}
+```
+
+### 应该记录数据库日志的场景
+
+✅ **推荐记录：**
+
+- 重要业务操作（订单、支付、退款）
+- 安全相关操作（登录、修改密码、权限变更）
+- 数据删除操作
+- 批量操作
+- 出错率高的接口
+
+### 不应该记录数据库日志的场景
+
+❌ **不推荐记录：**
+
+- 健康检查接口
+- 心跳接口
+- 实时统计接口
+- 高频查询接口
+- WebSocket 消息
+- 静态资源请求
+
+### 重要说明
+
+1. **文件日志始终启用** - 不受此配置影响，所有请求都会记录到文件
+2. **错误日志优先** - 即使禁用数据库日志，错误仍会记录（如果配置启用）
+3. **异步记录** - 日志记录不会阻塞响应
+4. **失败不影响业务** - 日志记录失败不会影响正常业务流程
 
 ---
 
