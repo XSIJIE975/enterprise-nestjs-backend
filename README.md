@@ -1,6 +1,6 @@
-# 🚀 NestJS Enterprise API
+# 企业级 NestJS 后端系统
 
-> 企业级NestJS后端系统 - 安全、可扩展、生产就绪
+> 基于 NestJS 11.x + TypeScript 5.x + Prisma + MySQL + Redis 构建的生产级后端系统
 
 ![Node.js](https://img.shields.io/badge/Node.js-22.x-green?logo=node.js)
 ![NestJS](https://img.shields.io/badge/NestJS-11.x-red?logo=nestjs)
@@ -10,226 +10,240 @@
 ![Redis](https://img.shields.io/badge/Redis-7.0-red?logo=redis)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## ✨ 特性
+## 项目特性
 
-- 🔐 **认证授权**: JWT双Token机制 + RBAC权限控制
-- 🛡️ **安全防护**: 限流、CORS、Helmet、数据验证等全面安全策略
-- 📊 **监控体系**: 健康检查、结构化日志、性能监控
-- 🗄️ **数据层**: Prisma ORM + MySQL + Redis缓存
-- 📝 **API文档**: 自动生成Swagger文档
-- 🔧 **开发体验**: 热重载、代码规范、Git hooks
-- 🐳 **容器化**: Docker支持，一键部署
-- 🧪 **测试**: 单元测试、集成测试、E2E测试
+- **JWT 双 Token 认证** - Access Token + Refresh Token 机制
+- **RBAC 权限控制** - 用户-角色-权限三层模型
+- **完整日志系统** - 文件日志 + 数据库日志 + 请求链路追踪
+- **多级缓存策略** - Redis + 内存缓存
+- **全局错误处理** - 统一错误码 + 异常过滤器
+- **API 文档自动生成** - Swagger/OpenAPI
+- **Docker 容器化** - 开箱即用的 Docker 配置
+- **企业级特性** - 限流、CORS、Helmet、参数验证
 
-## 🛠️ 技术栈
+## 核心技术
 
-### 核心框架
-- **NestJS**: 11.x - 企业级Node.js框架
-- **Node.js**: 22.x LTS - 运行时环境
-- **TypeScript**: 5.x - 类型安全
-- **pnpm**: 9.x - 包管理器
+| 类别     | 技术       | 版本     |
+| -------- | ---------- | -------- |
+| 框架     | NestJS     | 11.x     |
+| 语言     | TypeScript | 5.x      |
+| 运行时   | Node.js    | 22.x LTS |
+| 数据库   | MySQL      | 8.0+     |
+| ORM      | Prisma     | 6.x      |
+| 缓存     | Redis      | 7.0+     |
+| 包管理器 | pnpm       | 9.x      |
 
-### 数据库
-- **MySQL**: 8.0+ - 主数据库
-- **Prisma**: 6.x - ORM框架
-- **Redis**: 7.0+ - 缓存系统
+## 文档导航
 
-### 认证授权
-- **JWT**: 双Token机制 (Access + Refresh)
-- **RBAC**: 基于角色的权限控制
-- **bcrypt**: 密码加密
+完整的项目文档位于 `docs/` 目录，请访问 [文档首页](docs/README.md) 查看完整导航。
 
-## 项目结构
+### 快速入门指南
 
-```
-src/
-├── app.module.ts                 # 根模块
-├── main.ts                      # 应用入口
-├── common/                      # 公共模块
-│   ├── constants/               # 常量定义
-│   ├── decorators/              # 自定义装饰器
-│   ├── dto/                     # 通用DTO
-│   ├── enums/                   # 枚举定义
-│   ├── exceptions/              # 异常处理
-│   ├── filters/                 # 异常过滤器
-│   ├── guards/                  # 守卫
-│   ├── interceptors/            # 拦截器
-│   ├── interfaces/              # 接口定义
-│   ├── middlewares/             # 中间件
-│   ├── pipes/                   # 管道
-│   └── utils/                   # 工具函数
-├── config/                      # 配置模块
-│   ├── app.config.ts            # 应用配置
-│   ├── database.config.ts       # 数据库配置
-│   ├── jwt.config.ts            # JWT配置
-│   └── redis.config.ts          # Redis配置
-├── modules/                     # 业务模块
-│   ├── auth/                    # 认证模块
-│   ├── users/                   # 用户模块
-│   ├── roles/                   # 角色模块
-│   ├── permissions/             # 权限模块
-│   ├── health/                  # 健康检查
-│   └── public-api/              # 公开API模块
-├── shared/                      # 共享模块
-│   ├── database/                # 数据库服务
-│   ├── cache/                   # 缓存服务
-│   └── logger/                  # 日志服务
-└── prisma/                      # 数据库相关
-    ├── migrations/              # 迁移文件
-    └── schema.prisma            # Prisma Schema
-```
+- [环境搭建](docs/guides/getting-started.md) - 从零开始搭建开发环境
+- [系统架构概览](docs/architecture/overview.md) - 了解整体架构设计
+- [请求生命周期](docs/architecture/request-lifecycle.md) - 理解请求处理流程
 
-## 核心功能
+### 开发者文档
 
-### 🔐 认证授权
-- JWT双Token机制
-- 访问令牌 (15分钟) + 刷新令牌 (7天)
-- RBAC权限控制
-- 会话管理
+- [开发工作流](docs/guides/development-workflow.md) - 学习模块开发流程
+- [编码规范](docs/guides/coding-standards.md) - 遵循项目代码规范
+- [日志系统](docs/modules/logging.md) - 掌握日志记录和链路追踪
 
-### 🛡️ 安全防护
-- Helmet安全头
-- CORS跨域控制
-- 请求限流 (多级限流)
-- 参数验证
-- SQL注入防护
-- XSS防护
+### 架构文档
 
-### 📊 监控日志
-- 结构化日志 (Winston)
-- API调用日志
-- 错误日志
-- 性能监控
-- 健康检查
-
-### 🔧 错误处理
-- 统一错误码体系 (字母前缀+五位数字)
-- 全局异常过滤器
-- 业务异常类
-- RequestId链路追踪
+- [数据库设计规范](docs/architecture/database-design.md) - Prisma + MySQL 最佳实践
 
 ## 快速开始
 
-### 1. 安装依赖
+### 环境要求
+
+- Node.js 22.0.0+
+- pnpm 9.0.0+
+- Docker Desktop (推荐)
+
+### 一键启动
+
+**Windows:**
+
+```bash
+.\scripts\start.bat
+```
+
+**Linux/macOS:**
+
+```bash
+chmod +x scripts/start.sh
+./scripts/start.sh
+```
+
+### 手动启动
+
+#### 步骤 1: 安装依赖
+
 ```bash
 pnpm install
 ```
 
-### 2. 环境配置
+#### 步骤 2: 配置环境变量
+
 ```bash
 cp .env.example .env
-# 编辑 .env 文件配置数据库连接等信息
 ```
 
-### 3. 数据库设置
+#### 步骤 3: 启动数据库
+
 ```bash
-# 生成Prisma客户端
+pnpm docker:dev
+```
+
+#### 步骤 4: 初始化数据库
+
+```bash
 pnpm db:generate
-
-# 运行数据库迁移
 pnpm db:migrate
-
-# (可选) 查看数据库
-pnpm db:studio
+pnpm db:seed
 ```
 
-### 4. 启动应用
+#### 步骤 5: 启动应用
+
 ```bash
-# 开发模式
 pnpm start:dev
-
-# 生产模式
-pnpm build
-pnpm start:prod
 ```
 
-### 5. 访问应用
-- 应用地址: http://localhost:3000
-- API文档: http://localhost:3000/api/docs
-- 健康检查: http://localhost:3000/api/v1/health
+### 访问服务
 
-## 可用脚本
+- 主应用: <http://localhost:3000>
+- API 文档: <http://localhost:3000/api/docs>
+- 健康检查: <http://localhost:3000/api/v1/health>
+
+### 测试账户
+
+- 管理员: `admin@enterprise.local` / `admin123456`
+- 普通用户: `test@enterprise.local` / `test123456`
+
+详细说明请查看 [快速开始指南](docs/guides/getting-started.md)
+
+## 常用命令
+
+### 开发命令
 
 ```bash
-# 开发
-pnpm start:dev          # 开发模式启动
-pnpm start:debug        # 调试模式启动
-
-# 构建
-pnpm build              # 构建项目
-
-# 测试
-pnpm test               # 运行单元测试
-pnpm test:e2e           # 运行端到端测试
-pnpm test:cov           # 运行测试覆盖率
-
-# 代码质量
-pnpm lint               # 代码检查
-pnpm format             # 代码格式化
-
-# 数据库
-pnpm db:generate        # 生成Prisma客户端
-pnpm db:migrate         # 运行迁移
-pnpm db:studio          # 打开Prisma Studio
-pnpm db:seed            # 运行种子数据
+pnpm start:dev      # 开发模式
+pnpm start:debug    # 调试模式
+pnpm build          # 生产构建
+pnpm start:prod     # 生产模式
 ```
 
-## 环境变量
+### 数据库命令
 
-主要环境变量配置：
+```bash
+pnpm db:generate    # 生成 Prisma 客户端
+pnpm db:migrate     # 运行迁移
+pnpm db:seed        # 填充数据
+pnpm db:studio      # 打开 Prisma Studio
+```
+
+### Docker 命令
+
+```bash
+pnpm docker:dev         # 启动开发环境
+pnpm docker:dev:down    # 停止开发环境
+pnpm docker:dev:logs    # 查看日志
+```
+
+### 代码质量命令
+
+```bash
+pnpm lint           # 代码检查
+pnpm format         # 代码格式化
+pnpm type-check     # 类型检查
+```
+
+### 测试命令
+
+```bash
+pnpm test           # 单元测试
+pnpm test:watch     # 监听模式
+pnpm test:cov       # 覆盖率报告
+pnpm test:e2e       # E2E 测试
+```
+
+## 环境配置
+
+主要配置项:
 
 ```env
-NODE_ENV=development          # 环境：development/production/test
-PORT=3000                    # 应用端口
-DATABASE_URL=mysql://...     # 数据库连接字符串
-REDIS_HOST=localhost         # Redis主机
-JWT_ACCESS_SECRET=...        # JWT访问令牌密钥
-JWT_REFRESH_SECRET=...       # JWT刷新令牌密钥
-LOG_LEVEL=info              # 日志级别
+NODE_ENV=development
+PORT=3000
+DATABASE_URL=mysql://...
+REDIS_HOST=localhost
+JWT_ACCESS_SECRET=...
+JWT_REFRESH_SECRET=...
+LOG_LEVEL=info
 ```
 
-## API文档
+完整配置请参考 `.env.example` 文件
 
-项目集成了 Swagger/OpenAPI，启动应用后访问 `/api/docs` 查看完整的API文档。
+## API 文档
 
-## 错误码
+启动应用后访问:
 
-系统采用字母前缀+五位数字的错误码格式：
+- <http://localhost:3000/api/docs> - Swagger UI
+- <http://localhost:3000/api/docs-json> - Swagger JSON
 
-- `S10xxx`: 系统错误
-- `A10xxx`: 认证错误  
-- `P10xxx`: 权限错误
-- `U10xxx`: 用户错误
-- `V10xxx`: 验证错误
-- `R10xxx`: 限流错误
-- `B10xxx`: 业务错误
+## 错误码体系
 
-## 部署
+| 前缀 | 范围          | 说明     |
+| ---- | ------------- | -------- |
+| S    | S10000-S19999 | 系统错误 |
+| A    | A10000-A19999 | 认证错误 |
+| P    | P10000-P19999 | 权限错误 |
+| U    | U10000-U19999 | 用户错误 |
+| V    | V10000-V19999 | 验证错误 |
+| R    | R10000-R19999 | 限流错误 |
+| B    | B10000-B99999 | 业务错误 |
 
-### Docker 部署 (推荐)
+## 部署说明
+
+### Docker 部署
+
 ```bash
-# 构建镜像
 docker build -t enterprise-nestjs .
-
-# 使用 docker-compose
-docker-compose up -d
+docker-compose -f docker-compose.prod.yml up -d
 ```
 
 ### 传统部署
+
 ```bash
-# 使用 PM2
 pnpm build
 pm2 start ecosystem.config.js
 ```
 
 ## 贡献指南
 
-1. Fork 项目
+欢迎贡献代码！请遵循以下流程:
+
+1. Fork 本仓库
 2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
-3. 提交更改 (`git commit -m 'Add some amazing feature'`)
+3. 提交更改 (`git commit -m 'feat: add some amazing feature'`)
 4. 推送到分支 (`git push origin feature/amazing-feature`)
 5. 开启 Pull Request
 
+提交规范请遵循 [Conventional Commits](https://www.conventionalcommits.org/)
+
 ## 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情
+
+## 联系方式
+
+- 邮箱: <xsijie975@qq.com>
+- 问题反馈: [GitHub Issues](https://github.com/XSIJIE975/enterprise-nestjs-backend/issues)
+
+---
+
+**项目状态**: 活跃开发中  
+**版本**: v1.0.0  
+**最后更新**: 2025-10-06
+
+Made with ❤️ by XSIJIE
