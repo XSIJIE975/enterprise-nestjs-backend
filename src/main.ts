@@ -7,9 +7,6 @@ import * as express from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 import { LoggerService } from './shared/logger/logger.service';
 
 async function bootstrap() {
@@ -77,8 +74,9 @@ async function bootstrap() {
   // 全局过滤器
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // 全局拦截器
-  app.useGlobalInterceptors(new ResponseInterceptor());
+  // 注意：全局拦截器已在 AppModule 中通过 APP_INTERCEPTOR 注册
+  // - ResponseInterceptor: 统一响应格式和时区转换
+  // - LoggingInterceptor: API 日志记录
 
   // Swagger文档配置
   if (configService.get('NODE_ENV') !== 'production') {
