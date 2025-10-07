@@ -135,9 +135,6 @@ test-results/
 playwright-report/
 test-output/
 
-# Prisma
-prisma/migrations/migration_lock.toml
-
 # Docker
 .dockerignore
 
