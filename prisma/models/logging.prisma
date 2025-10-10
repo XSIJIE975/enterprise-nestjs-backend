@@ -6,15 +6,15 @@ model ApiLog {
   requestId  String   @unique
   userId     Int?
   method     String
-  url        String
+  url        String   @db.Text
   params     Json?
   body       Json?
   response   Json?
   statusCode Int
   duration   Int      // 响应时间（毫秒）
   ip         String
-  userAgent  String?
-  error      String?
+  userAgent  String?  @db.Text
+  error      String?  @db.Text
   createdAt  DateTime @default(now())
 
   // 关联关系
@@ -32,8 +32,8 @@ model ErrorLog {
   id        String   @id @default(uuid())
   requestId String?
   errorCode String
-  message   String
-  stack     String?
+  message   String   @db.Text
+  stack     String?  @db.Text
   context   Json?
   userId    Int?
   ip        String?
@@ -56,7 +56,7 @@ model AuditLog {
   oldData    Json?
   newData    Json?
   ip         String?
-  userAgent  String?
+  userAgent  String?  @db.Text
   createdAt  DateTime @default(now())
 
   @@index([userId])
