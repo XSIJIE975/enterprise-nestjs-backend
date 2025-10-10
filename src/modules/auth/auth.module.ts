@@ -7,23 +7,54 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
+import { DatabaseModule } from '../../shared/database/database.module';
+import { CacheModule } from '../../shared/cache/cache.module';
+import { LoggerModule } from '../../shared/logger/logger.module';
 
+/**
+ * 认证模块
+ * 提供用户认证、授权、Token 管理等功能
+ */
 @Module({
   imports: [
-    PassportModule,
+    // Passport 认证模块
+    PassportModule.register({
+      defaultStrategy: 'jwt',
+    }),
+
+    // JWT 模块配置（Access Token）
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get('JWT_ACCESS_SECRET'),
         signOptions: {
           expiresIn: configService.get('JWT_ACCESS_EXPIRES_IN', '15m'),
+          issuer: configService.get('JWT_ISSUER', 'enterprise-nestjs-backend'),
+          audience: configService.get(
+            'JWT_AUDIENCE',
+            'enterprise-nestjs-backend',
+          ),
         },
       }),
     }),
+
+    // 用户模块
     UsersModule,
+
+    // 数据库模块
+    DatabaseModule,
+
+    // 缓存模块
+    CacheModule,
+
+    // 日志模块
+    LoggerModule,
   ],
+
   controllers: [AuthController],
+
   providers: [AuthService, JwtStrategy, LocalStrategy],
-  exports: [AuthService],
+
+  exports: [AuthService, JwtStrategy],
 })
 export class AuthModule {}
