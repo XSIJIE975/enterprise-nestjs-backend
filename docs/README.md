@@ -51,19 +51,25 @@
 核心功能模块使用指南
 
 - [**日志系统使用指南**](./modules/logging.md)
-  - 日志文件位置和配置
-  - 日志记录 API 和最佳实践
+  - 文件日志和数据库日志配置
+  - 日志记录 API 和装饰器使用
   - 请求链路追踪(RequestId)
-  - 数据库日志查询和分析
+  - 日志查询、统计和管理
 
-- **认证授权模块** (规划中)
-  - JWT 双 Token 机制
-  - 登录/注册/刷新流程
-  - 密码加密和会话管理
+- [**认证授权模块**](./modules/authentication.md)
+  - JWT 双 Token 认证机制
+  - 登录/注册/刷新/登出流程
+  - Token 黑名单和会话管理
+  - 密码加密和安全策略
+
+- **用户管理模块** (规划中)
+  - 用户 CRUD 操作
+  - 用户信息管理
+  - 密码修改和重置
 
 - **缓存系统模块** (规划中)
   - Redis 缓存使用
-  - 内存缓存策略
+  - 内存缓存降级策略
   - 缓存失效和更新
 
 - **RBAC 权限模块** (规划中)
@@ -104,13 +110,14 @@ API 设计规范和使用指南
 1. ✅ [开发工作流程](./guides/development-workflow.md) - 学习模块开发8步法
 2. ✅ [编码规范](./guides/coding-standards.md) - 遵循项目代码风格
 3. ✅ [日志系统](./modules/logging.md) - 掌握日志记录和链路追踪
+4. ✅ [认证授权](./modules/authentication.md) - 理解 JWT 认证流程
 
 ### 深入学习
 
 成为项目专家:
 
 1. ✅ [数据库设计规范](./architecture/database-design.md) - Prisma 最佳实践
-2. 🔄 认证授权机制(规划中)
+2. ✅ [认证授权机制](./modules/authentication.md) - JWT 双 Token 实现
 3. 🔄 RBAC 权限系统(规划中)
 4. 🔄 性能优化技巧(规划中)
 
@@ -124,6 +131,8 @@ API 设计规范和使用指南
 - **如何创建新模块**: [模块开发流程](./guides/development-workflow.md#模块开发流程)
 - **日志没有 requestId**: [请求链路追踪](./modules/logging.md#请求链路跟踪-request-id)
 - **数据库设计疑问**: [数据库设计规范](./architecture/database-design.md)
+- **JWT 认证失败**: [认证授权 - 故障排查](./modules/authentication.md#故障排查)
+- **Token 刷新问题**: [认证授权 - Token 刷新](./modules/authentication.md#token-刷新)
 
 ### 常用参考
 
@@ -131,6 +140,8 @@ API 设计规范和使用指南
 - **Git 提交格式**: [编码规范 - Git 提交规范](./guides/coding-standards.md#git-提交规范)
 - **Prisma 关系设计**: [数据库设计 - 关系设计](./architecture/database-design.md#关系设计)
 - **日志 API**: [日志系统 - 日志记录 API](./modules/logging.md#日志记录-api)
+- **认证守卫使用**: [认证授权 - 守卫使用](./modules/authentication.md#守卫使用)
+- **配置管理规范**: [开发工作流程 - 配置管理](./guides/development-workflow.md)
 
 ---
 
@@ -161,8 +172,7 @@ API 设计规范和使用指南
 
 ---
 
-**文档版本**: v1.0.0  
-**最后更新**: 2025-10-06
+**最后更新**: 2025-10-10
 **维护者**: XSIJIE
 
 感谢阅读!祝开发愉快! 🎉

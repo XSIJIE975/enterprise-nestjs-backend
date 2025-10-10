@@ -311,3 +311,6 @@ const converted = convertDatesInObject(data, 'Asia/Shanghai');
 - [ISO 8601 标准](https://en.wikipedia.org/wiki/ISO_8601)
 - [JavaScript Date API](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date)
 - [Intl.DateTimeFormat API](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat)
+
+**维护者**: XSIJIE
+**最后更新**: 2025-10-10

@@ -48,6 +48,7 @@
 - [开发工作流](docs/guides/development-workflow.md) - 学习模块开发流程
 - [编码规范](docs/guides/coding-standards.md) - 遵循项目代码规范
 - [日志系统](docs/modules/logging.md) - 掌握日志记录和链路追踪
+- [认证授权](docs/modules/authentication.md) - JWT 双 Token 认证机制
 
 ### 架构文档
 

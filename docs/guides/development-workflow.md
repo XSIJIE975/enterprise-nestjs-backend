@@ -649,6 +649,55 @@ const [user, orders, profile] = await Promise.all([
 ]);
 ```
 
+### 4. 配置管理最佳实践
+
+项目采用命名空间模式统一管理配置，所有配置通过 `src/config/` 目录下的模块定义。
+
+**配置模块结构：**
+
+```plaintext
+src/config/
+├── index.ts              # 统一导出
+├── app.config.ts         # 应用核心配置
+├── database.config.ts    # 数据库配置
+├── redis.config.ts       # Redis 配置
+├── jwt.config.ts         # JWT 配置
+├── security.config.ts    # 安全配置
+├── throttle.config.ts    # 限流配置
+├── upload.config.ts      # 上传配置
+└── mail.config.ts        # 邮件配置
+```
+
+**读取配置的正确方式：**
+
+```typescript
+// ✅ 推荐：使用命名空间访问
+const port = this.configService.get('app.port', 3000);
+const dbUrl = this.configService.get('database.url');
+const jwtSecret = this.configService.get('jwt.accessTokenSecret');
+const bcryptRounds = this.configService.get('security.bcrypt.rounds', 10);
+
+// ❌ 不推荐：直接访问环境变量
+const port = this.configService.get('PORT', 3000);
+const dbUrl = this.configService.get('DATABASE_URL');
+```
+
+**优势：**
+
+- ✅ 更好的类型安全和代码补全
+- ✅ 配置结构清晰，易于维护
+- ✅ 支持默认值和配置验证
+- ✅ 遵循 NestJS 最佳实践
+
+**添加新配置：**
+
+1. 在对应的 config 文件中添加环境变量读取
+2. 使用 `registerAs('namespace', () => ({ ... }))` 导出
+3. 在 `app.module.ts` 的 `ConfigModule.forRoot()` 中加载
+4. 通过 `configService.get('namespace.property')` 访问
+
+详细配置说明请参考各配置模块的源码注释。
+
 ---
 
 ## 下一步
@@ -656,8 +705,9 @@ const [user, orders, profile] = await Promise.all([
 - [编码规范](./coding-standards.md)
 - [快速开始指南](./getting-started.md)
 - [日志系统使用指南](../modules/logging.md)
+- [认证授权模块](../modules/authentication.md)
 
 ---
 
-**文档版本**: v1.0.0  
-**最后更新**: 2025-10-06
+**维护者**: XSIJIE
+**最后更新**: 2025-10-10
