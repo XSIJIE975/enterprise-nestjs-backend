@@ -9,7 +9,7 @@ import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
  * 演示如何使用 @EnableDatabaseLog() 和 @DisableDatabaseLog() 控制数据库日志
  *
  * 使用场景：
- * - 生产环境全局禁用数据库日志（LOG_ENABLE_DATABASE=false）
+ * - 生产环境全局禁用数据库日志（通过 app.log.enableDatabase 配置）
  * - 只对关键接口使用 @EnableDatabaseLog() 启用
  * - 对高频接口使用 @DisableDatabaseLog() 排除
  */
@@ -65,11 +65,11 @@ export class SystemLoggingExample {
  * 使用建议：
  *
  * 1. 开发环境：
- *    - 设置 LOG_ENABLE_DATABASE=true（全局启用）
+ *    - 设置 LOG_ENABLE_DATABASE=true（通过 app.config.ts 的 log.enableDatabase）
  *    - 对高频接口使用 @DisableDatabaseLog() 排除
  *
  * 2. 生产环境：
- *    - 设置 LOG_ENABLE_DATABASE=false（全局禁用）
+ *    - 设置 LOG_ENABLE_DATABASE=false（通过 app.config.ts 的 log.enableDatabase）
  *    - 只对关键接口使用 @EnableDatabaseLog() 启用
  *
  * 3. 应该启用的接口：

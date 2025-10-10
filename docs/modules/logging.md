@@ -10,16 +10,20 @@ LOG_MAX_FILES=14d                 # 日志保留时间
 LOG_MAX_SIZE=20m                  # 单个文件大小
 LOG_ENABLE_CONSOLE=true           # 是否输出到控制台
 
-# 数据库日志配置
+# 数据库日志配置（通过 app.config.ts 配置）
 LOG_ENABLE_DATABASE=false         # 是否全局启用数据库日志（默认 false）
 LOG_DB_RETENTION_DAYS=30          # 数据库日志保留天数
 ```
+
+> **配置说明**：数据库日志开关已统一到 `app.config.ts` 的 `log.enableDatabase` 属性，通过 `configService.get('app.log.enableDatabase')` 读取。
 
 **各环境推荐配置：**
 
 - **开发环境** (`LOG_ENABLE_DATABASE=true`) - 全局启用，方便调试
 - **测试环境** (`LOG_ENABLE_DATABASE=true`) - 启用，用于集成测试验证
-- **生产环境** (`LOG_ENABLE_DATABASE=false`) - 全局禁用，只对关键接口启用目实现了完整的日志和请求链路跟踪系统,包括以下功能:
+- **生产环境** (`LOG_ENABLE_DATABASE=false`) - 全局禁用，只对关键接口启用
+
+本系统实现了完整的日志和请求链路跟踪系统,包括以下功能:
 
 - **文件日志**: 使用 Winston 记录到 `logs/` 目录
 - **数据库日志**: 将重要日志持久化到 MySQL 数据库
@@ -55,10 +59,12 @@ LOG_LEVEL=info                    # 日志级别: debug, info, warn, error
 LOG_DIR=logs                      # 日志文件目录
 LOG_MAX_FILES=14d                 # 日志保留时间
 LOG_MAX_SIZE=20m                  # 单个文件大小
-LOG_ENABLE_DATABASE=true          # 是否记录到数据库
+LOG_ENABLE_DATABASE=true          # 是否记录到数据库（读取路径：app.log.enableDatabase）
 LOG_ENABLE_CONSOLE=true           # 是否输出到控制台
 LOG_DB_RETENTION_DAYS=30          # 数据库日志保留天数
 ```
+
+> **注意**：所有配置通过 `src/config/app.config.ts` 统一管理，使用 `configService.get('app.log.xxx')` 访问。
 
 ---
 
@@ -278,9 +284,9 @@ async updateUser(userId: number, newData: any) {
 
 系统提供了灵活的三层控制机制：
 
-#### 1. 环境变量全局控制
+#### 1. 配置全局控制
 
-通过 `LOG_ENABLE_DATABASE` 环境变量控制全局开关：
+通过 `app.config.ts` 中的 `log.enableDatabase` 控制全局开关：
 
 ```env
 # 开发环境 - 全局启用，便于调试
@@ -289,6 +295,8 @@ LOG_ENABLE_DATABASE=true
 # 生产环境 - 全局禁用，按需启用
 LOG_ENABLE_DATABASE=false
 ```
+
+代码中通过 `configService.get('app.log.enableDatabase')` 读取。
 
 #### 2. 装饰器精确控制
 
@@ -732,5 +740,5 @@ try {
 
 ---
 
-**文档版本**: v1.0.0  
-**最后更新**: 2025-10-06
+**维护者**: XSIJIE
+**最后更新**: 2025-10-10
