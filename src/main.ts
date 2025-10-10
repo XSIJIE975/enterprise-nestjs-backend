@@ -71,8 +71,9 @@ async function bootstrap() {
     }),
   );
 
-  // 全局过滤器
-  app.useGlobalFilters(new AllExceptionsFilter());
+  // 全局过滤器（通过依赖注入获取实例）
+  const allExceptionsFilter = app.get(AllExceptionsFilter);
+  app.useGlobalFilters(allExceptionsFilter);
 
   // 注意：全局拦截器已在 AppModule 中通过 APP_INTERCEPTOR 注册
   // - ResponseInterceptor: 统一响应格式和时区转换

@@ -33,6 +33,9 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
+// 过滤器
+import { AllExceptionsFilter } from './common/filters/http-exception.filter';
+
 @Module({
   imports: [
     // 配置模块
@@ -88,6 +91,12 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor'
     LogsModule,
   ],
   providers: [
+    // 全局异常过滤器
+    // - 捕获所有未处理的异常并统一响应格式
+    // - 记录文件日志（始终启用）
+    // - 根据 LOG_ENABLE_DATABASE 环境变量决定是否记录数据库日志
+    AllExceptionsFilter,
+
     // 全局拦截器：统一响应格式和时区转换
     // - 自动将响应数据包装为统一格式
     // - 根据环境变量或请求头 X-Timezone 转换时间字段
