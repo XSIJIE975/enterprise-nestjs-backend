@@ -17,12 +17,14 @@ export const appConfig = registerAs('app', () => ({
     dir: process.env.LOG_DIR || 'logs', // 日志文件存储目录
     maxFiles: process.env.LOG_MAX_FILES || '14d', // 日志文件保留时间
     maxSize: process.env.LOG_MAX_SIZE || '20m', // 单个日志文件大小
-    enableDatabase: process.env.LOG_ENABLE_DATABASE === 'true' || true, // 是否记录到数据库
+    datePattern: process.env.LOG_DATE_PATTERN || 'YYYY-MM-DD', // 日志文件日期格式
+    zippedArchive: process.env.LOG_ZIPPED_ARCHIVE === 'true', // 是否压缩归档
+    enableDatabase: process.env.LOG_ENABLE_DATABASE === 'true', // 是否记录到数据库
     enableConsole: process.env.LOG_ENABLE_CONSOLE !== 'false', // 是否输出到控制台
-    databaseLogRetentionDays:
+    databaseRetentionDays:
       parseInt(process.env.LOG_DB_RETENTION_DAYS, 10) || 30, // 数据库日志保留天数
   },
 
-  requestTimeout: parseInt(process.env.REQUEST_TIMEOUT, 10) || 30000,
-  maxFileSize: parseInt(process.env.MAX_FILE_SIZE, 10) || 10485760, // 10MB
+  // 请求超时配置
+  requestTimeout: parseInt(process.env.REQUEST_TIMEOUT, 10) || 30000, // 30秒
 }));

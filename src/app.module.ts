@@ -5,10 +5,16 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
 
 // 配置
-import { appConfig } from './config/app.config';
-import { databaseConfig } from './config/database.config';
-import { jwtConfig } from './config/jwt.config';
-import { redisConfig } from './config/redis.config';
+import {
+  appConfig,
+  databaseConfig,
+  jwtConfig,
+  redisConfig,
+  securityConfig,
+  throttleConfig,
+  uploadConfig,
+  mailConfig,
+} from './config';
 
 // 共享模块
 import { DatabaseModule } from './shared/database/database.module';
@@ -41,7 +47,16 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     // 配置模块
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [appConfig, databaseConfig, jwtConfig, redisConfig],
+      load: [
+        appConfig,
+        databaseConfig,
+        jwtConfig,
+        redisConfig,
+        securityConfig,
+        throttleConfig,
+        uploadConfig,
+        mailConfig,
+      ],
       envFilePath: [
         `.env.${process.env.NODE_ENV || 'development'}`,
         '.env.local',
