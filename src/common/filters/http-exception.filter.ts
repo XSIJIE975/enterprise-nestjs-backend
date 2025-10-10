@@ -4,20 +4,58 @@ import {
   ArgumentsHost,
   HttpException,
   HttpStatus,
-  Logger,
+  Injectable,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
-import { ErrorCode, ErrorMessages } from '../enums/error-codes.enum';
+import { ErrorCode } from '../enums/error-codes.enum';
 import { BusinessException } from '../exceptions/business.exception';
+import { LogsService } from '../../modules/logs/logs.service';
+import { LoggerService } from '../../shared/logger/logger.service';
+import { RequestContextService } from '../../shared/request-context/request-context.service';
 
+/**
+ * 全局异常过滤器
+ *
+ * 功能：
+ * 1. 捕获所有未处理的异常
+ * 2. 统一异常响应格式
+ * 3. 记录文件日志（始终启用）
+ * 4. 记录数据库日志（根据配置决定）
+ *
+ * 日志策略：
+ * - 文件日志：所有异常都记录
+ * - 数据库日志：根据 LOG_ENABLE_DATABASE 环境变量决定（默认关闭）
+ * - 异常日志优先级高，建议生产环境也启用数据库记录
+ */
+@Injectable()
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
-  private readonly logger = new Logger(AllExceptionsFilter.name);
+  private readonly enableDatabaseLog: boolean;
+
+  constructor(
+    private readonly logger: LoggerService,
+    private readonly logsService: LogsService,
+    private readonly configService: ConfigService,
+  ) {
+    // 读取全局数据库日志开关
+    this.enableDatabaseLog =
+      this.configService.get<string>('LOG_ENABLE_DATABASE', 'false') === 'true';
+  }
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
+
+    const requestId =
+      RequestContextService.getRequestId() || request['requestId'] || 'unknown';
+    const userId =
+      RequestContextService.getUserId() ||
+      (request as any)['user']?.userId ||
+      (request as any)['user']?.id;
+    const ip = request.ip || request.socket.remoteAddress || 'unknown';
+    const userAgent = request.get('User-Agent') || '';
 
     let errorCode: ErrorCode;
     let message: string;
@@ -33,16 +71,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     } else if (exception instanceof HttpException) {
       const errorResponse = exception.getResponse();
       statusCode = exception.getStatus();
-      
-      if (typeof errorResponse === 'object' && errorResponse && 'message' in errorResponse) {
+
+      if (
+        typeof errorResponse === 'object' &&
+        errorResponse &&
+        'message' in errorResponse
+      ) {
         const responseMessage = (errorResponse as any).message;
-        message = Array.isArray(responseMessage) 
+        message = Array.isArray(responseMessage)
           ? responseMessage.join(', ')
           : responseMessage;
       } else {
         message = errorResponse?.toString() || 'HTTP Exception';
       }
-      
+
       // 根据HTTP状态码映射到错误码
       errorCode = this.mapHttpStatusToErrorCode(statusCode);
     } else {
@@ -55,27 +97,77 @@ export class AllExceptionsFilter implements ExceptionFilter {
       code: errorCode,
       message,
       data,
-      requestId: request['requestId'] || 'unknown',
+      requestId,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
     };
 
-    // 记录错误日志
+    // 记录文件日志
     this.logger.error(
-      `${errorCode}: ${message}`,
-      {
-        requestId: request['requestId'],
-        path: request.url,
-        method: request.method,
-        ip: request.ip,
-        userAgent: request.get('User-Agent'),
-        stack: exception instanceof Error ? exception.stack : undefined,
-        userId: (request as any)['user']?.userId || (request as any)['user']?.id,
-      },
+      `${errorCode}: ${message} | Path: ${request.url} | Method: ${request.method}`,
+      exception instanceof Error ? exception.stack : undefined,
+      'AllExceptionsFilter',
     );
 
+    // 根据配置决定是否记录数据库日志
+    if (this.enableDatabaseLog) {
+      // 异步记录到数据库，不阻塞响应
+      this.logsService
+        .createErrorLog({
+          requestId,
+          userId,
+          errorCode,
+          message,
+          stack: exception instanceof Error ? exception.stack : undefined,
+          context: {
+            method: request.method,
+            url: request.url,
+            params: request.params,
+            query: request.query,
+            body: this.sanitizeBody(request.body),
+            statusCode,
+          },
+          ip,
+          userAgent,
+        })
+        .catch(error => {
+          // 记录日志失败不应该影响业务流程
+          this.logger.error(
+            `Failed to save error log to database: ${error.message}`,
+            error.stack,
+            'AllExceptionsFilter',
+          );
+        });
+    }
+
     response.status(statusCode).json(errorResult);
+  }
+
+  /**
+   * 清理敏感的请求体数据
+   */
+  private sanitizeBody(body: any): any {
+    if (!body || typeof body !== 'object') {
+      return body;
+    }
+
+    const sensitiveFields = [
+      'password',
+      'token',
+      'secret',
+      'apiKey',
+      'creditCard',
+    ];
+    const sanitized = { ...body };
+
+    for (const field of sensitiveFields) {
+      if (field in sanitized) {
+        sanitized[field] = '***REDACTED***';
+      }
+    }
+
+    return sanitized;
   }
 
   private mapHttpStatusToErrorCode(statusCode: number): ErrorCode {
