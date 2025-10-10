@@ -46,7 +46,7 @@ async function bootstrap() {
 
   // CORS配置
   app.enableCors({
-    origin: configService.get('ALLOWED_ORIGINS')?.split(',') || [
+    origin: configService.get('app.allowedOrigins')?.split(',') || [
       'http://localhost:3000',
     ],
     credentials: true,
@@ -67,7 +67,7 @@ async function bootstrap() {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      disableErrorMessages: configService.get('NODE_ENV') === 'production',
+      disableErrorMessages: configService.get('app.env') === 'production',
     }),
   );
 
@@ -80,7 +80,7 @@ async function bootstrap() {
   // - LoggingInterceptor: API 日志记录
 
   // Swagger文档配置
-  if (configService.get('NODE_ENV') !== 'production') {
+  if (configService.get('app.env') !== 'production') {
     const config = new DocumentBuilder()
       .setTitle('Enterprise NestJS API')
       .setDescription('企业级NestJS后端API文档')
@@ -111,10 +111,8 @@ async function bootstrap() {
     });
   }
 
-  const port =
-    configService.get('app.port') || configService.get('PORT') || 8000;
-  const host =
-    configService.get('app.host') || configService.get('HOST') || 'localhost';
+  const port = configService.get('app.port') || 8000;
+  const host = configService.get('app.host') || 'localhost';
 
   await app.listen(port, host);
 

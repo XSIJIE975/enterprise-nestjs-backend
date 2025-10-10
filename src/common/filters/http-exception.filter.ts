@@ -25,7 +25,7 @@ import { RequestContextService } from '../../shared/request-context/request-cont
  *
  * 日志策略：
  * - 文件日志：所有异常都记录
- * - 数据库日志：根据 LOG_ENABLE_DATABASE 环境变量决定（默认关闭）
+ * - 数据库日志：根据 app.log.enableDatabase 配置决定（默认关闭）
  * - 异常日志优先级高，建议生产环境也启用数据库记录
  */
 @Injectable()
@@ -39,8 +39,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     private readonly configService: ConfigService,
   ) {
     // 读取全局数据库日志开关
-    this.enableDatabaseLog =
-      this.configService.get<string>('LOG_ENABLE_DATABASE', 'false') === 'true';
+    this.enableDatabaseLog = this.configService.get<boolean>(
+      'app.log.enableDatabase',
+      false,
+    );
   }
 
   catch(exception: unknown, host: ArgumentsHost) {

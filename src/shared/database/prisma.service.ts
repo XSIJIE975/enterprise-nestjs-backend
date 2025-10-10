@@ -11,7 +11,7 @@ export class PrismaService
     super({
       datasources: {
         db: {
-          url: configService.get('DATABASE_URL'),
+          url: configService.get('database.url'),
         },
       },
       log: [
@@ -41,7 +41,7 @@ export class PrismaService
     } catch (error) {
       console.warn('Database connection failed:', error.message);
       // 在开发环境中，可以选择不连接数据库
-      if (this.configService.get('NODE_ENV') !== 'development') {
+      if (this.configService.get('app.env') !== 'development') {
         throw error;
       }
     }
@@ -52,7 +52,7 @@ export class PrismaService
   }
 
   async clearDatabase() {
-    if (this.configService.get('NODE_ENV') === 'test') {
+    if (this.configService.get('app.env') === 'test') {
       const tablenames = await this.$queryRaw<
         Array<{ tablename: string }>
       >`SELECT tablename FROM pg_tables WHERE schemaname='public'`;

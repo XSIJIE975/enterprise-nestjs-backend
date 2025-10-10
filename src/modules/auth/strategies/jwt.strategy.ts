@@ -13,14 +13,13 @@ import { JwtPayload, JwtUser } from '../interfaces/jwt-payload.interface';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
-    private readonly configService: ConfigService,
-    private readonly authService: AuthService,
+    private configService: ConfigService,
+    private authService: AuthService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_ACCESS_SECRET'),
-      passReqToCallback: true, // 传递 request 对象到 validate 方法
+      secretOrKey: configService.get('jwt.accessTokenSecret'),
     });
   }
 

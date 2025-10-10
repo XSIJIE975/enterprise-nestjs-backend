@@ -26,12 +26,12 @@ import { LoggerModule } from '../../shared/logger/logger.module';
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get('JWT_ACCESS_SECRET'),
+        secret: configService.get('jwt.accessTokenSecret'),
         signOptions: {
-          expiresIn: configService.get('JWT_ACCESS_EXPIRES_IN', '15m'),
-          issuer: configService.get('JWT_ISSUER', 'enterprise-nestjs-backend'),
+          expiresIn: configService.get('jwt.accessTokenExpiresIn', '15m'),
+          issuer: configService.get('jwt.issuer', 'enterprise-nestjs-backend'),
           audience: configService.get(
-            'JWT_AUDIENCE',
+            'jwt.audience',
             'enterprise-nestjs-backend',
           ),
         },

@@ -29,20 +29,20 @@ export class AuthService {
     private readonly logger: LoggerService,
   ) {
     this.accessTokenExpires = this.configService.get(
-      'JWT_ACCESS_EXPIRES_IN',
+      'jwt.accessTokenExpiresIn',
       '15m',
     );
     this.refreshTokenExpires = this.configService.get(
-      'JWT_REFRESH_EXPIRES_IN',
+      'jwt.refreshTokenExpiresIn',
       '7d',
     );
-    this.refreshTokenSecret = this.configService.get('JWT_REFRESH_SECRET');
+    this.refreshTokenSecret = this.configService.get('jwt.refreshTokenSecret');
     this.jwtIssuer = this.configService.get(
-      'JWT_ISSUER',
+      'jwt.issuer',
       'enterprise-nestjs-backend',
     );
     this.jwtAudience = this.configService.get(
-      'JWT_AUDIENCE',
+      'jwt.audience',
       'enterprise-nestjs-backend',
     );
   }

@@ -22,7 +22,7 @@ import { DATABASE_LOG_KEY } from '../decorators/database-log.decorator';
  * 2. 数据库日志：支持三种控制方式（按优先级）
  *    - @DisableDatabaseLog() 装饰器：强制禁用
  *    - @EnableDatabaseLog() 装饰器：强制启用
- *    - LOG_ENABLE_DATABASE 环境变量：全局开关（默认 false）
+ *    - app.log.enableDatabase 配置：全局开关（默认 false）
  *
  * 使用建议：
  * - 开发环境：可开启全局数据库日志，便于调试
@@ -40,8 +40,10 @@ export class LoggingInterceptor implements NestInterceptor {
     private readonly reflector: Reflector,
   ) {
     // 读取全局数据库日志开关（默认关闭）
-    this.enableDatabaseLog =
-      this.configService.get<string>('LOG_ENABLE_DATABASE', 'false') === 'true';
+    this.enableDatabaseLog = this.configService.get<boolean>(
+      'app.log.enableDatabase',
+      false,
+    );
 
     this.logger.log(
       `Database logging is ${this.enableDatabaseLog ? 'ENABLED' : 'DISABLED'} globally`,

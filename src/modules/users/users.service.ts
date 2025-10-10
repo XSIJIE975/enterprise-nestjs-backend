@@ -21,7 +21,10 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    this.bcryptRounds = this.configService.get<number>('BCRYPT_ROUNDS', 10);
+    this.bcryptRounds = this.configService.get<number>(
+      'security.bcrypt.rounds',
+      10,
+    );
   }
 
   /**

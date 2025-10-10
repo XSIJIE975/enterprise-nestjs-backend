@@ -12,10 +12,11 @@ import { MemoryCacheService } from './memory-cache.service';
       useFactory: async (configService: ConfigService) => {
         try {
           const redis = new Redis({
-            host: configService.get('REDIS_HOST', 'localhost'),
-            port: configService.get('REDIS_PORT', 6379),
-            password: configService.get('REDIS_PASSWORD'),
-            db: configService.get('REDIS_DB', 0),
+            host: configService.get('redis.host', 'localhost'),
+            port: configService.get('redis.port', 6379),
+            password: configService.get('redis.password'),
+            db: configService.get('redis.db', 0),
+            keyPrefix: configService.get('redis.keyPrefix', 'nestjs:'),
             connectTimeout: 1000,
             lazyConnect: true,
             maxRetriesPerRequest: 1,
@@ -23,7 +24,7 @@ import { MemoryCacheService } from './memory-cache.service';
           });
 
           // 监听错误事件，防止未处理的错误
-          redis.on('error', (error) => {
+          redis.on('error', error => {
             console.warn('Redis connection error:', error.message);
           });
 
@@ -33,12 +34,17 @@ import { MemoryCacheService } from './memory-cache.service';
             console.log('✅ Redis connected successfully');
             return redis;
           } catch {
-            console.warn('⚠️ Redis connection failed, using memory cache fallback');
+            console.warn(
+              '⚠️ Redis connection failed, using memory cache fallback',
+            );
             redis.disconnect();
             return null;
           }
         } catch (error) {
-          console.warn('⚠️ Redis initialization failed, using memory cache:', error.message);
+          console.warn(
+            '⚠️ Redis initialization failed, using memory cache:',
+            error.message,
+          );
           return null;
         }
       },
