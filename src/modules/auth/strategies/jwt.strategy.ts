@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
 import { JwtPayload, JwtUser } from '../interfaces/jwt-payload.interface';
+import { RequestContextService } from '../../../shared/request-context/request-context.service';
 
 /**
  * JWT 认证策略
@@ -20,6 +21,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
       secretOrKey: configService.get('jwt.accessTokenSecret'),
+      passReqToCallback: true, // 将 request 对象传递给 validate 方法
     });
   }
 
@@ -43,12 +45,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Token 已失效，请重新登录');
     }
 
-    // 返回用户信息（会附加到 request.user）
-    return {
+    // 构建用户信息
+    const user: JwtUser = {
       userId: payload.sub,
       username: payload.username,
       email: payload.email,
       roles: payload.roles || [],
     };
+
+    // 将用户信息存储到 RequestContext 中，方便全局访问
+    RequestContextService.setUserId(user.userId);
+    RequestContextService.set('user', user);
+    RequestContextService.set('accessToken', token);
+
+    // 返回用户信息（会附加到 request.user，兼容旧代码）
+    return user;
   }
 }
