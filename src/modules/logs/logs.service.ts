@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
-import { Prisma } from '@prisma/client';
+import type { Prisma } from '@/prisma/prisma/client';
 import {
   CreateAuditLogDto,
   QueryApiLogsDto,

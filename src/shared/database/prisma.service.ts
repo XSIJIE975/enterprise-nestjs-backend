@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@/prisma/prisma/client';
 
 @Injectable()
 export class PrismaService
@@ -38,7 +38,7 @@ export class PrismaService
   async onModuleInit() {
     try {
       await this.$connect();
-    } catch (error) {
+    } catch (error: any) {
       console.warn('Database connection failed:', error.message);
       // 在开发环境中，可以选择不连接数据库
       if (this.configService.get('app.env') !== 'development') {

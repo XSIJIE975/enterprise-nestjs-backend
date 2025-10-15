@@ -13,11 +13,7 @@ export class CacheService {
     return data ? JSON.parse(data) : null;
   }
 
-  async set(
-    key: string,
-    value: any,
-    ttl?: number,
-  ): Promise<'OK' | null> {
+  async set(key: string, value: any, ttl?: number): Promise<'OK' | null> {
     if (!this.redis) {
       throw new Error('Redis client is not available');
     }
@@ -48,7 +44,7 @@ export class CacheService {
     }
     return await this.redis.ttl(key);
   }
-  
+
   async ping(): Promise<string> {
     if (!this.redis) {
       throw new Error('Redis client is not available');

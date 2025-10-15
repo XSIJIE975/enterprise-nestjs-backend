@@ -40,7 +40,7 @@ import { MemoryCacheService } from './memory-cache.service';
             redis.disconnect();
             return null;
           }
-        } catch (error) {
+        } catch (error: any) {
           console.warn(
             '⚠️ Redis initialization failed, using memory cache:',
             error.message,
