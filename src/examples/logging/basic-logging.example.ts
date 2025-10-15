@@ -65,7 +65,7 @@ export class BasicLoggingExample {
     try {
       // 业务逻辑
       throw new Error('Payment gateway timeout');
-    } catch (error) {
+    } catch (error: any) {
       this.logger.logError({
         error,
         context: 'OrderService.processOrder',

@@ -222,7 +222,7 @@ export class AuthService {
       },
     });
 
-    // 缓存 Token 信息到 Redis（用于快速验证）
+    // 缓存 Token 信息到缓存服务（用于快速验证）
     await this.cacheTokenToRedis(user.id, accessToken, refreshToken);
 
     // 更新最后登录时间
@@ -349,7 +349,7 @@ export class AuthService {
         },
       });
 
-      // 更新 Redis 缓存
+      // 更新缓存服务缓存
       await this.cacheTokenToRedis(user.id, newAccessToken, newRefreshToken);
 
       this.logger.log(
@@ -420,7 +420,7 @@ export class AuthService {
         },
       });
 
-      // 从 Redis 中删除缓存
+      // 从缓存服务中删除缓存
       await this.removeTokenFromRedis(userId);
 
       this.logger.log(`用户退出登录: User ID ${userId}`, 'AuthService');
@@ -532,7 +532,7 @@ export class AuthService {
       },
     });
 
-    // 从 Redis 中删除缓存
+    // 从缓存服务中删除缓存
     await this.removeTokenFromRedis(userId);
 
     this.logger.log(`撤销用户所有会话: User ID ${userId}`, 'AuthService');
@@ -550,7 +550,7 @@ export class AuthService {
     reason: ErrorCode = ErrorCode.SESSION_INVALID,
   ): Promise<void> {
     const key = `token:blacklist:${token}`;
-    // 存储原因而不是简单的'1'，便于区分不同场景
+    // 存储原因便于区分不同场景
     await this.cacheService.set(key, reason, ttl);
   }
 
@@ -566,7 +566,7 @@ export class AuthService {
   }
 
   /**
-   * 检查 Token 是否在黑名单中（简化版）
+   * 检查 Token 是否在黑名单中
    * @param token Token
    * @returns 是否在黑名单中
    */
@@ -576,7 +576,7 @@ export class AuthService {
   }
 
   /**
-   * 缓存 Token 到 Redis
+   * 缓存 Token 到缓存服务
    * @param userId 用户 ID
    * @param accessToken Access Token
    * @param refreshToken Refresh Token
@@ -598,7 +598,7 @@ export class AuthService {
   }
 
   /**
-   * 从 Redis 中删除 Token 缓存
+   * 从缓存服务中删除 Token 缓存
    * @param userId 用户 ID
    */
   private async removeTokenFromRedis(userId: number): Promise<void> {
