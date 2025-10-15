@@ -12,10 +12,11 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
+    "strict": true,
     "strictNullChecks": false,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
+    "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": ["src/*"],
@@ -23,7 +24,8 @@
       "@/config/*": ["src/config/*"],
       "@/modules/*": ["src/modules/*"],
       "@/shared/*": ["src/shared/*"],
-      "@/database/*": ["src/database/*"]
+      "@/database/*": ["src/database/*"],
+      "@/prisma/*": ["src/generated/*"]
     }
   }
 }
