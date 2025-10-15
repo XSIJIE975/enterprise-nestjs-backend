@@ -2,6 +2,8 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
 import { AuthService } from '../auth.service';
+import type { AuthUser } from '../types/user.types';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 
 /**
  * 本地认证策略
@@ -20,13 +22,16 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
    * 验证用户凭证
    * @param username 用户名或邮箱
    * @param password 密码
-   * @returns 用户信息
+   * @returns 用户信息（不含密码，包含角色）
    */
-  async validate(username: string, password: string): Promise<any> {
+  async validate(username: string, password: string): Promise<AuthUser> {
     const user = await this.authService.validateUser(username, password);
 
     if (!user) {
-      throw new UnauthorizedException('用户名或密码错误');
+      throw new UnauthorizedException({
+        code: ErrorCode.INVALID_CREDENTIALS,
+        message: ErrorMessages[ErrorCode.INVALID_CREDENTIALS],
+      });
     }
 
     return user;

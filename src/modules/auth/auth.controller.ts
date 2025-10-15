@@ -16,12 +16,14 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterResponseDto } from './dto/register-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { DisableDatabaseLog } from '../../common/decorators/database-log.decorator';
+import { AuthUser } from './types/user.types';
 
 /**
  * 认证控制器
@@ -35,9 +37,7 @@ export class AuthController {
   /**
    * 用户注册
    * @param registerDto 注册信息
-   * @param req Request 对象
-   * @param ip 客户端 IP
-   * @returns 认证响应
+   * @returns 注册响应
    */
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
@@ -45,7 +45,7 @@ export class AuthController {
   @ApiResponse({
     status: HttpStatus.CREATED,
     description: '注册成功',
-    type: AuthResponseDto,
+    type: RegisterResponseDto,
   })
   @ApiResponse({
     status: HttpStatus.CONFLICT,
@@ -54,20 +54,13 @@ export class AuthController {
   @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '参数验证失败' })
   async register(
     @Body() registerDto: RegisterDto,
-    @Request() req: any,
-    @Ip() ip: string,
-  ): Promise<AuthResponseDto> {
-    const deviceInfo = {
-      userAgent: req.headers['user-agent'],
-      ipAddress: ip,
-    };
-
-    return this.authService.register(registerDto, deviceInfo);
+  ): Promise<RegisterResponseDto> {
+    return this.authService.register(registerDto);
   }
 
   /**
    * 用户登录
-   * @param loginDto 登录信息
+   * @param _loginDto 登录信息
    * @param req Request 对象（由 LocalAuthGuard 注入 user）
    * @param ip 客户端 IP
    * @returns 认证响应
@@ -97,7 +90,7 @@ export class AuthController {
       ipAddress: ip,
     };
 
-    return this.authService.login(req.user, deviceInfo);
+    return this.authService.login(req.user as AuthUser, deviceInfo);
   }
 
   /**

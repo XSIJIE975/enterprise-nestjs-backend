@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
@@ -39,7 +39,7 @@ import { LoggerModule } from '../../shared/logger/logger.module';
     }),
 
     // 用户模块
-    UsersModule,
+    forwardRef(() => UsersModule),
 
     // 数据库模块
     DatabaseModule,

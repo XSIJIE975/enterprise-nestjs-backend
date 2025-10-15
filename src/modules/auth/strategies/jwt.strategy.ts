@@ -6,6 +6,7 @@ import { Request } from 'express';
 import { AuthService } from '../auth.service';
 import { JwtPayload, JwtUser } from '../interfaces/jwt-payload.interface';
 import { RequestContextService } from '../../../shared/request-context/request-context.service';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 
 /**
  * JWT 认证策略
@@ -36,13 +37,21 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 
     if (!token) {
-      throw new UnauthorizedException('Token 不存在');
+      throw new UnauthorizedException({
+        code: ErrorCode.TOKEN_MISSING,
+        message: ErrorMessages[ErrorCode.TOKEN_MISSING],
+      });
     }
 
-    // 检查 Token 是否在黑名单中
-    const isBlacklisted = await this.authService.isTokenBlacklisted(token);
-    if (isBlacklisted) {
-      throw new UnauthorizedException('Token 已失效，请重新登录');
+    // 检查 Token 是否在黑名单中，并获取具体原因
+    const blacklistReason =
+      await this.authService.getTokenBlacklistReason(token);
+    if (blacklistReason) {
+      // 根据黑名单原因返回不同的错误信息
+      throw new UnauthorizedException({
+        code: blacklistReason,
+        message: ErrorMessages[blacklistReason],
+      });
     }
 
     // 构建用户信息
@@ -57,8 +66,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     RequestContextService.setUserId(user.userId);
     RequestContextService.set('user', user);
     RequestContextService.set('accessToken', token);
-
-    // 返回用户信息（会附加到 request.user，兼容旧代码）
     return user;
   }
 }
