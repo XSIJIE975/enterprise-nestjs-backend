@@ -42,6 +42,8 @@ export enum ErrorCode {
   SESSION_EXPIRED = 'AS10000', // 会话过期
   SESSION_INVALID = 'AS10001', // 会话无效
   CONCURRENT_LOGIN_LIMIT = 'AS10002', // 并发登录限制
+  MAX_SESSIONS_EXCEEDED = 'AS10003', // 已达到最大登录设备数
+  SESSION_REVOKED = 'AS10004', // 会话已被其他设备踢出
 
   // ===========================================
   // P系列 - Permission 权限错误 (P10000-P19999)
@@ -174,6 +176,9 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.SESSION_EXPIRED]: '会话已过期，请重新登录',
   [ErrorCode.SESSION_INVALID]: '会话无效',
   [ErrorCode.CONCURRENT_LOGIN_LIMIT]: '超出并发登录限制',
+  [ErrorCode.MAX_SESSIONS_EXCEEDED]:
+    '登录设备已达上限，已为您注销最早登录的设备',
+  [ErrorCode.SESSION_REVOKED]: '您的账号在其他设备登录，当前会话已失效',
 
   // 权限错误
   [ErrorCode.FORBIDDEN]: '无权限访问该资源',

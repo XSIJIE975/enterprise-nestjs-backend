@@ -6,8 +6,11 @@ import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
 import { LoggerService } from '../../shared/logger/logger.service';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterResponseDto } from './dto/register-response.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import type { AuthUser } from './types/user.types';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 
 /**
  * 认证服务
@@ -51,9 +54,12 @@ export class AuthService {
    * 验证用户（用于本地策略）
    * @param usernameOrEmail 用户名或邮箱
    * @param password 密码
-   * @returns 用户信息（不含密码）
+   * @returns 用户信息（不含密码，包含角色）
    */
-  async validateUser(usernameOrEmail: string, password: string) {
+  async validateUser(
+    usernameOrEmail: string,
+    password: string,
+  ): Promise<AuthUser | null> {
     const user = await this.usersService.findByUsernameOrEmail(usernameOrEmail);
 
     if (!user) {
@@ -64,7 +70,10 @@ export class AuthService {
     // 检查账户是否被禁用
     if (!user.isActive) {
       this.logger.warn(`登录失败: 账户已被禁用 - ${usernameOrEmail}`);
-      throw new UnauthorizedException('账户已被禁用，请联系管理员');
+      throw new UnauthorizedException({
+        code: ErrorCode.ACCOUNT_DISABLED,
+        message: ErrorMessages[ErrorCode.ACCOUNT_DISABLED],
+      });
     }
 
     // 验证密码
@@ -87,19 +96,24 @@ export class AuthService {
   /**
    * 用户注册
    * @param registerDto 注册信息
-   * @returns 认证响应（包含 Token 和用户信息）
+   * @returns 注册响应
    */
-  async register(
-    registerDto: RegisterDto,
-    deviceInfo?: any,
-  ): Promise<AuthResponseDto> {
+  async register(registerDto: RegisterDto): Promise<RegisterResponseDto> {
     this.logger.log(`用户注册: ${registerDto.email}`, 'AuthService');
 
     // 创建用户
     const user = await this.usersService.create(registerDto);
 
-    // 生成 Token
-    return this.login(user, deviceInfo);
+    this.logger.log(
+      `用户注册成功: ${user.username} (ID: ${user.id})`,
+      'AuthService',
+    );
+
+    return {
+      username: user.username,
+      email: user.email,
+      message: '注册成功，请登录',
+    };
   }
 
   /**
@@ -108,12 +122,15 @@ export class AuthService {
    * @param deviceInfo 设备信息
    * @returns 认证响应（包含 Token 和用户信息）
    */
-  async login(user: any, deviceInfo?: any): Promise<AuthResponseDto> {
+  async login(user: AuthUser, deviceInfo?: any): Promise<AuthResponseDto> {
+    // 提取角色代码列表
+    const roles = user.userRoles?.map(ur => ur.role.code) || [];
+
     const payload: JwtPayload = {
       sub: user.id,
       username: user.username,
       email: user.email,
-      roles: user.roles || [],
+      roles,
     };
 
     // 生成 Access Token
@@ -135,10 +152,63 @@ export class AuthService {
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + 7); // Refresh Token 7天后过期
 
-    // 将旧的会话设置为失效（单设备登录策略）
-    await this.revokeAllUserSessions(user.id);
+    // 智能会话管理：检查并清理超出限制的会话
+    const maxConcurrentSessions = this.configService.get<number>(
+      'security.session.maxConcurrentSessions',
+      5,
+    );
 
-    // 保存会话信息到数据库
+    // 查询用户当前活跃会话数
+    const activeSessions = await this.prisma.userSession.findMany({
+      where: {
+        userId: user.id,
+        isActive: true,
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      orderBy: {
+        createdAt: 'asc', // 按创建时间升序，最早的在前
+      },
+    });
+
+    // 如果活跃会话数已达到限制，踢出最早登录的会话
+    if (activeSessions.length >= maxConcurrentSessions) {
+      const sessionsToRevoke = activeSessions.slice(
+        0,
+        activeSessions.length - maxConcurrentSessions + 1,
+      );
+
+      for (const session of sessionsToRevoke) {
+        // 将旧 Token 加入黑名单（原因：超出最大设备数）
+        await this.addTokenToBlacklist(
+          session.accessToken,
+          15 * 60,
+          ErrorCode.MAX_SESSIONS_EXCEEDED,
+        );
+        await this.addTokenToBlacklist(
+          session.refreshToken,
+          7 * 24 * 60 * 60,
+          ErrorCode.MAX_SESSIONS_EXCEEDED,
+        );
+
+        // 撤销会话
+        await this.prisma.userSession.update({
+          where: { id: session.id },
+          data: {
+            isActive: false,
+            revokedAt: new Date(),
+          },
+        });
+      }
+
+      this.logger.warn(
+        `[${ErrorCode.MAX_SESSIONS_EXCEEDED}] 超出最大设备数限制(${maxConcurrentSessions})，已踢出 ${sessionsToRevoke.length} 个最早的会话: User ID ${user.id}`,
+        'AuthService',
+      );
+    }
+
+    // 保存新会话信息到数据库
     await this.prisma.userSession.create({
       data: {
         userId: user.id,
@@ -178,7 +248,7 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         avatar: user.avatar,
-        roles: user.roles || [],
+        roles,
       },
     };
   }
@@ -197,7 +267,10 @@ export class AuthService {
       // 检查 Refresh Token 是否在黑名单中
       const isBlacklisted = await this.isTokenBlacklisted(refreshToken);
       if (isBlacklisted) {
-        throw new UnauthorizedException('Refresh Token 已失效');
+        throw new UnauthorizedException({
+          code: ErrorCode.REFRESH_TOKEN_INVALID,
+          message: ErrorMessages[ErrorCode.REFRESH_TOKEN_INVALID],
+        });
       }
 
       // 验证 Refresh Token
@@ -209,7 +282,10 @@ export class AuthService {
       const user = await this.usersService.findOne(payload.sub);
 
       if (!user.isActive) {
-        throw new UnauthorizedException('账户已被禁用');
+        throw new UnauthorizedException({
+          code: ErrorCode.ACCOUNT_DISABLED,
+          message: ErrorMessages[ErrorCode.ACCOUNT_DISABLED],
+        });
       }
 
       // 验证会话是否存在且有效
@@ -225,15 +301,19 @@ export class AuthService {
       });
 
       if (!session) {
-        throw new UnauthorizedException('会话已失效，请重新登录');
+        throw new UnauthorizedException({
+          code: ErrorCode.SESSION_EXPIRED,
+          message: ErrorMessages[ErrorCode.SESSION_EXPIRED],
+        });
       }
 
       // 生成新的 Token
+      const roles = user.roles || [];
       const newPayload: JwtPayload = {
         sub: user.id,
         username: user.username,
         email: user.email,
-        roles: user.roles || [],
+        roles,
       };
 
       const newAccessToken = this.jwtService.sign(newPayload, {
@@ -249,8 +329,12 @@ export class AuthService {
         audience: this.jwtAudience,
       });
 
-      // 将旧 Token 加入黑名单
-      await this.addTokenToBlacklist(refreshToken, 7 * 24 * 60 * 60); // 7天
+      // 将旧 Token 加入黑名单（原因：Token 刷新）
+      await this.addTokenToBlacklist(
+        refreshToken,
+        7 * 24 * 60 * 60,
+        ErrorCode.SESSION_INVALID,
+      );
 
       // 更新会话
       const expiresAt = new Date();
@@ -287,12 +371,15 @@ export class AuthService {
           firstName: user.firstName,
           lastName: user.lastName,
           avatar: user.avatar,
-          roles: user.roles || [],
+          roles,
         },
       };
-    } catch (error) {
+    } catch (error: any) {
       this.logger.error('Token 刷新失败', error);
-      throw new UnauthorizedException('Refresh Token 无效或已过期');
+      throw new UnauthorizedException({
+        code: ErrorCode.REFRESH_TOKEN_INVALID,
+        message: ErrorMessages[ErrorCode.REFRESH_TOKEN_INVALID],
+      });
     }
   }
 
@@ -312,9 +399,17 @@ export class AuthService {
     });
 
     if (session) {
-      // 将 Token 加入黑名单
-      await this.addTokenToBlacklist(accessToken, 15 * 60); // Access Token 15分钟
-      await this.addTokenToBlacklist(session.refreshToken, 7 * 24 * 60 * 60); // Refresh Token 7天
+      // 将 Token 加入黑名单（原因：用户主动退出）
+      await this.addTokenToBlacklist(
+        accessToken,
+        15 * 60,
+        ErrorCode.SESSION_INVALID,
+      );
+      await this.addTokenToBlacklist(
+        session.refreshToken,
+        7 * 24 * 60 * 60,
+        ErrorCode.SESSION_INVALID,
+      );
 
       // 撤销会话
       await this.prisma.userSession.update({
@@ -333,7 +428,74 @@ export class AuthService {
   }
 
   /**
-   * 撤销用户的所有会话（用于单设备登录）
+   * 注销其他会话（保留当前会话）
+   *
+   * 用户主动注销除当前设备外的所有其他设备会话
+   *
+   * @param userId 用户 ID
+   * @param currentSessionId 当前会话 ID（UUID 格式，保留此会话）
+   */
+  async logoutOtherSessions(
+    userId: number,
+    currentSessionId: string,
+  ): Promise<void> {
+    // 查找除当前会话外的所有活跃会话
+    const otherSessions = await this.prisma.userSession.findMany({
+      where: {
+        userId,
+        isActive: true,
+        NOT: {
+          id: currentSessionId,
+        },
+      },
+    });
+
+    // 将其他会话的 Token 加入黑名单（原因：用户主动踢出其他设备）
+    for (const session of otherSessions) {
+      await this.addTokenToBlacklist(
+        session.accessToken,
+        15 * 60,
+        ErrorCode.SESSION_REVOKED,
+      );
+      await this.addTokenToBlacklist(
+        session.refreshToken,
+        7 * 24 * 60 * 60,
+        ErrorCode.SESSION_REVOKED,
+      );
+    }
+
+    // 撤销除当前会话外的所有会话
+    await this.prisma.userSession.updateMany({
+      where: {
+        userId,
+        isActive: true,
+        NOT: {
+          id: currentSessionId,
+        },
+      },
+      data: {
+        isActive: false,
+        revokedAt: new Date(),
+      },
+    });
+
+    this.logger.log(
+      `注销其他设备会话: User ID ${userId}, 保留会话 ${currentSessionId}`,
+      'AuthService',
+    );
+  }
+
+  /**
+   * 撤销用户的所有会话（安全相关操作）
+   *
+   * 此方法会强制撤销用户所有设备的登录会话，常用于以下场景：
+   * - 用户修改密码后，强制所有设备重新登录
+   * - 账号安全事件（如账号被盗、异常登录）
+   * - 管理员手动强制用户下线
+   * - 用户主动点击"退出所有设备"
+   *
+   * 注意：普通登录流程现在使用智能会话管理，不会调用此方法
+   *
    * @param userId 用户 ID
    */
   async revokeAllUserSessions(userId: number): Promise<void> {
@@ -344,10 +506,18 @@ export class AuthService {
       },
     });
 
-    // 将所有 Token 加入黑名单
+    // 将所有 Token 加入黑名单（原因：安全操作，如修改密码）
     for (const session of sessions) {
-      await this.addTokenToBlacklist(session.accessToken, 15 * 60);
-      await this.addTokenToBlacklist(session.refreshToken, 7 * 24 * 60 * 60);
+      await this.addTokenToBlacklist(
+        session.accessToken,
+        15 * 60,
+        ErrorCode.SESSION_REVOKED,
+      );
+      await this.addTokenToBlacklist(
+        session.refreshToken,
+        7 * 24 * 60 * 60,
+        ErrorCode.SESSION_REVOKED,
+      );
     }
 
     // 撤销所有会话
@@ -372,21 +542,37 @@ export class AuthService {
    * 将 Token 加入黑名单
    * @param token Token
    * @param ttl 过期时间（秒）
+   * @param reason 加入黑名单的原因（错误码）
    */
-  private async addTokenToBlacklist(token: string, ttl: number): Promise<void> {
+  private async addTokenToBlacklist(
+    token: string,
+    ttl: number,
+    reason: ErrorCode = ErrorCode.SESSION_INVALID,
+  ): Promise<void> {
     const key = `token:blacklist:${token}`;
-    await this.cacheService.set(key, '1', ttl);
+    // 存储原因而不是简单的'1'，便于区分不同场景
+    await this.cacheService.set(key, reason, ttl);
   }
 
   /**
    * 检查 Token 是否在黑名单中
    * @param token Token
+   * @returns 黑名单原因（错误码），如果不在黑名单中则返回 null
+   */
+  async getTokenBlacklistReason(token: string): Promise<ErrorCode | null> {
+    const key = `token:blacklist:${token}`;
+    const result = await this.cacheService.get(key);
+    return result as ErrorCode | null;
+  }
+
+  /**
+   * 检查 Token 是否在黑名单中（简化版）
+   * @param token Token
    * @returns 是否在黑名单中
    */
   async isTokenBlacklisted(token: string): Promise<boolean> {
-    const key = `token:blacklist:${token}`;
-    const result = await this.cacheService.get(key);
-    return result !== null;
+    const reason = await this.getTokenBlacklistReason(token);
+    return reason !== null;
   }
 
   /**
