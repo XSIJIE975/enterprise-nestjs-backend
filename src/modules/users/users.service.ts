@@ -2,6 +2,8 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  forwardRef,
+  Inject,
 } from '@nestjs/common';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -9,6 +11,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
+import { AuthService } from '../auth/auth.service';
 
 /**
  * 用户服务
@@ -20,6 +23,8 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authService: AuthService,
   ) {
     this.bcryptRounds = this.configService.get<number>(
       'security.bcrypt.rounds',
@@ -520,6 +525,9 @@ export class UsersService {
       where: { id: userId },
       data: { password: hashedPassword },
     });
+
+    // 密码修改后，撤销所有会话，强制用户重新登录
+    await this.authService.revokeAllUserSessions(userId);
   }
 
   /**
@@ -792,11 +800,11 @@ export class UsersService {
   /**
    * 注销其他会话（保留当前会话）
    * @param userId 用户 ID
-   * @param currentSessionId 当前会话 ID
+   * @param currentAccessToken 当前访问令牌
    */
   async logoutOtherSessions(
     userId: number,
-    currentSessionId: string,
+    currentAccessToken: string,
   ): Promise<void> {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
@@ -807,15 +815,20 @@ export class UsersService {
       throw new NotFoundException('用户不存在');
     }
 
-    // 删除除当前会话外的所有会话
-    await this.prisma.userSession.deleteMany({
+    // 通过 accessToken 查找当前会话 ID
+    const currentSession = await this.prisma.userSession.findFirst({
       where: {
         userId,
-        NOT: {
-          id: currentSessionId,
-        },
+        accessToken: currentAccessToken,
+        isActive: true,
       },
     });
+
+    if (!currentSession) {
+      throw new NotFoundException('当前会话不存在');
+    }
+
+    await this.authService.logoutOtherSessions(userId, currentSession.id);
   }
 
   /**

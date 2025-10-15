@@ -46,7 +46,7 @@ import { UserSessionDto } from './dto/user-session.dto';
  * 提供用户 CRUD、角色管理、会话管理等功能
  */
 @ApiTags('用户管理')
-@ApiBearerAuth()
+@ApiBearerAuth('JWT-auth')
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -406,9 +406,6 @@ export class UsersController {
       return { message: '无法获取当前会话信息' };
     }
 
-    // 通过 accessToken 查找当前会话 ID
-    // 这里简化处理，实际应该通过 accessToken 查询对应的 session
-    // 暂时使用 accessToken 作为标识
     await this.usersService.logoutOtherSessions(user.userId, accessToken);
 
     return { message: '成功注销其他会话' };
