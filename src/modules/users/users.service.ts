@@ -184,7 +184,7 @@ export class UsersService {
   /**
    * 根据邮箱或用户名查找用户（用于登录）
    * @param usernameOrEmail 用户名或邮箱
-   * @returns 用户信息（含密码和角色）
+   * @returns 用户信息（含密码、角色和权限）
    */
   async findByUsernameOrEmail(usernameOrEmail: string) {
     return this.prisma.user.findFirst({
@@ -195,7 +195,15 @@ export class UsersService {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
         },
       },

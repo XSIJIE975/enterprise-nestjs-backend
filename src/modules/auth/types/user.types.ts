@@ -1,14 +1,22 @@
 import type { Prisma } from '@/prisma/prisma/client';
 
 /**
- * 用户完整信息类型（包含角色关联）
+ * 用户完整信息类型（包含角色和权限关联）
  * 对应 findByUsernameOrEmail 等方法的返回类型
  */
 export type UserWithRoles = Prisma.UserGetPayload<{
   include: {
     userRoles: {
       include: {
-        role: true;
+        role: {
+          include: {
+            rolePermissions: {
+              include: {
+                permission: true;
+              };
+            };
+          };
+        };
       };
     };
   };
