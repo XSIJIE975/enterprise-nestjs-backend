@@ -1,122 +1,110 @@
 import { Injectable, Inject } from '@nestjs/common';
-import Redis from 'ioredis';
+import { ICacheService } from './interfaces/cache.interface';
 
+/**
+ * 通用缓存服务
+ * 适用于通用场景（令牌黑名单、会话管理、临时数据等）
+ * 内部根据环境自动选择 Redis 或内存实现
+ *
+ * 使用场景：
+ * - ✅ 令牌黑名单
+ * - ✅ 会话管理
+ * - ✅ 临时数据缓存
+ * - ✅ 接口限流计数
+ *
+ * 如需 RBAC 缓存（用户角色/权限），请使用 RbacCacheService
+ */
 @Injectable()
-export class CacheService {
-  constructor(@Inject('REDIS_CLIENT') private readonly redis: Redis | null) {}
+export class CacheService implements ICacheService {
+  constructor(
+    @Inject('CACHE_SERVICE')
+    private readonly cache: ICacheService,
+  ) {}
 
   async get<T = any>(key: string): Promise<T | null> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    const data = await this.redis.get(key);
-    return data ? JSON.parse(data) : null;
+    return this.cache.get<T>(key);
   }
 
   async set(key: string, value: any, ttl?: number): Promise<'OK' | null> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    const serializedValue = JSON.stringify(value);
-    if (ttl) {
-      return await this.redis.setex(key, ttl, serializedValue);
-    }
-    return await this.redis.set(key, serializedValue);
+    return this.cache.set(key, value, ttl);
   }
 
   async del(key: string): Promise<number> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    return await this.redis.del(key);
+    return this.cache.del(key);
+  }
+
+  async delPattern(pattern: string): Promise<number> {
+    return this.cache.delPattern(pattern);
   }
 
   async exists(key: string): Promise<number> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    return await this.redis.exists(key);
+    return this.cache.exists(key);
   }
 
   async ttl(key: string): Promise<number> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    return await this.redis.ttl(key);
-  }
-
-  async ping(): Promise<string> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    return await this.redis.ping();
+    return this.cache.ttl(key);
   }
 
   async flush(): Promise<'OK'> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    await this.redis.flushdb();
-    return 'OK';
+    return this.cache.flush();
   }
 
   async mget(keys: string[]): Promise<(string | null)[]> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    return await this.redis.mget(...keys);
+    return this.cache.mget(keys);
   }
 
   async mset(keyValuePairs: Record<string, any>): Promise<'OK'> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    const pairs: string[] = [];
-    Object.entries(keyValuePairs).forEach(([key, value]) => {
-      pairs.push(key, JSON.stringify(value));
-    });
-    return await this.redis.mset(...pairs);
+    return this.cache.mset(keyValuePairs);
   }
 
   async incr(key: string): Promise<number> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    return await this.redis.incr(key);
+    return this.cache.incr(key);
   }
 
   async decr(key: string): Promise<number> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    return await this.redis.decr(key);
+    return this.cache.decr(key);
   }
 
   async expire(key: string, seconds: number): Promise<number> {
-    if (!this.redis) {
-      throw new Error('Redis client is not available');
-    }
-    return await this.redis.expire(key, seconds);
+    return this.cache.expire(key, seconds);
   }
 
-  // 缓存装饰器辅助方法
   async getOrSet<T>(
     key: string,
     factory: () => Promise<T>,
     ttl?: number,
   ): Promise<T> {
-    const cached = await this.get<T>(key);
-    if (cached !== null) {
-      return cached;
-    }
-
-    const result = await factory();
-    await this.set(key, result, ttl);
-    return result;
+    return this.cache.getOrSet<T>(key, factory, ttl);
   }
 
-  // 生成缓存键的辅助方法
   generateKey(prefix: string, ...parts: (string | number)[]): string {
-    return `${prefix}:${parts.join(':')}`;
+    return this.cache.generateKey(prefix, ...parts);
+  }
+
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    return this.cache.sadd(key, ...members);
+  }
+
+  async smembers(key: string): Promise<string[]> {
+    return this.cache.smembers(key);
+  }
+
+  async srem(key: string, ...members: string[]): Promise<number> {
+    return this.cache.srem(key, ...members);
+  }
+
+  isAvailable(): boolean {
+    return this.cache.isAvailable();
+  }
+
+  getType(): 'redis' | 'memory' {
+    return this.cache.getType();
+  }
+
+  /**
+   * @deprecated 使用 isAvailable() 替代
+   */
+  async ping(): Promise<string> {
+    return this.isAvailable() ? 'PONG' : 'UNAVAILABLE';
   }
 }
