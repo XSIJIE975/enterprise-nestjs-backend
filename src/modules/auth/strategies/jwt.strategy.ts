@@ -60,6 +60,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       username: payload.username,
       email: payload.email,
       roles: payload.roles || [],
+      permissions: payload.permissions || [],
     };
 
     // 将用户信息存储到 RequestContext 中，方便全局访问
