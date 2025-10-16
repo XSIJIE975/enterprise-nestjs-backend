@@ -12,6 +12,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth/auth.service';
+import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
 
 /**
  * 用户服务
@@ -25,6 +26,7 @@ export class UsersService {
     private readonly configService: ConfigService,
     @Inject(forwardRef(() => AuthService))
     private readonly authService: AuthService,
+    private readonly rbacCacheService: RbacCacheService,
   ) {
     this.bcryptRounds = this.configService.get<number>(
       'security.bcrypt.rounds',
@@ -665,6 +667,9 @@ export class UsersService {
       })),
     });
 
+    // 清除用户的 RBAC 缓存，确保下次请求获取最新的角色和权限
+    await this.rbacCacheService.deleteUserCache(userId);
+
     // 返回更新后的用户信息
     const updatedUser = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -727,6 +732,9 @@ export class UsersService {
         },
       },
     });
+
+    // 清除用户的 RBAC 缓存，确保下次请求获取最新的角色和权限
+    await this.rbacCacheService.deleteUserCache(userId);
   }
 
   /**
@@ -757,6 +765,49 @@ export class UsersService {
       description: ur.role.description,
       createdAt: ur.role.createdAt,
     }));
+  }
+
+  /**
+   * 获取用户的权限代码列表
+   * @param userId 用户 ID
+   * @returns 权限代码数组
+   */
+  async getUserPermissions(userId: number): Promise<string[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    // 提取所有权限代码（基于角色聚合，去重，只包含激活的角色和权限）
+    const permissions = Array.from(
+      new Set(
+        user.userRoles
+          .filter(ur => ur.role.isActive) // 只包含激活的角色
+          .flatMap(ur => ur.role.rolePermissions || [])
+          .filter(rp => rp.permission.isActive) // 只包含激活的权限
+          .map(rp => rp.permission.code),
+      ),
+    );
+
+    return permissions;
   }
 
   /**

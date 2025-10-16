@@ -4,6 +4,7 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { AuthService } from '../auth/auth.service';
+import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
 import * as bcrypt from 'bcrypt';
 
 // Mock bcrypt
@@ -75,6 +76,16 @@ describe('UsersService', () => {
         {
           provide: AuthService,
           useValue: mockAuthService,
+        },
+        {
+          provide: RbacCacheService,
+          useValue: {
+            getUserRoles: jest.fn(),
+            setUserRoles: jest.fn(),
+            getUserPermissions: jest.fn(),
+            setUserPermissions: jest.fn(),
+            deleteUserCache: jest.fn(),
+          },
         },
         {
           provide: ConfigService,
@@ -319,7 +330,15 @@ describe('UsersService', () => {
         include: {
           userRoles: {
             include: {
-              role: true,
+              role: {
+                include: {
+                  rolePermissions: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
