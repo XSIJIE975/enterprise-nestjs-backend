@@ -23,6 +23,11 @@ export interface JwtPayload {
   roles: string[];
 
   /**
+   * 用户权限代码列表（基于角色聚合）
+   */
+  permissions: string[];
+
+  /**
    * 签发时间（JWT 标准字段）
    */
   iat?: number;
@@ -51,4 +56,5 @@ export interface JwtUser {
   username: string;
   email: string;
   roles: string[];
+  permissions: string[];
 }
