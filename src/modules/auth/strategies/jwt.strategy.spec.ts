@@ -26,6 +26,7 @@ describe('JwtStrategy', () => {
     username: 'testuser',
     email: 'test@example.com',
     roles: ['USER', 'ADMIN'],
+    permissions: ['USER_READ', 'USER_WRITE', 'ADMIN_READ'],
   };
 
   const mockRequest = {
@@ -152,6 +153,7 @@ describe('JwtStrategy', () => {
         username: 'testuser',
         email: 'test@example.com',
         roles: [],
+        permissions: [],
       };
 
       const result = await strategy.validate(
@@ -160,6 +162,7 @@ describe('JwtStrategy', () => {
       );
 
       expect(result.roles).toEqual([]);
+      expect(result.permissions).toEqual([]);
     });
 
     it('应该将用户信息和 Token 存储到 RequestContext', async () => {
