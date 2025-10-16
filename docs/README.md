@@ -56,6 +56,12 @@
   - 请求链路追踪(RequestId)
   - 日志查询、统计和管理
 
+- [**缓存系统使用指南**](./modules/cache.md)
+  - Redis 和内存缓存实现
+  - RBAC 角色权限缓存
+  - 批量失效和反向索引
+  - 配置和最佳实践
+
 - [**认证授权模块**](./modules/authentication.md)
   - JWT 双 Token 认证机制
   - 登录/注册/刷新/登出流程
