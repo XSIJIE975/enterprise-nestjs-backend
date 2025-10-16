@@ -8,6 +8,8 @@ import {
 } from '../decorators/permissions.decorator';
 import { RequestContextService } from '../../shared/request-context/request-context.service';
 import { PrismaService } from '../../shared/database/prisma.service';
+import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
+import { LoggerService } from '../../shared/logger/logger.service';
 
 describe('PermissionsGuard', () => {
   let guard: PermissionsGuard;
@@ -75,6 +77,25 @@ describe('PermissionsGuard', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: RbacCacheService,
+          useValue: {
+            getUserRoles: jest.fn(),
+            setUserRoles: jest.fn(),
+            getUserPermissions: jest.fn(),
+            setUserPermissions: jest.fn(),
+            deleteUserCache: jest.fn(),
+          },
+        },
+        {
+          provide: LoggerService,
+          useValue: {
+            log: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
         },
       ],
     }).compile();
