@@ -126,11 +126,21 @@ export class AuthService {
     // 提取角色代码列表
     const roles = user.userRoles?.map(ur => ur.role.code) || [];
 
+    // 提取所有权限代码列表（基于角色聚合，去重）
+    const permissions = Array.from(
+      new Set(
+        user.userRoles
+          ?.flatMap(ur => ur.role.rolePermissions || [])
+          .map(rp => rp.permission.code) || [],
+      ),
+    );
+
     const payload: JwtPayload = {
       sub: user.id,
       username: user.username,
       email: user.email,
       roles,
+      permissions,
     };
 
     // 生成 Access Token
@@ -248,7 +258,6 @@ export class AuthService {
         firstName: user.firstName,
         lastName: user.lastName,
         avatar: user.avatar,
-        roles,
       },
     };
   }
@@ -308,12 +317,15 @@ export class AuthService {
       }
 
       // 生成新的 Token
-      const roles = user.roles || [];
+      // 直接使用原 payload 中的 roles 和 permissions，避免重新查询数据库
+      const roles = payload.roles || [];
+      const permissions = payload.permissions || [];
       const newPayload: JwtPayload = {
         sub: user.id,
         username: user.username,
         email: user.email,
         roles,
+        permissions,
       };
 
       const newAccessToken = this.jwtService.sign(newPayload, {
@@ -371,7 +383,6 @@ export class AuthService {
           firstName: user.firstName,
           lastName: user.lastName,
           avatar: user.avatar,
-          roles,
         },
       };
     } catch (error: any) {
