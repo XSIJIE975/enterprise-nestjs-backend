@@ -28,20 +28,33 @@ export class HealthService extends HealthIndicator {
 
   async checkRedis(key: string): Promise<HealthIndicatorResult> {
     try {
+      // 检查缓存服务是否可用
+      if (!this.cache.isAvailable()) {
+        throw new Error('Cache service is not available');
+      }
+
+      // 测试读写操作
       await this.cache.set('health_check', 'ok', 10);
       const result = await this.cache.get('health_check');
+
       if (result === 'ok') {
+        const cacheType = this.cache.getType();
         return this.getStatus(key, true, {
-          message: 'Cache service is healthy',
+          message: `Cache service (${cacheType}) is healthy`,
+          type: cacheType,
         });
       } else {
         throw new Error('Cache test failed');
       }
     } catch (error: any) {
-      // 在开发环境，如果缓存服务不可用，仍然报告为健康
-      if (process.env.NODE_ENV === 'development') {
+      // 在开发环境，如果使用内存缓存，仍然报告为健康
+      if (
+        process.env.NODE_ENV === 'development' &&
+        this.cache.getType() === 'memory'
+      ) {
         return this.getStatus(key, true, {
           message: 'Cache service (memory fallback) is healthy',
+          type: 'memory',
         });
       }
       throw this.getStatus(key, false, {
