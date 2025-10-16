@@ -38,6 +38,5 @@ export class AuthResponseDto {
     firstName?: string;
     lastName?: string;
     avatar?: string;
-    roles: string[];
   };
 }

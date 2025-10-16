@@ -159,8 +159,18 @@ export class AuthController {
 
   /**
    * 获取当前用户信息
+   *
+   * 注意：返回的 roles 和 permissions 来自 JWT Token（登录时快照）
+   * - 用途：前端 UI 控制（显示/隐藏按钮、菜单等）
+   * - 限制：权限变更后需重新登录才能更新
+   *
+   * 后端安全保障：
+   * - RolesGuard 和 PermissionsGuard 会实时查询数据库
+   * - 确保权限撤销立即生效，不依赖 Token 中的信息
+   * - 即使 Token 中有旧权限，实际接口调用时仍会被拦截
+   *
    * @param req Request 对象
-   * @returns 用户信息
+   * @returns 用户信息（包含角色和权限）
    */
   @UseGuards(JwtAuthGuard)
   @Post('me')
@@ -175,6 +185,7 @@ export class AuthController {
       username: req.user.username,
       email: req.user.email,
       roles: req.user.roles,
+      permissions: req.user.permissions,
     };
   }
 }
