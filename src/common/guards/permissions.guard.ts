@@ -5,8 +5,8 @@ import {
   PermissionsOptions,
   PermissionLogic,
 } from '../decorators/permissions.decorator';
-import { PrismaService } from '../../shared/database/prisma.service';
 import { RequestContextService } from '../../shared/request-context/request-context.service';
+import { PrismaService } from '../../shared/database/prisma.service';
 
 /**
  * 权限守卫
@@ -15,6 +15,9 @@ import { RequestContextService } from '../../shared/request-context/request-cont
  * 支持两种逻辑：
  * - AND: 用户需要拥有所有指定权限
  * - OR: 用户只需拥有任意一个权限
+ *
+ * 安全策略：实时从数据库查询权限，确保权限变更立即生效
+ * 避免依赖 JWT 中的权限信息，防止权限撤销后仍可在 token 有效期内使用旧权限
  *
  * @example
  * ```typescript
@@ -44,7 +47,7 @@ export class PermissionsGuard implements CanActivate {
       return true;
     }
 
-    // 从 RequestContext 中获取用户 ID（由 JwtStrategy 设置）
+    // 从 RequestContext 中获取用户 ID
     const userId = RequestContextService.getUserId();
 
     // 如果用户未登录，拒绝访问
@@ -52,7 +55,7 @@ export class PermissionsGuard implements CanActivate {
       return false;
     }
 
-    // 查询用户的所有权限
+    // 实时从数据库查询用户权限，确保权限变更立即生效
     const userPermissions = await this.getUserPermissions(userId);
 
     // 根据逻辑类型验证权限
@@ -70,19 +73,26 @@ export class PermissionsGuard implements CanActivate {
   }
 
   /**
-   * 获取用户的所有权限代码
+   * 从数据库实时查询用户的所有权限代码
    * @param userId 用户 ID
    * @returns 权限代码数组
    */
   private async getUserPermissions(userId: number): Promise<string[]> {
     const userRoles = await this.prisma.userRole.findMany({
-      where: { userId },
+      where: {
+        userId,
+      },
       include: {
         role: {
           include: {
             rolePermissions: {
               include: {
-                permission: true,
+                permission: {
+                  select: {
+                    code: true,
+                    isActive: true,
+                  },
+                },
               },
             },
           },
@@ -90,16 +100,17 @@ export class PermissionsGuard implements CanActivate {
       },
     });
 
-    // 提取所有权限代码（去重）
-    const permissions = new Set<string>();
-    userRoles.forEach(userRole => {
-      userRole.role.rolePermissions.forEach(rp => {
-        if (rp.permission.isActive) {
-          permissions.add(rp.permission.code);
-        }
-      });
-    });
+    // 提取所有权限代码（去重，只包含激活的角色和权限）
+    const permissions = Array.from(
+      new Set(
+        userRoles
+          .filter(ur => ur.role.isActive) // 只包含激活的角色
+          .flatMap(ur => ur.role.rolePermissions)
+          .filter(rp => rp.permission.isActive) // 只包含激活的权限
+          .map(rp => rp.permission.code),
+      ),
+    );
 
-    return Array.from(permissions);
+    return permissions;
   }
 }
