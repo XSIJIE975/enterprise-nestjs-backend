@@ -6,6 +6,7 @@ import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
+import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
 import { LoggerService } from '../../shared/logger/logger.service';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 
@@ -119,6 +120,8 @@ describe('AuthService', () => {
     create: jest.fn(),
     updateLastLoginAt: jest.fn(),
     findOne: jest.fn(),
+    getUserRoles: jest.fn(),
+    getUserPermissions: jest.fn(),
   };
 
   const mockJwtService = {
@@ -181,6 +184,16 @@ describe('AuthService', () => {
         {
           provide: CacheService,
           useValue: mockCacheService,
+        },
+        {
+          provide: RbacCacheService,
+          useValue: {
+            getUserRoles: jest.fn(),
+            setUserRoles: jest.fn(),
+            getUserPermissions: jest.fn(),
+            setUserPermissions: jest.fn(),
+            deleteUserCache: jest.fn(),
+          },
         },
         {
           provide: ConfigService,
@@ -366,6 +379,13 @@ describe('AuthService', () => {
         ...mockAuthUser,
         roles: ['USER'],
       });
+      mockUsersService.getUserRoles.mockResolvedValue([
+        { code: 'USER', name: '普通用户' },
+      ]);
+      mockUsersService.getUserPermissions.mockResolvedValue([
+        'user:read',
+        'user:write',
+      ]);
       mockPrismaService.userSession.findFirst.mockResolvedValue(mockSession);
       mockJwtService.sign
         .mockReturnValueOnce('new-access-token')

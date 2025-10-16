@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { CacheService } from '../../shared/cache/cache.service';
+import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
 import { LoggerService } from '../../shared/logger/logger.service';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
@@ -28,6 +29,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly cacheService: CacheService,
+    private readonly rbacCacheService: RbacCacheService,
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
   ) {
@@ -235,11 +237,15 @@ export class AuthService {
     // 缓存 Token 信息到缓存服务（用于快速验证）
     await this.cacheTokenToRedis(user.id, accessToken, refreshToken);
 
+    // 缓存用户角色和权限（用于守卫快速验证）
+    await this.rbacCacheService.setUserRoles(user.id, roles);
+    await this.rbacCacheService.setUserPermissions(user.id, permissions);
+
     // 更新最后登录时间
     await this.usersService.updateLastLoginAt(user.id);
 
     this.logger.log(
-      `用户登录成功: ${user.username} (ID: ${user.id})`,
+      `用户登录成功: ${user.username} (ID: ${user.id}), 角色: ${roles.join(', ')}, 权限: ${permissions.length} 个`,
       'AuthService',
     );
 
@@ -317,9 +323,15 @@ export class AuthService {
       }
 
       // 生成新的 Token
-      // 直接使用原 payload 中的 roles 和 permissions，避免重新查询数据库
-      const roles = payload.roles || [];
-      const permissions = payload.permissions || [];
+      // 重新从数据库查询最新的角色和权限，确保权限变更能在刷新 token 时立即生效
+      const userRolesData = await this.usersService.getUserRoles(user.id);
+      const roles = userRolesData.map(r => r.code);
+      const permissions = await this.usersService.getUserPermissions(user.id);
+
+      // 更新 RBAC 缓存，保持缓存一致性
+      await this.rbacCacheService.setUserRoles(user.id, roles);
+      await this.rbacCacheService.setUserPermissions(user.id, permissions);
+
       const newPayload: JwtPayload = {
         sub: user.id,
         username: user.username,
@@ -433,6 +445,9 @@ export class AuthService {
 
       // 从缓存服务中删除缓存
       await this.removeTokenFromRedis(userId);
+
+      // 清除用户的 RBAC 缓存
+      await this.rbacCacheService.deleteUserCache(userId);
 
       this.logger.log(`用户退出登录: User ID ${userId}`, 'AuthService');
     }
