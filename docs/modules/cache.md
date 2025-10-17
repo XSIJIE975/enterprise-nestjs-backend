@@ -725,30 +725,7 @@ await this.cacheService.set(key, value, ttl);
 
 ## 常见问题
 
-### 1. 生产环境启动失败
-
-**问题**：应用启动时报错 "生产环境必须配置 Redis"
-
-**原因**：生产环境 (`NODE_ENV=production`) 强制要求 Redis 可用
-
-**解决方案**：
-
-```bash
-# 1. 检查 Redis 服务是否启动
-redis-cli ping
-
-# 2. 检查环境变量是否正确
-echo $REDIS_HOST
-echo $REDIS_PORT
-
-# 3. 检查网络连接和防火墙
-telnet redis-server 6379
-
-# 4. 临时解决：设置 CACHE_TYPE=memory（不推荐）
-export CACHE_TYPE=memory
-```
-
-### 2. 内存缓存在分布式环境下数据不一致
+### 1. 内存缓存在分布式环境下数据不一致
 
 **问题**：多个应用实例的缓存数据不同步
 
@@ -757,12 +734,12 @@ export CACHE_TYPE=memory
 **解决方案**：
 
 ```env
-# 生产环境必须使用 Redis
+# 生产环境最好使用 Redis
 CACHE_TYPE=redis
 NODE_ENV=production
 ```
 
-### 3. 角色变更后用户权限未更新
+### 2. 角色变更后用户权限未更新
 
 **问题**：更新角色权限后，用户仍然拥有旧权限
 
@@ -775,7 +752,7 @@ NODE_ENV=production
 await this.rbacCacheService.invalidateRoleUsers(roleCode);
 ```
 
-### 4. 缓存未命中率过高
+### 3. 缓存未命中率过高
 
 **问题**：频繁查询数据库，缓存效果不佳
 
@@ -800,7 +777,7 @@ console.log('缓存可用:', stats.available);
 this.logger.debug(`缓存用户 ${userId} 的角色`);
 ```
 
-### 5. Redis 内存占用过高
+### 4. Redis 内存占用过高
 
 **问题**：Redis 内存持续增长
 
@@ -820,7 +797,7 @@ await this.cacheService.set(key, value, 3600);  // 不要设置永久缓存
 await this.cacheService.delPattern('old:pattern:*');
 ```
 
-### 6. 如何查看缓存内容（调试）
+### 5. 如何查看缓存内容（调试）
 
 ```bash
 # Redis 命令行
@@ -1057,6 +1034,6 @@ TTL nestjs:user:roles:123
 
 ---
 
-**最后更新**: 2025-10-16  
+**最后更新**: 2025-10-17  
 **维护者**: XSIJIE  
 **相关模块**: 认证授权、RBAC 权限系统
