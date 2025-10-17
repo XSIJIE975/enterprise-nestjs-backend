@@ -137,19 +137,9 @@
 
 ```json
 {
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "tokenType": "Bearer",
-  "expiresIn": 900,
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "username": "johndoe",
-    "firstName": "John",
-    "lastName": "Doe",
-    "avatar": null,
-    "roles": []
-  }
+  "email": "user@example.com",
+  "username": "johndoe",
+  "message": "注册成功，请登录"
 }
 ```
 
@@ -166,7 +156,24 @@
 }
 ```
 
-**响应**: 同注册响应
+**响应**:
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "tokenType": "Bearer",
+  "expiresIn": 900,
+  "user": {
+    "id": 1,
+    "username": "admin",
+    "email": "admin@enterprise.local",
+    "firstName": "Admin",
+    "lastName": "User",
+    "avatar": null
+  }
+}
+```
 
 ### 3. 刷新 Token
 
@@ -180,7 +187,7 @@
 }
 ```
 
-**响应**: 返回新的 Access Token 和 Refresh Token
+**响应**: 同登录响应，返回新的 Access Token 和 Refresh Token
 
 ### 4. 退出登录
 
@@ -217,7 +224,8 @@ Authorization: Bearer {accessToken}
   "userId": 1,
   "username": "admin",
   "email": "admin@enterprise.local",
-  "roles": ["admin"]
+  "roles": ["admin"],
+  "permissions": ["read", "write", "delete"]
 }
 ```
 
@@ -306,19 +314,19 @@ export class UsersController {
 ### 2. Token 安全
 
 - **Access Token**:
-  - 短生命周期（15分钟）
+  - 短生命周期（默认15分钟，可配置）
   - 用于日常 API 访问
   - 存储在内存或 sessionStorage
 
 - **Refresh Token**:
-  - 长生命周期（7天）
+  - 长生命周期（默认7天，可配置）
   - 仅用于刷新 Access Token
   - 存储在 HttpOnly Cookie（推荐）或 localStorage
 
-### 3. 单设备登录策略
+### 3. 多设备登录策略
 
-- 新设备登录时，自动撤销旧设备的所有会话
-- 旧设备的 Token 立即加入黑名单
+- 新设备登录时，自动撤销最大允许的会话数中最早的会话
+- 旧设备的所有 Token 立即撤销并加入黑名单
 - 旧设备再次访问时会收到 401 Unauthorized
 
 ### 4. Token 黑名单机制
@@ -427,4 +435,4 @@ BCRYPT_ROUNDS=12                                          # 读取路径：secur
 ---
 
 **维护者**: XSIJIE
-**最后更新**: 2025-10-09
+**最后更新**: 2025-10-17
