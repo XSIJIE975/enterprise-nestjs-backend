@@ -1,9 +1,12 @@
 version: '3.8'
 
+# 自定义项目名称（Docker Compose V2 语法）
+name: enterprise-dev
+
 services:
   mysql:
     image: mysql:8.0
-    container_name: enterprise-mysql
+    container_name: enterprise-mysql-dev
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: password
@@ -24,7 +27,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: enterprise-redis
+    container_name: enterprise-redis-dev
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -40,7 +43,7 @@ services:
   # 可选：数据库管理工具
   adminer:
     image: adminer
-    container_name: enterprise-adminer
+    container_name: enterprise-adminer-dev
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -53,7 +56,7 @@ services:
   # 可选：Redis管理工具
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: enterprise-redis-commander
+    container_name: enterprise-redis-commander-dev
     restart: unless-stopped
     environment:
       REDIS_HOSTS: redis:redis:6379
@@ -66,3 +69,7 @@ services:
 volumes:
   mysql_data:
   redis_data:
+
+networks:
+  default:
+    name: enterprise-dev-network
