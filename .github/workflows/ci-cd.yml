@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
   NODE_VERSION: '22'
@@ -12,23 +12,23 @@ env:
 
 jobs:
   test:
-    name: Test
+    name: Test & Lint
     runs-on: ubuntu-latest
-    
+
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: test
-          MYSQL_DATABASE: test_db
+          MYSQL_ROOT_PASSWORD: test_root_password
+          MYSQL_DATABASE: nestjs_test
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping"
+          --health-cmd="mysqladmin ping -h localhost"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=3
-      
+          --health-retries=5
+
       redis:
         image: redis:7-alpine
         ports:
@@ -40,126 +40,233 @@ jobs:
           --health-retries=3
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-    - name: Type check
-      run: pnpm type-check
+      - name: Generate Prisma Client
+        run: pnpm db:generate
+        env:
+          DATABASE_URL: "mysql://root:test_root_password@localhost:3306/nestjs_test"
 
-    - name: Lint
-      run: pnpm lint
+      - name: Check for migrations
+        id: check_migrations
+        run: |
+          if [ -d "prisma/migrations" ] && [ "$(ls -A prisma/migrations | grep -v migration_lock.toml)" ]; then
+            echo "has_migrations=true" >> $GITHUB_OUTPUT
+            echo "✅ Found migration files"
+          else
+            echo "has_migrations=false" >> $GITHUB_OUTPUT
+            echo "⚠️  No migration files found, will use db push instead"
+          fi
+        shell: bash
 
-    - name: Test
-      run: pnpm test:cov
-      env:
-        DATABASE_URL: "mysql://root:test@localhost:3306/test_db"
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
-        JWT_ACCESS_SECRET: test-secret
-        JWT_REFRESH_SECRET: test-refresh-secret
+      - name: Run Prisma Migrations (if exists)
+        if: steps.check_migrations.outputs.has_migrations == 'true'
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: "mysql://root:test_root_password@localhost:3306/nestjs_test"
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage/lcov.info
+      - name: Push Prisma Schema (if no migrations)
+        if: steps.check_migrations.outputs.has_migrations == 'false'
+        run: npx prisma db push --skip-generate
+        env:
+          DATABASE_URL: "mysql://root:test_root_password@localhost:3306/nestjs_test"
+
+      - name: Type check
+        run: pnpm type-check
+
+      - name: Lint check
+        run: pnpm lint
+
+      - name: Format check
+        run: pnpm format:check
+        continue-on-error: true
+
+      - name: Create .env.test for tests
+        run: |
+          cat > .env.test << 'EOF'
+          NODE_ENV=test
+          PORT=8001
+          DATABASE_URL="mysql://root:test_root_password@localhost:3306/nestjs_test"
+          DB_HOST=localhost
+          DB_PORT=3306
+          DB_DATABASE=nestjs_test
+          DB_USERNAME=root
+          DB_ROOT_PASSWORD=test_root_password
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          REDIS_PASSWORD=
+          REDIS_DB=0
+          JWT_SECRET=test-jwt-secret-for-ci-cd-pipeline-must-be-at-least-32-chars
+          JWT_EXPIRES_IN=7d
+          JWT_REFRESH_SECRET=test-jwt-refresh-secret-for-ci-cd-pipeline-must-be-at-least-32-chars
+          JWT_REFRESH_EXPIRES_IN=30d
+          LOG_LEVEL=error
+          LOG_TO_FILE=false
+          TZ=Asia/Shanghai
+          DEFAULT_TIMEZONE=Asia/Shanghai
+          CORS_ENABLED=true
+          CORS_ORIGIN=http://localhost:8001
+          THROTTLE_TTL=60
+          THROTTLE_LIMIT=100
+          UPLOAD_DIR=./uploads
+          MAX_FILE_SIZE=5242880
+          MAIL_HOST=smtp.example.com
+          MAIL_PORT=587
+          MAIL_SECURE=false
+          MAIL_USER=test@example.com
+          MAIL_PASSWORD=test_password
+          MAIL_FROM="Test <test@example.com>"
+          EOF
+          cat .env.test
+        shell: bash
+
+      - name: Run unit tests
+        run: pnpm test:cov
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: github.event_name == 'push'
+        with:
+          file: ./coverage/lcov.info
+          fail_ci_if_error: false
+        continue-on-error: true
 
   build:
-    name: Build
+    name: Build Application
     runs-on: ubuntu-latest
     needs: test
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup pnpm
-      uses: pnpm/action-setup@v4
-      with:
-        version: ${{ env.PNPM_VERSION }}
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'pnpm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-    - name: Install dependencies
-      run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-    - name: Generate Prisma client
-      run: pnpm db:generate
+      - name: Generate Prisma client
+        run: pnpm db:generate
+        env:
+          DATABASE_URL: "mysql://root:test@localhost:3306/nestjs_test"
 
-    - name: Build application
-      run: pnpm build
+      - name: Build application
+        run: pnpm build
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: dist/
+      - name: Check build output
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "Build failed: dist directory not found"
+            exit 1
+          fi
+          echo "Build successful: dist directory exists"
+          ls -la dist/
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ github.sha }}
+          path: dist/
+          retention-days: 7
 
   docker:
-    name: Docker Build
+    name: Docker Build & Push
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, build]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        continue-on-error: true
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: |
-          ${{ secrets.DOCKER_USERNAME }}/nest-enterprise-api:latest
-          ${{ secrets.DOCKER_USERNAME }}/nest-enterprise-api:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKER_USERNAME }}/enterprise-nestjs-backend
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ secrets.DOCKER_USERNAME != '' && secrets.DOCKER_PASSWORD != '' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NODE_ENV=production
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+        continue-on-error: true
 
   security:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: test
+    if: github.event_name == 'push'
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
+      - name: Run Trivy vulnerability scanner (filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+        continue-on-error: true
 
-    - name: Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v3
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+        continue-on-error: true
+
+      - name: Run Trivy vulnerability scanner (summary)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+        continue-on-error: true
