@@ -1,21 +1,26 @@
 version: '3.8'
 
+# 自定义项目名称（Docker Compose V2 语法）
+name: enterprise-prod
+
 services:
   # NestJS 应用服务
   app:
     build: 
       context: .
       dockerfile: Dockerfile
-    container_name: enterprise-app
+      args:
+        NODE_ENV: production
+    container_name: enterprise-app-prod
     ports:
-      - "3000:3000"
+      - "${PORT:-8002}:8002"  # 使用环境变量配置端口，默认 8002（生产环境）
+    env_file:
+      - .env.production  # 从文件加载所有环境变量
     environment:
-      - NODE_ENV=production
-      - DATABASE_URL=mysql://app_user:app_password@mysql:3306/enterprise_db
+      # 覆盖特定环境变量（Docker 内部网络地址）
+      - DATABASE_URL=mysql://${DB_USERNAME:-app_user}:${DB_PASSWORD:-app_password}@mysql:3306/${DB_DATABASE:-enterprise_db}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - JWT_ACCESS_SECRET=production-super-secret-jwt-access-key-64-chars-minimum
-      - JWT_REFRESH_SECRET=production-super-secret-jwt-refresh-key-64-chars-minimum
     depends_on:
       mysql:
         condition: service_healthy
@@ -23,12 +28,13 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
     networks:
-      - app-network
+      - enterprise-prod-network
 
   # MySQL 数据库
   mysql:
@@ -36,22 +42,24 @@ services:
     container_name: enterprise-mysql-prod
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: prod_root_password_change_this
-      MYSQL_DATABASE: enterprise_db
-      MYSQL_USER: app_user
-      MYSQL_PASSWORD: app_password_change_this
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-prod_root_password}
+      MYSQL_DATABASE: ${DB_DATABASE:-enterprise_db}
+      MYSQL_USER: ${DB_USERNAME:-app_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-app_password}
+      TZ: Asia/Shanghai
     ports:
-      - "3306:3306"
+      - "${DB_PORT:-3306}:3306"
     volumes:
       - mysql_prod_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone='+08:00'
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-prod_root_password}"]
       timeout: 20s
       retries: 10
+      interval: 10s
     networks:
-      - app-network
+      - enterprise-prod-network
 
   # Redis 缓存
   redis:
@@ -59,33 +67,44 @@ services:
     container_name: enterprise-redis-prod
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_prod_data:/data
-    command: redis-server --appendonly yes --requirepass redis_password_change_this
+    command: >
+      sh -c "redis-server 
+      --appendonly yes 
+      --maxmemory 512mb 
+      --maxmemory-policy allkeys-lru
+      $([ -n '${REDIS_PASSWORD}' ] && echo '--requirepass ${REDIS_PASSWORD}' || echo '')"
     healthcheck:
-      test: ["CMD", "redis-cli", "auth", "redis_password_change_this", "ping"]
+      test: >
+        sh -c "if [ -n '${REDIS_PASSWORD}' ]; then 
+          redis-cli --no-auth-warning -a '${REDIS_PASSWORD}' ping; 
+        else 
+          redis-cli ping; 
+        fi"
       interval: 30s
       timeout: 10s
       retries: 3
     networks:
-      - app-network
+      - enterprise-prod-network
 
-  # Nginx 反向代理 (可选)
-  nginx:
-    image: nginx:alpine
-    container_name: enterprise-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-    depends_on:
-      - app
-    networks:
-      - app-network
+  # Nginx 反向代理 (可选 - 需要先创建 nginx/ 目录和配置文件)
+  # 取消注释以下内容启用 Nginx
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: enterprise-nginx-prod
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./nginx/ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - enterprise-prod-network
 
 volumes:
   mysql_prod_data:
@@ -94,5 +113,6 @@ volumes:
     driver: local
 
 networks:
-  app-network:
+  enterprise-prod-network:
+    name: enterprise-prod-network
     driver: bridge
