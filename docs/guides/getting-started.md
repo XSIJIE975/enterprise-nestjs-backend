@@ -1,6 +1,6 @@
 # 快速开始指南
 
-> 从零开始搭建开发环境并启动项目
+> 从零开始快速搭建开发环境并启动项目
 
 ## 📋 前置要求
 
@@ -83,6 +83,8 @@ REDIS_PORT=6379
 # JWT 配置
 JWT_ACCESS_SECRET=your-secret-key
 JWT_REFRESH_SECRET=your-refresh-secret
+
+# 其他配置项请参考 .env.example 文件
 ```
 
 #### 步骤 3：生成 Prisma 客户端
