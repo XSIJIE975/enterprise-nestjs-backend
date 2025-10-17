@@ -1,0 +1,91 @@
+version: '3.8'
+
+# 自定义项目名称（Docker Compose V2 语法）
+name: enterprise-test
+
+services:
+  # NestJS 应用服务（测试环境）
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: test
+    container_name: enterprise-app-test
+    ports:
+      - "${PORT:-8001}:8001"  # 测试环境默认使用 8001 端口
+    env_file:
+      - .env.test  # 从测试环境配置文件加载
+    environment:
+      # 覆盖特定环境变量（Docker 内部网络地址）
+      - DATABASE_URL=mysql://${DB_USERNAME:-test_user}:${DB_PASSWORD:-test_password}@mysql:3306/${DB_DATABASE:-enterprise_test}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - enterprise-test-network
+
+  # MySQL 数据库（测试环境）
+  mysql:
+    image: mysql:8.0
+    container_name: enterprise-mysql-test
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-test_root_password}
+      MYSQL_DATABASE: ${DB_DATABASE:-enterprise_test}
+      MYSQL_USER: ${DB_USERNAME:-test_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-test_password}
+      TZ: Asia/Shanghai
+    ports:
+      - "${DB_PORT:-3307}:3306"  # 测试环境使用 3307 避免冲突
+    volumes:
+      - mysql_test_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone='+08:00'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-test_root_password}"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+    networks:
+      - enterprise-test-network
+
+  # Redis 缓存（测试环境）
+  redis:
+    image: redis:7-alpine
+    container_name: enterprise-redis-test
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6380}:6379"  # 测试环境使用 6380 避免冲突
+    volumes:
+      - redis_test_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - enterprise-test-network
+
+volumes:
+  mysql_test_data:
+    driver: local
+  redis_test_data:
+    driver: local
+
+networks:
+  enterprise-test-network:
+    name: enterprise-test-network
+    driver: bridge
