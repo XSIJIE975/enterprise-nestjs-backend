@@ -45,7 +45,15 @@ export class MemoryCacheService implements ICacheService {
   }
 
   async set(key: string, value: any, ttl?: number): Promise<'OK' | null> {
-    const options = ttl ? { ttl: ttl * 1000 } : {}; // 转换为毫秒
+    // ttl = 0 表示不过期（永久缓存）
+    // ttl > 0 表示指定过期时间（秒）
+    // ttl = undefined 使用默认 TTL
+    const options =
+      ttl === 0
+        ? { ttl: 0 } // 0 表示永不过期
+        : ttl
+          ? { ttl: ttl * 1000 } // 转换为毫秒
+          : {}; // 使用默认 TTL
     this.cache.set(key, value, options);
     return 'OK';
   }
