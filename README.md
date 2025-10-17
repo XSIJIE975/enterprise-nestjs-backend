@@ -175,7 +175,7 @@ pnpm test:e2e       # E2E 测试
 
 ```env
 NODE_ENV=development
-PORT=3000
+PORT=8000
 DATABASE_URL=mysql://...
 REDIS_HOST=localhost
 JWT_ACCESS_SECRET=...
@@ -189,8 +189,8 @@ LOG_LEVEL=info
 
 启动应用后访问:
 
-- <http://localhost:3000/api/docs> - Swagger UI
-- <http://localhost:3000/api/docs-json> - Swagger JSON
+- <http://localhost:8000/api/docs> - Swagger UI
+- <http://localhost:8000/api/docs-json> - Swagger JSON
 
 ## 错误码体系
 
@@ -243,8 +243,7 @@ pm2 start ecosystem.config.js
 
 ---
 
-**项目状态**: 活跃开发中  
 **版本**: v1.0.0  
-**最后更新**: 2025-10-06
+**最后更新**: 2025-10-17
 
 Made with ❤️ by XSIJIE
