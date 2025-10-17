@@ -306,8 +306,8 @@ try {
     Write-Host ("=" * 70) -ForegroundColor Green
     Write-Host ""
     Write-Host "📍 服务信息:" -ForegroundColor Cyan
-    Write-Host "   🌐 应用地址:    http://localhost" -ForegroundColor White
-    Write-Host "   📚 API 文档:    http://localhost/api/docs" -ForegroundColor White
+    Write-Host "   🌐 应用地址:    http://localhost:8002" -ForegroundColor White
+    Write-Host "   📚 API 文档:    http://localhost:8002/api/docs" -ForegroundColor White
     Write-Host "   🗄️  数据库端口:  localhost:3306" -ForegroundColor White
     Write-Host "   📊 Redis 端口:  localhost:6379" -ForegroundColor White
     Write-Host ""
