@@ -19,6 +19,10 @@ RUN pnpm install --frozen-lockfile
 # ===========================
 FROM node:22-alpine AS builder
 
+# 构建参数：指定构建环境（默认 production）
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+
 # 安装 pnpm
 RUN npm install -g pnpm@9.12.3
 
@@ -36,7 +40,7 @@ COPY src ./src
 # 生成 Prisma 客户端（包含 Alpine Linux 目标）
 RUN pnpm prisma generate
 
-# 构建应用
+# 构建应用（NODE_ENV 已设置）
 RUN pnpm build
 
 # ===========================
@@ -87,12 +91,13 @@ USER nestjs
 ENV NODE_ENV=production \
     TZ=Asia/Shanghai
 
-# 暴露端口
-EXPOSE 8000
+# 暴露端口（默认 8002，可通过环境变量 PORT 覆盖）
+EXPOSE 8002
 
 # 健康检查（通过 HTTP 请求检查 /health 端点）
+# 注意：健康检查的端口应与实际运行端口一致，生产环境默认 8002
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:8000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+  CMD node -e "require('http').get('http://localhost:8002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # 启动应用
 CMD ["node", "dist/src/main"]
