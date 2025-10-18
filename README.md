@@ -113,9 +113,9 @@ pnpm start:dev
 
 ### 访问服务
 
-- 主应用: <http://localhost:3000>
-- API 文档: <http://localhost:3000/api/docs>
-- 健康检查: <http://localhost:3000/api/v1/health>
+- 主应用: <http://localhost:8000>
+- API 文档: <http://localhost:8000/api/docs>
+- 健康检查: <http://localhost:8000/api/v1/health>
 
 ### 测试账户
 
@@ -243,7 +243,6 @@ pm2 start ecosystem.config.js
 
 ---
 
-**版本**: v1.0.0  
-**最后更新**: 2025-10-17
+**最后更新**: 2025-10-18
 
 Made with ❤️ by XSIJIE
