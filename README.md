@@ -1,6 +1,6 @@
 # 企业级 NestJS 后端系统
 
-> 基于 NestJS 11.x + TypeScript 5.x + Prisma + MySQL + Redis 构建的生产级后端系统
+> 生产级 NestJS 后端系统 | JWT 双 Token + RBAC | 完整日志链路追踪 | Redis 多级缓存 | 健康监控 | Prisma ORM | Docker 部署 | 开箱即用
 
 ![Node.js](https://img.shields.io/badge/Node.js-22.x-green?logo=node.js)
 ![NestJS](https://img.shields.io/badge/NestJS-11.x-red?logo=nestjs)
