@@ -1,16 +1,18 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import * as compression from 'compression';
 import * as express from 'express';
 import helmet from 'helmet';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './shared/logger/logger.service';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
 
@@ -19,6 +21,11 @@ async function bootstrap() {
 
   // 使用自定义日志服务
   app.useLogger(loggerService);
+
+  // 配置静态文件服务 - 托管 public 目录
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/', // 直接从根路径访问
+  });
 
   // 全局前缀，排除根路径和API信息路径
   app.setGlobalPrefix('api/v1', {
