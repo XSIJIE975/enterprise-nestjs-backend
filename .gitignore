@@ -80,7 +80,7 @@ dist
 
 # Gatsby 文件
 .cache/
-public
+# public  # 注释掉，因为我们需要托管静态文件
 
 # Vuepress 构建输出
 .vuepress/dist
@@ -129,6 +129,8 @@ temp/
 # 上传的文件
 uploads/
 public/uploads/
+public/tmp/
+public/temp/
 
 # 测试输出
 test-results/
