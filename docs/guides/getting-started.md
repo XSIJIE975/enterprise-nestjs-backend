@@ -32,8 +32,8 @@ git --version     # git version x.x.x
 
 #### Windows 系统
 
-```bash
-.\scripts\start.bat
+```powershell
+.\scripts\start.ps1
 ```
 
 #### Linux/macOS 系统
@@ -142,9 +142,9 @@ pnpm start:debug
 
 | 服务           | 地址                                | 说明            |
 | -------------- | ----------------------------------- | --------------- |
-| **主应用**     | http://localhost:3000               | NestJS 应用     |
-| **API 文档**   | http://localhost:3000/api/docs      | Swagger 文档    |
-| **健康检查**   | http://localhost:3000/api/v1/health | 系统健康状态    |
+| **主应用**     | http://localhost:8000               | NestJS 应用     |
+| **API 文档**   | http://localhost:8000/api/docs      | Swagger 文档    |
+| **健康检查**   | http://localhost:8000/api/v1/health | 系统健康状态    |
 | **数据库管理** | http://localhost:8080               | Adminer         |
 | **Redis 管理** | http://localhost:8081               | Redis Commander |
 
@@ -378,4 +378,4 @@ pnpm install
 ---
 
 **维护者**: XSIJIE
-**最后更新**: 2025-10-10
+**最后更新**: 2025-10-18
