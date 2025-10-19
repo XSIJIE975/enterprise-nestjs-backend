@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企业级 NestJS 后端系统</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 800px;
+        }
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            animation: fadeInDown 1s;
+        }
+        p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        .links {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .btn {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .features {
+            margin-top: 3rem;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            text-align: left;
+        }
+        .feature {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            -webkit-backdrop-filter: blur(10px);
+            backdrop-filter: blur(10px);
+        }
+        .feature h3 {
+            margin-top: 0;
+            font-size: 1rem;
+        }
+        .feature p {
+            font-size: 0.9rem;
+            margin: 0;
+        }
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 企业级 NestJS 后端系统</h1>
+        <p>生产级 NestJS 后端系统 | JWT 双 Token + RBAC | 完整日志链路追踪 | Redis 多级缓存 | 健康监控 | Prisma ORM | Docker 部署 | 开箱即用</p>
+        
+        <div class="links">
+            <a href="/api/docs" class="btn">📚 API 文档</a>
+            <a href="/api/v1/health" class="btn">💓 健康检查</a>
+            <a href="https://github.com/XSIJIE975/enterprise-nestjs-backend" class="btn" target="_blank" rel="noopener noreferrer">📦 GitHub</a>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <h3>🔐 JWT 双 Token</h3>
+                <p>Access + Refresh Token 机制</p>
+            </div>
+            <div class="feature">
+                <h3>👥 RBAC 权限</h3>
+                <p>用户-角色-权限三层模型</p>
+            </div>
+            <div class="feature">
+                <h3>📊 完整日志</h3>
+                <p>文件日志 + 数据库日志 + 链路追踪</p>
+            </div>
+            <div class="feature">
+                <h3>⚡ 多级缓存</h3>
+                <p>Redis + LRU 内存缓存</p>
+            </div>
+            <div class="feature">
+                <h3>🏥 健康监控</h3>
+                <p>数据库/Redis/内存/磁盘监控</p>
+            </div>
+            <div class="feature">
+                <h3>🐳 Docker 部署</h3>
+                <p>完整的容器化解决方案</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
