@@ -14,6 +14,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { RegisterResponseDto } from './dto/register-response.dto';
@@ -28,6 +29,11 @@ import { AuthUser } from './types/user.types';
 /**
  * 认证控制器
  * 处理用户注册、登录、Token 刷新、退出登录等
+ *
+ * 限流策略：
+ * - 登录接口：1分钟内最多5次（防止暴力破解）
+ * - 刷新Token：1分钟内最多10次（正常使用）
+ * - 其他接口：使用全局默认限流
  */
 @ApiTags('认证管理')
 @Controller('auth')
@@ -68,6 +74,7 @@ export class AuthController {
   @UseGuards(LocalAuthGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 1分钟内最多5次（防止暴力破解）
   @ApiOperation({ summary: '用户登录' })
   @ApiResponse({
     status: HttpStatus.OK,
@@ -102,6 +109,7 @@ export class AuthController {
    */
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 1分钟内最多10次
   @ApiOperation({ summary: '刷新 Token' })
   @ApiResponse({
     status: HttpStatus.OK,
