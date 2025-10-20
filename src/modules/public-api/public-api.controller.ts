@@ -1,8 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 
 @ApiTags('Public')
-@Controller() // 移除controller路径，使其处理根路径
+@Controller()
+@SkipThrottle()
 export class PublicApiController {
   @Get()
   @ApiOperation({ summary: 'API根路径' })

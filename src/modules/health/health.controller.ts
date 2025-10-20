@@ -1,5 +1,6 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import {
   HealthCheckService,
   HealthCheck,
@@ -11,7 +12,8 @@ import { DisableDatabaseLog } from '../../common/decorators/database-log.decorat
 
 @ApiTags('Health')
 @Controller('health')
-@DisableDatabaseLog() // 健康检查接口频繁调用，不需要记录数据库日志
+@SkipThrottle()
+@DisableDatabaseLog()
 export class HealthController {
   constructor(
     private health: HealthCheckService,

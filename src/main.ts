@@ -22,6 +22,17 @@ async function bootstrap() {
   // 使用自定义日志服务
   app.useLogger(loggerService);
 
+  // 信任代理，获取真实IP（用于限流和日志）
+  // true: 信任所有代理（不安全，仅开发环境）
+  // false: 不信任代理
+  // 1: 信任第一层代理（推荐：Nginx/负载均衡器）
+  // 'loopback': 信任本地回环地址（127.0.0.1, ::1）
+  // '192.168.0.0/16': 信任特定网段的代理
+  app.set(
+    'trust proxy',
+    configService.get('app.env') === 'production' ? 1 : true,
+  );
+
   // 配置静态文件服务 - 托管 public 目录
   app.useStaticAssets(join(__dirname, '..', 'public'), {
     prefix: '/', // 直接从根路径访问
