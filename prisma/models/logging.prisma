@@ -21,7 +21,7 @@ model ApiLog {
   /// 状态码 - HTTP状态码（200、404、500等）
   statusCode Int
   /// 响应时间 - 请求处理耗时（毫秒）
-  duration   Int      // 响应时间（毫秒）
+  duration   Int
   /// 客户端IP - 发起请求的IP地址
   ip         String
   /// 用户代理 - 客户端信息（浏览器、设备等）
