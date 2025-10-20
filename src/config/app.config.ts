@@ -24,7 +24,4 @@ export const appConfig = registerAs('app', () => ({
     databaseRetentionDays:
       parseInt(process.env.LOG_DB_RETENTION_DAYS, 10) || 30, // 数据库日志保留天数
   },
-
-  // 请求超时配置
-  requestTimeout: parseInt(process.env.REQUEST_TIMEOUT, 10) || 30000, // 30秒
 }));
