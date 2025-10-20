@@ -1,13 +1,20 @@
 // 基于角色的访问控制 (RBAC) 模型
 
-// 角色表
+/// 角色表 - 定义系统中的各种角色（如管理员、普通用户等）
 model Role {
+  /// 角色ID - 主键，自增
   id          Int      @id @default(autoincrement())
+  /// 角色名称 - 唯一，用于显示（如"系统管理员"）
   name        String   @unique
+  /// 角色代码 - 唯一，用于程序识别（如"ADMIN"）
   code        String   @unique
+  /// 角色描述 - 详细说明角色的职责和权限范围
   description String?
+  /// 角色状态 - true表示启用，false表示禁用
   isActive    Boolean  @default(true)
+  /// 创建时间 - 角色创建时间
   createdAt   DateTime @default(now())
+  /// 更新时间 - 角色最后修改时间
   updatedAt   DateTime @updatedAt
 
   // 关联关系
@@ -17,16 +24,25 @@ model Role {
   @@map("roles")
 }
 
-// 权限表
+/// 权限表 - 定义系统中的所有操作权限
 model Permission {
+  /// 权限ID - 主键，自增
   id          Int      @id @default(autoincrement())
+  /// 权限名称 - 唯一，用于显示（如"创建用户"）
   name        String   @unique
+  /// 权限代码 - 唯一，用于程序识别（如"user:create"）
   code        String   @unique
+  /// 资源类型 - 权限所属的资源（如"user"、"role"）
   resource    String
+  /// 操作动作 - 对资源的操作类型（如"create"、"read"、"update"、"delete"）
   action      String
+  /// 权限描述 - 详细说明权限的作用范围
   description String?
+  /// 权限状态 - true表示启用，false表示禁用
   isActive    Boolean  @default(true)
+  /// 创建时间 - 权限创建时间
   createdAt   DateTime @default(now())
+  /// 更新时间 - 权限最后修改时间
   updatedAt   DateTime @updatedAt
 
   // 关联关系
@@ -35,12 +51,17 @@ model Permission {
   @@map("permissions")
 }
 
-// 角色权限关联表
+/// 角色权限关联表 - 实现角色与权限的多对多关系
 model RolePermission {
+  /// 关联ID - 主键，自增
   id           Int @id @default(autoincrement())
+  /// 角色ID - 关联到角色表
   roleId       Int
+  /// 权限ID - 关联到权限表
   permissionId Int
+  /// 分配时间 - 权限分配给角色的时间
   assignedAt   DateTime @default(now())
+  /// 分配人ID - 执行分配操作的管理员ID
   assignedBy   Int?
 
   // 关联关系

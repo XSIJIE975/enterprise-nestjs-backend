@@ -1,20 +1,34 @@
 // 用户认证相关模型
 
-// 用户表
+/// 用户表 - 存储系统用户的基本信息和认证数据
 model User {
+  /// 用户ID - 主键，自增
   id          Int      @id @default(autoincrement())
+  /// 邮箱地址 - 唯一，用于登录和通知
   email       String   @unique
+  /// 用户名 - 唯一，用于登录和显示
   username    String   @unique
+  /// 密码哈希值 - 使用bcrypt加密存储
   password    String
+  /// 名字 - 用户的名
   firstName   String?
+  /// 姓氏 - 用户的姓
   lastName    String?
+  /// 头像URL - 用户头像图片地址
   avatar      String?
+  /// 手机号码 - 唯一，用于联系和验证
   phone       String?  @unique
+  /// 账户状态 - true表示激活，false表示禁用
   isActive    Boolean  @default(true)
+  /// 邮箱验证状态 - true表示已验证
   isVerified  Boolean  @default(false)
+  /// 最后登录时间 - 记录用户最近一次登录的时间
   lastLoginAt DateTime?
+  /// 创建时间 - 记录创建时间
   createdAt   DateTime @default(now())
+  /// 更新时间 - 自动更新修改时间
   updatedAt   DateTime @updatedAt
+  /// 软删除时间 - 记录删除时间，非空表示已删除
   deletedAt   DateTime?
 
   // 关联关系
@@ -25,19 +39,31 @@ model User {
   @@map("users")
 }
 
-// 用户会话表
+/// 用户会话表 - 管理用户的登录会话和令牌信息
 model UserSession {
+  /// 会话ID - 主键，UUID格式
   id           String    @id @default(uuid())
+  /// 用户ID - 关联到用户表
   userId       Int
+  /// 访问令牌 - JWT访问令牌
   accessToken  String    @db.Text
+  /// 刷新令牌 - JWT刷新令牌，用于获取新的访问令牌
   refreshToken String    @db.Text
+  /// 设备信息 - 登录设备的详细信息（JSON格式）
   deviceInfo   String?   @db.Text
+  /// IP地址 - 登录时的IP地址
   ipAddress    String?
+  /// 用户代理 - 浏览器或客户端信息
   userAgent    String?   @db.Text
+  /// 会话状态 - true表示活跃，false表示已失效
   isActive     Boolean   @default(true)
+  /// 过期时间 - 令牌过期的时间点
   expiresAt    DateTime
+  /// 创建时间 - 会话创建时间
   createdAt    DateTime  @default(now())
+  /// 更新时间 - 会话最后更新时间
   updatedAt    DateTime  @updatedAt
+  /// 撤销时间 - 会话被撤销的时间，非空表示已撤销
   revokedAt    DateTime?
 
   // 关联关系
@@ -49,12 +75,17 @@ model UserSession {
   @@map("user_sessions")
 }
 
-// 用户角色关联表
+/// 用户角色关联表 - 实现用户与角色的多对多关系
 model UserRole {
+  /// 关联ID - 主键，自增
   id         Int      @id @default(autoincrement())
+  /// 用户ID - 关联到用户表
   userId     Int
+  /// 角色ID - 关联到角色表
   roleId     Int
+  /// 分配时间 - 角色分配给用户的时间
   assignedAt DateTime @default(now())
+  /// 分配人ID - 执行分配操作的管理员ID
   assignedBy Int?
 
   // 关联关系
