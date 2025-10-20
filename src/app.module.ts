@@ -1,5 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
@@ -34,8 +34,9 @@ import { LogsModule } from './modules/logs/logs.module';
 // 中间件
 import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 
-// 拦截器
-import { APP_INTERCEPTOR } from '@nestjs/core';
+// 拦截器和守卫
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
@@ -65,24 +66,30 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
       expandVariables: true,
     }),
 
-    // 限流模块
-    ThrottlerModule.forRoot([
-      {
-        name: 'short',
-        ttl: 1000, // 1秒
-        limit: 10, // 1秒内最多10次请求
+    // 限流模块 - 基于IP地址限流
+    ThrottlerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const throttleConfig = config.get('throttle');
+        return [
+          {
+            name: 'short',
+            ttl: throttleConfig?.short?.ttl || 1000,
+            limit: throttleConfig?.short?.limit || 20,
+          },
+          {
+            name: 'medium',
+            ttl: throttleConfig?.medium?.ttl || 60000,
+            limit: throttleConfig?.medium?.limit || 200,
+          },
+          {
+            name: 'long',
+            ttl: throttleConfig?.long?.ttl || 3600000,
+            limit: throttleConfig?.long?.limit || 2000,
+          },
+        ];
       },
-      {
-        name: 'medium',
-        ttl: 60000, // 1分钟
-        limit: 100, // 1分钟内最多100次请求
-      },
-      {
-        name: 'long',
-        ttl: 3600000, // 1小时
-        limit: 1000, // 1小时内最多1000次请求
-      },
-    ]),
+    }),
 
     // 定时任务模块
     ScheduleModule.forRoot(),
@@ -111,6 +118,16 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     // - 记录文件日志（始终启用）
     // - 根据 LOG_ENABLE_DATABASE 环境变量决定是否记录数据库日志
     AllExceptionsFilter,
+
+    // 全局守卫：限流保护（基于IP）
+    // - 防止API被滥用，每个IP独立限流
+    // - 三个级别：short(1秒20次)、medium(1分钟200次)、long(1小时2000次)
+    // - 自动识别反向代理后的真实IP（X-Real-IP / X-Forwarded-For）
+    // - 可通过 @SkipThrottle() 跳过特定路由
+    {
+      provide: APP_GUARD,
+      useClass: CustomThrottlerGuard,
+    },
 
     // 全局拦截器：统一响应格式和时区转换
     // - 自动将响应数据包装为统一格式
