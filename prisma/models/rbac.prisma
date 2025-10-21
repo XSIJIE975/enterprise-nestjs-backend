@@ -64,10 +64,12 @@ model RolePermission {
   /// 分配人ID - 执行分配操作的管理员ID
   assignedBy   Int?
 
-  // 关联关系
+  // 关联关系（仅 Prisma 层面，不创建数据库外键）
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
   permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
   @@map("role_permissions")
 }

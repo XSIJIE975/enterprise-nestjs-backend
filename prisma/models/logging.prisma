@@ -31,7 +31,7 @@ model ApiLog {
   /// 创建时间 - 日志记录时间
   createdAt  DateTime @default(now())
 
-  // 关联关系
+  // 关联关系（仅 Prisma 层面，不创建数据库外键）
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([requestId])
