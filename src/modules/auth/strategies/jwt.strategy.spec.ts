@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtStrategy } from './jwt.strategy';
@@ -9,6 +9,8 @@ import { Request } from 'express';
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;
+
+  const MOCK_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
@@ -22,7 +24,7 @@ describe('JwtStrategy', () => {
   };
 
   const mockPayload = {
-    sub: 1,
+    sub: MOCK_USER_ID,
     username: 'testuser',
     email: 'test@example.com',
     roles: ['USER', 'ADMIN'],
@@ -75,11 +77,13 @@ describe('JwtStrategy', () => {
       const result = await strategy.validate(mockRequest, mockPayload);
 
       expect(result).toBeDefined();
-      expect(result.userId).toBe(1);
+      expect(result.userId).toBe(MOCK_USER_ID);
       expect(result.username).toBe('testuser');
       expect(result.email).toBe('test@example.com');
       expect(result.roles).toEqual(['USER', 'ADMIN']);
-      expect(RequestContextService.setUserId).toHaveBeenCalledWith(1);
+      expect(RequestContextService.setUserId).toHaveBeenCalledWith(
+        MOCK_USER_ID,
+      );
       expect(RequestContextService.set).toHaveBeenCalledWith('user', result);
       expect(RequestContextService.set).toHaveBeenCalledWith(
         'accessToken',
@@ -149,7 +153,7 @@ describe('JwtStrategy', () => {
     it('应该正确处理空 roles 的 payload', async () => {
       mockAuthService.getTokenBlacklistReason.mockResolvedValue(null);
       const payloadWithEmptyRoles = {
-        sub: 1,
+        sub: '550e8400-e29b-41d4-a716-446655440000',
         username: 'testuser',
         email: 'test@example.com',
         roles: [],
@@ -170,11 +174,13 @@ describe('JwtStrategy', () => {
 
       await strategy.validate(mockRequest, mockPayload);
 
-      expect(RequestContextService.setUserId).toHaveBeenCalledWith(1);
+      expect(RequestContextService.setUserId).toHaveBeenCalledWith(
+        MOCK_USER_ID,
+      );
       expect(RequestContextService.set).toHaveBeenCalledWith(
         'user',
         expect.objectContaining({
-          userId: 1,
+          userId: MOCK_USER_ID,
           username: 'testuser',
         }),
       );

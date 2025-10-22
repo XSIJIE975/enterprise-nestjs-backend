@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { RbacCacheService } from './rbac-cache.service';
 import { ICacheService } from '../interfaces/cache.interface';
 import { LoggerService } from '@/shared/logger/logger.service';
@@ -68,21 +68,22 @@ describe('RBAC 缓存服务', () => {
   });
 
   describe('获取用户角色', () => {
+    const userId = '550e8400-e29b-41d4-a716-446655440000';
+
     it('应该能从缓存中获取用户角色', async () => {
-      const userId = 1;
       const roles = ['admin', 'user'];
       mockCacheService.get.mockResolvedValue(roles);
 
       const result = await service.getUserRoles(userId);
 
       expect(result).toEqual(roles);
-      expect(mockCacheService.get).toHaveBeenCalledWith('user:roles:1');
+      expect(mockCacheService.get).toHaveBeenCalledWith(`user:roles:${userId}`);
     });
 
     it('如果角色未缓存应该返回 null', async () => {
       mockCacheService.get.mockResolvedValue(null);
 
-      const result = await service.getUserRoles(1);
+      const result = await service.getUserRoles(userId);
 
       expect(result).toBeNull();
     });
@@ -90,35 +91,35 @@ describe('RBAC 缓存服务', () => {
 
   describe('设置用户角色', () => {
     it('应该使用默认 TTL 在缓存中设置用户角色', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       const roles = ['admin', 'user'];
       mockCacheService.set.mockResolvedValue('OK');
 
       await service.setUserRoles(userId, roles);
 
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'user:roles:1',
+        `user:roles:${userId}`,
         roles,
         3600,
       );
     });
 
     it('应该使用自定义 TTL 设置用户角色', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       const roles = ['admin'];
       mockCacheService.set.mockResolvedValue('OK');
 
       await service.setUserRoles(userId, roles, 7200);
 
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'user:roles:1',
+        `user:roles:${userId}`,
         roles,
         7200,
       );
     });
 
     it('应该更新每个角色的反向索引', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       const roles = ['admin', 'editor'];
       mockCacheService.set.mockResolvedValue('OK');
       mockCacheService.sadd.mockResolvedValue(1);
@@ -127,31 +128,34 @@ describe('RBAC 缓存服务', () => {
 
       expect(mockCacheService.sadd).toHaveBeenCalledWith(
         'role:users:admin',
-        '1',
+        userId,
       );
       expect(mockCacheService.sadd).toHaveBeenCalledWith(
         'role:users:editor',
-        '1',
+        userId,
       );
     });
   });
 
   describe('获取用户权限', () => {
+    const userId = '550e8400-e29b-41d4-a716-446655440000';
+
     it('应该能从缓存中获取用户权限', async () => {
-      const userId = 1;
       const permissions = ['user:read', 'user:write'];
       mockCacheService.get.mockResolvedValue(permissions);
 
       const result = await service.getUserPermissions(userId);
 
       expect(result).toEqual(permissions);
-      expect(mockCacheService.get).toHaveBeenCalledWith('user:permissions:1');
+      expect(mockCacheService.get).toHaveBeenCalledWith(
+        `user:permissions:${userId}`,
+      );
     });
 
     it('如果权限未缓存应该返回 null', async () => {
       mockCacheService.get.mockResolvedValue(null);
 
-      const result = await service.getUserPermissions(1);
+      const result = await service.getUserPermissions(userId);
 
       expect(result).toBeNull();
     });
@@ -159,35 +163,35 @@ describe('RBAC 缓存服务', () => {
 
   describe('设置用户权限', () => {
     it('应该使用默认 TTL 在缓存中设置用户权限', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       const permissions = ['user:read', 'user:write'];
       mockCacheService.set.mockResolvedValue('OK');
 
       await service.setUserPermissions(userId, permissions);
 
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'user:permissions:1',
+        `user:permissions:${userId}`,
         permissions,
         3600,
       );
     });
 
     it('应该使用自定义 TTL 设置用户权限', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       const permissions = ['user:read'];
       mockCacheService.set.mockResolvedValue('OK');
 
       await service.setUserPermissions(userId, permissions, 7200);
 
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'user:permissions:1',
+        `user:permissions:${userId}`,
         permissions,
         7200,
       );
     });
 
     it('应该更新每个权限的反向索引', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       const permissions = ['user:read', 'user:write'];
       mockCacheService.set.mockResolvedValue('OK');
       mockCacheService.sadd.mockResolvedValue(1);
@@ -196,30 +200,32 @@ describe('RBAC 缓存服务', () => {
 
       expect(mockCacheService.sadd).toHaveBeenCalledWith(
         'permission:users:user:read',
-        '1',
+        userId,
       );
       expect(mockCacheService.sadd).toHaveBeenCalledWith(
         'permission:users:user:write',
-        '1',
+        userId,
       );
     });
   });
 
   describe('删除用户缓存', () => {
     it('应该删除用户的角色和权限缓存', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       mockCacheService.del.mockResolvedValue(1);
       mockCacheService.get.mockResolvedValue(['admin']);
       mockCacheService.smembers.mockResolvedValue([]);
 
       await service.deleteUserCache(userId);
 
-      expect(mockCacheService.del).toHaveBeenCalledWith('user:roles:1');
-      expect(mockCacheService.del).toHaveBeenCalledWith('user:permissions:1');
+      expect(mockCacheService.del).toHaveBeenCalledWith(`user:roles:${userId}`);
+      expect(mockCacheService.del).toHaveBeenCalledWith(
+        `user:permissions:${userId}`,
+      );
     });
 
     it('应该从角色反向索引中移除用户', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       mockCacheService.del.mockResolvedValue(1);
       mockCacheService.get.mockResolvedValueOnce(['admin', 'editor']);
       mockCacheService.get.mockResolvedValueOnce([]);
@@ -229,16 +235,16 @@ describe('RBAC 缓存服务', () => {
 
       expect(mockCacheService.srem).toHaveBeenCalledWith(
         'role:users:admin',
-        '1',
+        userId,
       );
       expect(mockCacheService.srem).toHaveBeenCalledWith(
         'role:users:editor',
-        '1',
+        userId,
       );
     });
 
     it('应该从权限反向索引中移除用户', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       mockCacheService.del.mockResolvedValue(1);
       mockCacheService.get.mockResolvedValueOnce([]);
       mockCacheService.get.mockResolvedValueOnce(['user:read', 'user:write']);
@@ -248,11 +254,11 @@ describe('RBAC 缓存服务', () => {
 
       expect(mockCacheService.srem).toHaveBeenCalledWith(
         'permission:users:user:read',
-        '1',
+        userId,
       );
       expect(mockCacheService.srem).toHaveBeenCalledWith(
         'permission:users:user:write',
-        '1',
+        userId,
       );
     });
   });
@@ -366,13 +372,13 @@ describe('RBAC 缓存服务', () => {
 
   describe('边界情况', () => {
     it('应该能处理没有角色的用户', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       mockCacheService.set.mockResolvedValue('OK');
 
       await service.setUserRoles(userId, []);
 
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'user:roles:1',
+        `user:roles:${userId}`,
         [],
         3600,
       );
@@ -380,13 +386,13 @@ describe('RBAC 缓存服务', () => {
     });
 
     it('应该能处理没有权限的用户', async () => {
-      const userId = 1;
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       mockCacheService.set.mockResolvedValue('OK');
 
       await service.setUserPermissions(userId, []);
 
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'user:permissions:1',
+        `user:permissions:${userId}`,
         [],
         3600,
       );
@@ -394,9 +400,10 @@ describe('RBAC 缓存服务', () => {
     });
 
     it('应该能优雅地处理缓存服务错误', async () => {
+      const userId = '550e8400-e29b-41d4-a716-446655440000';
       mockCacheService.get.mockResolvedValue(null);
 
-      const result = await service.getUserRoles(1);
+      const result = await service.getUserRoles(userId);
 
       expect(result).toBeNull();
     });

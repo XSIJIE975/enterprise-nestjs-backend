@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -13,9 +13,13 @@ jest.mock('bcrypt');
 describe('UsersService', () => {
   let service: UsersService;
 
+  // Mock UUID 甯搁噺
+  const MOCK_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
+  const MOCK_USER_ID_2 = '660e8400-e29b-41d4-a716-446655440001';
+  const NON_EXISTENT_UUID = '999e8400-e29b-41d4-a716-446655440999';
   // Mock 数据
   const mockUser = {
-    id: 1,
+    id: MOCK_USER_ID,
     email: 'test@example.com',
     username: 'testuser',
     password: 'hashedPassword123',
@@ -219,7 +223,7 @@ describe('UsersService', () => {
     it('应该返回所有用户列表', async () => {
       const mockUsers = [
         mockUser,
-        { ...mockUser, id: 2, email: 'user2@example.com' },
+        { ...mockUser, id: MOCK_USER_ID_2, email: 'user2@example.com' },
       ];
       mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
 
@@ -255,14 +259,13 @@ describe('UsersService', () => {
     it('应该根据 ID 返回用户', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
-      const result = await service.findOne(1);
+      const result = await service.findOne(MOCK_USER_ID);
 
       expect(result).toBeDefined();
-      expect(result.id).toBe(1);
       expect(result.email).toBe(mockUser.email);
       expect(result).not.toHaveProperty('password');
       expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: MOCK_USER_ID },
         include: {
           userRoles: {
             include: {
@@ -276,8 +279,12 @@ describe('UsersService', () => {
     it('当用户不存在时应该抛出 NotFoundException', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
-      await expect(service.findOne(999)).rejects.toThrow('用户不存在');
+      await expect(service.findOne(NON_EXISTENT_UUID)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.findOne(NON_EXISTENT_UUID)).rejects.toThrow(
+        '用户不存在',
+      );
     });
 
     it('当用户已被软删除时应该抛出 NotFoundException', async () => {
@@ -286,7 +293,9 @@ describe('UsersService', () => {
         deletedAt: new Date(),
       });
 
-      await expect(service.findOne(1)).rejects.toThrow(NotFoundException);
+      await expect(service.findOne(MOCK_USER_ID)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -368,12 +377,12 @@ describe('UsersService', () => {
         ...updateUserDto,
       });
 
-      const result = await service.update(1, updateUserDto);
+      const result = await service.update(MOCK_USER_ID, updateUserDto);
 
       expect(result.firstName).toBe('Updated');
       expect(result.lastName).toBe('Name');
       expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: MOCK_USER_ID },
         data: updateUserDto,
         include: {
           userRoles: {
@@ -388,18 +397,18 @@ describe('UsersService', () => {
     it('当用户不存在时应该抛出 NotFoundException', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.update(999, updateUserDto)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update(NON_EXISTENT_UUID, updateUserDto),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('当更新邮箱且邮箱已被使用时应该抛出 ConflictException', async () => {
       mockPrismaService.user.findUnique
         .mockResolvedValueOnce(mockUser) // 查找目标用户
-        .mockResolvedValueOnce({ ...mockUser, id: 2 }); // 邮箱已被其他用户使用
+        .mockResolvedValueOnce({ ...mockUser, id: MOCK_USER_ID_2 }); // 邮箱已被其他用户使用
 
       await expect(
-        service.update(1, { email: 'taken@example.com' }),
+        service.update(MOCK_USER_ID, { email: 'taken@example.com' }),
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -409,11 +418,11 @@ describe('UsersService', () => {
       (bcrypt.hash as jest.Mock).mockResolvedValue('newHashedPassword');
       mockPrismaService.user.update.mockResolvedValue(mockUser);
 
-      await service.updatePassword(1, 'NewPassword123!');
+      await service.updatePassword(MOCK_USER_ID, 'NewPassword123!');
 
       expect(bcrypt.hash).toHaveBeenCalledWith('NewPassword123!', 10);
       expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: MOCK_USER_ID },
         data: { password: 'newHashedPassword' },
       });
     });
@@ -423,10 +432,10 @@ describe('UsersService', () => {
     it('应该成功更新最后登录时间', async () => {
       mockPrismaService.user.update.mockResolvedValue(mockUser);
 
-      await service.updateLastLoginAt(1);
+      await service.updateLastLoginAt(MOCK_USER_ID);
 
       expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: MOCK_USER_ID },
         data: { lastLoginAt: expect.any(Date) },
       });
     });
@@ -468,7 +477,11 @@ describe('UsersService', () => {
       mockPrismaService.user.update.mockResolvedValue(mockUser);
       mockAuthService.revokeAllUserSessions.mockResolvedValue(undefined);
 
-      await service.changePassword(1, 'OldPassword123!', 'NewPassword123!');
+      await service.changePassword(
+        MOCK_USER_ID,
+        'OldPassword123!',
+        'NewPassword123!',
+      );
 
       expect(bcrypt.compare).toHaveBeenCalledWith(
         'OldPassword123!',
@@ -476,14 +489,20 @@ describe('UsersService', () => {
       );
       expect(bcrypt.hash).toHaveBeenCalledWith('NewPassword123!', 10);
       expect(mockPrismaService.user.update).toHaveBeenCalled();
-      expect(mockAuthService.revokeAllUserSessions).toHaveBeenCalledWith(1);
+      expect(mockAuthService.revokeAllUserSessions).toHaveBeenCalledWith(
+        MOCK_USER_ID,
+      );
     });
 
     it('当用户不存在时应该抛出 NotFoundException', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.changePassword(999, 'OldPassword123!', 'NewPassword123!'),
+        service.changePassword(
+          NON_EXISTENT_UUID,
+          'OldPassword123!',
+          'NewPassword123!',
+        ),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -492,7 +511,11 @@ describe('UsersService', () => {
       mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
       await expect(
-        service.changePassword(1, 'WrongPassword', 'NewPassword123!'),
+        service.changePassword(
+          MOCK_USER_ID,
+          'WrongPassword',
+          'NewPassword123!',
+        ),
       ).rejects.toThrow('旧密码不正确');
     });
   });
@@ -501,23 +524,23 @@ describe('UsersService', () => {
     it('应该成功注销其他设备会话', async () => {
       const mockSession = {
         id: 'session-uuid-123',
-        userId: 1,
+        userId: MOCK_USER_ID,
         accessToken: 'token123',
       };
       mockPrismaService.userSession.findFirst.mockResolvedValue(mockSession);
       mockAuthService.logoutOtherSessions.mockResolvedValue(undefined);
 
-      await service.logoutOtherSessions(1, 'token123');
+      await service.logoutOtherSessions(MOCK_USER_ID, 'token123');
 
       expect(mockPrismaService.userSession.findFirst).toHaveBeenCalledWith({
         where: {
-          userId: 1,
+          userId: MOCK_USER_ID,
           accessToken: 'token123',
           isActive: true,
         },
       });
       expect(mockAuthService.logoutOtherSessions).toHaveBeenCalledWith(
-        1,
+        MOCK_USER_ID,
         'session-uuid-123',
       );
     });
@@ -526,7 +549,7 @@ describe('UsersService', () => {
       mockPrismaService.userSession.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.logoutOtherSessions(1, 'invalidToken'),
+        service.logoutOtherSessions(MOCK_USER_ID, 'invalidToken'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -539,10 +562,10 @@ describe('UsersService', () => {
         deletedAt: new Date(),
       });
 
-      await service.remove(1);
+      await service.remove(MOCK_USER_ID);
 
       expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: 1 },
+        where: { id: MOCK_USER_ID },
         data: { deletedAt: expect.any(Date) },
       });
     });
@@ -550,7 +573,9 @@ describe('UsersService', () => {
     it('当用户不存在时应该抛出 NotFoundException', async () => {
       mockPrismaService.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove(999)).rejects.toThrow(NotFoundException);
+      await expect(service.remove(NON_EXISTENT_UUID)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

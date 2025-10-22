@@ -1,4 +1,4 @@
-import { ExecutionContext } from '@nestjs/common';
+﻿import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PermissionsGuard } from './permissions.guard';
@@ -15,6 +15,9 @@ describe('PermissionsGuard', () => {
   let guard: PermissionsGuard;
   let reflector: Reflector;
 
+  // Mock UUID 常量
+  const MOCK_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
+
   const mockExecutionContext = {
     getHandler: jest.fn(),
     getClass: jest.fn(),
@@ -26,7 +29,7 @@ describe('PermissionsGuard', () => {
   const mockUserRolesWithPermissions = [
     {
       id: 1,
-      userId: 1,
+      userId: MOCK_USER_ID,
       roleId: 1,
       assignedAt: new Date(),
       assignedBy: 1,
@@ -161,7 +164,9 @@ describe('PermissionsGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue(permissionsOptions);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(
         mockUserRolesWithPermissions,
       );
@@ -170,7 +175,7 @@ describe('PermissionsGuard', () => {
 
       expect(result).toBe(true);
       expect(mockPrismaService.userRole.findMany).toHaveBeenCalledWith({
-        where: { userId: 1 },
+        where: { userId: MOCK_USER_ID },
         include: {
           role: {
             include: {
@@ -198,7 +203,9 @@ describe('PermissionsGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue(permissionsOptions);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(
         mockUserRolesWithPermissions,
       );
@@ -216,7 +223,9 @@ describe('PermissionsGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue(permissionsOptions);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(
         mockUserRolesWithPermissions,
       );
@@ -234,7 +243,9 @@ describe('PermissionsGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue(permissionsOptions);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(
         mockUserRolesWithPermissions,
       );
@@ -262,7 +273,9 @@ describe('PermissionsGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue(permissionsOptions);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(
         mockUserRolesWithInactive,
       );
@@ -298,7 +311,9 @@ describe('PermissionsGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue(permissionsOptions);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(
         mockUserRolesWithInactivePermission,
       );

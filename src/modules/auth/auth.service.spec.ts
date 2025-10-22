@@ -13,9 +13,13 @@ import { ErrorCode } from '@/common/enums/error-codes.enum';
 describe('AuthService', () => {
   let service: AuthService;
 
+  // Mock UUID 常量
+  const MOCK_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
+  const MOCK_USER_ID_2 = '660e8400-e29b-41d4-a716-446655440001';
+
   // Mock 数据
   const mockUser = {
-    id: 1,
+    id: MOCK_USER_ID,
     email: 'test@example.com',
     username: 'testuser',
     password: 'hashedPassword123',
@@ -33,7 +37,7 @@ describe('AuthService', () => {
   };
 
   const mockAuthUser = {
-    id: 1,
+    id: MOCK_USER_ID,
     email: 'test@example.com',
     username: 'testuser',
     firstName: 'Test',
@@ -49,10 +53,10 @@ describe('AuthService', () => {
     userRoles: [
       {
         id: 1,
-        userId: 1,
+        userId: MOCK_USER_ID,
         roleId: 1,
         assignedAt: new Date('2025-01-01'),
-        assignedBy: 1,
+        assignedBy: MOCK_USER_ID,
         role: {
           id: 1,
           code: 'USER',
@@ -67,7 +71,7 @@ describe('AuthService', () => {
               roleId: 1,
               permissionId: 1,
               assignedAt: new Date('2025-01-01'),
-              assignedBy: 1,
+              assignedBy: MOCK_USER_ID,
               permission: {
                 id: 1,
                 code: 'USER_READ',
@@ -85,7 +89,7 @@ describe('AuthService', () => {
               roleId: 1,
               permissionId: 2,
               assignedAt: new Date('2025-01-01'),
-              assignedBy: 1,
+              assignedBy: MOCK_USER_ID,
               permission: {
                 id: 2,
                 code: 'USER_WRITE',
@@ -106,7 +110,7 @@ describe('AuthService', () => {
 
   const mockSession = {
     id: 'session-uuid-123',
-    userId: 1,
+    userId: MOCK_USER_ID,
     accessToken: 'mock-access-token',
     refreshToken: 'mock-refresh-token',
     isActive: true,
@@ -120,6 +124,7 @@ describe('AuthService', () => {
     create: jest.fn(),
     updateLastLoginAt: jest.fn(),
     findOne: jest.fn(),
+    findOneInternal: jest.fn(),
     getUserRoles: jest.fn(),
     getUserPermissions: jest.fn(),
   };
@@ -284,7 +289,7 @@ describe('AuthService', () => {
 
     it('应该成功注册新用户', async () => {
       const createdUser = {
-        id: 2,
+        id: MOCK_USER_ID_2,
         ...registerDto,
         password: 'hashedPassword',
       };
@@ -325,13 +330,15 @@ describe('AuthService', () => {
       expect(result.user.username).toBe('testuser');
       expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
       expect(mockPrismaService.userSession.create).toHaveBeenCalled();
-      expect(mockUsersService.updateLastLoginAt).toHaveBeenCalledWith(1);
+      expect(mockUsersService.updateLastLoginAt).toHaveBeenCalledWith(
+        MOCK_USER_ID,
+      );
     });
 
     it('当达到最大会话数时应该踢出最早的会话', async () => {
       const oldSessions = Array.from({ length: 5 }, (_, i) => ({
         id: `session-${i}`,
-        userId: 1,
+        userId: MOCK_USER_ID,
         accessToken: `token-${i}`,
         refreshToken: `refresh-${i}`,
         isActive: true,
@@ -375,10 +382,7 @@ describe('AuthService', () => {
     it('应该成功刷新 Token', async () => {
       mockCacheService.get.mockResolvedValue(null); // 不在黑名单中
       mockJwtService.verify.mockReturnValue(mockPayload);
-      mockUsersService.findOne.mockResolvedValue({
-        ...mockAuthUser,
-        roles: ['USER'],
-      });
+      mockUsersService.findOneInternal.mockResolvedValue(mockAuthUser);
       mockUsersService.getUserRoles.mockResolvedValue([
         { code: 'USER', name: '普通用户' },
       ]);
@@ -415,10 +419,9 @@ describe('AuthService', () => {
     it('当用户账户被禁用时应该拒绝刷新', async () => {
       mockCacheService.get.mockResolvedValue(null);
       mockJwtService.verify.mockReturnValue(mockPayload);
-      mockUsersService.findOne.mockResolvedValue({
+      mockUsersService.findOneInternal.mockResolvedValue({
         ...mockAuthUser,
         isActive: false,
-        roles: ['USER'],
       });
 
       await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(
@@ -442,7 +445,7 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
-    const userId = 1;
+    const userId = MOCK_USER_ID;
     const accessToken = 'test-access-token';
 
     it('应该成功退出登录', async () => {
@@ -480,7 +483,7 @@ describe('AuthService', () => {
   });
 
   describe('logoutOtherSessions', () => {
-    const userId = 1;
+    const userId = MOCK_USER_ID;
     const currentSessionId = 'current-session-id';
 
     it('应该成功注销其他设备会话', async () => {
@@ -509,7 +512,7 @@ describe('AuthService', () => {
   });
 
   describe('revokeAllUserSessions', () => {
-    const userId = 1;
+    const userId = MOCK_USER_ID;
 
     it('应该成功撤销用户所有会话', async () => {
       const allSessions = [mockSession, { ...mockSession, id: 'session-2' }];

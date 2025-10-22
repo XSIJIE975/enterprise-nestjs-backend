@@ -1,4 +1,4 @@
-import { ExecutionContext } from '@nestjs/common';
+﻿import { ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RolesGuard } from './roles.guard';
@@ -11,6 +11,9 @@ describe('RolesGuard', () => {
   let guard: RolesGuard;
   let reflector: Reflector;
 
+  // Mock UUID 常量
+  const MOCK_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
+
   const mockExecutionContext = {
     getHandler: jest.fn(),
     getClass: jest.fn(),
@@ -22,10 +25,10 @@ describe('RolesGuard', () => {
   const mockUserRoles = [
     {
       id: 1,
-      userId: 1,
+      userId: MOCK_USER_ID,
       roleId: 1,
       assignedAt: new Date(),
-      assignedBy: 1,
+      assignedBy: MOCK_USER_ID,
       role: {
         code: 'USER',
         isActive: true,
@@ -33,10 +36,10 @@ describe('RolesGuard', () => {
     },
     {
       id: 2,
-      userId: 1,
+      userId: MOCK_USER_ID,
       roleId: 2,
       assignedAt: new Date(),
-      assignedBy: 1,
+      assignedBy: MOCK_USER_ID,
       role: {
         code: 'EDITOR',
         isActive: true,
@@ -124,14 +127,16 @@ describe('RolesGuard', () => {
 
     it('当用户拥有所需角色时应该允许访问', async () => {
       jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['USER']);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
 
       const result = await guard.canActivate(mockExecutionContext);
 
       expect(result).toBe(true);
       expect(mockPrismaService.userRole.findMany).toHaveBeenCalledWith({
-        where: { userId: 1 },
+        where: { userId: MOCK_USER_ID },
         include: {
           role: {
             select: {
@@ -147,7 +152,9 @@ describe('RolesGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue(['ADMIN', 'EDITOR']); // 用户有 EDITOR
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
 
       const result = await guard.canActivate(mockExecutionContext);
@@ -159,7 +166,9 @@ describe('RolesGuard', () => {
       jest
         .spyOn(reflector, 'getAllAndOverride')
         .mockReturnValue(['ADMIN', 'SUPER_ADMIN']);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(mockUserRoles);
 
       const result = await guard.canActivate(mockExecutionContext);
@@ -179,7 +188,9 @@ describe('RolesGuard', () => {
       ];
 
       jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['USER']);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue(
         mockUserRolesWithInactive,
       );
@@ -191,7 +202,9 @@ describe('RolesGuard', () => {
 
     it('应该正确处理用户没有任何角色的情况', async () => {
       jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['USER']);
-      jest.spyOn(RequestContextService, 'getUserId').mockReturnValue(1);
+      jest
+        .spyOn(RequestContextService, 'getUserId')
+        .mockReturnValue(MOCK_USER_ID);
       mockPrismaService.userRole.findMany.mockResolvedValue([]); // 用户没有角色
 
       const result = await guard.canActivate(mockExecutionContext);
