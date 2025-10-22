@@ -150,6 +150,26 @@ async function main() {
 
   console.log('✅ 已创建默认角色');
 
+  // 创建默认管理员用户（需要在分配权限前创建，以便使用其 ID）
+  console.log('👤 创建默认管理员用户...');
+  const hashedPassword = await bcrypt.hash('admin123456', 12);
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: 'admin@enterprise.local' },
+    update: {},
+    create: {
+      email: 'admin@enterprise.local',
+      username: 'admin',
+      password: hashedPassword,
+      firstName: '系统',
+      lastName: '管理员',
+      isActive: true,
+      isVerified: true,
+    },
+  });
+
+  console.log('✅ 已创建默认管理员用户');
+
   // 为管理员角色分配所有权限
   console.log('🔐 分配角色权限...');
   for (const permission of permissions) {
@@ -164,7 +184,7 @@ async function main() {
       create: {
         roleId: adminRole.id,
         permissionId: permission.id,
-        assignedBy: 1, // 系统自动分配
+        assignedBy: adminUser.id, // 使用管理员用户ID
       },
     });
   }
@@ -186,30 +206,12 @@ async function main() {
       create: {
         roleId: userRole.id,
         permissionId: permission.id,
-        assignedBy: 1, // 系统自动分配
+        assignedBy: adminUser.id, // 使用管理员用户ID
       },
     });
   }
 
   console.log('✅ 已分配角色权限');
-
-  // 创建默认管理员用户
-  console.log('👤 创建默认管理员用户...');
-  const hashedPassword = await bcrypt.hash('admin123456', 12);
-
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@enterprise.local' },
-    update: {},
-    create: {
-      email: 'admin@enterprise.local',
-      username: 'admin',
-      password: hashedPassword,
-      firstName: '系统',
-      lastName: '管理员',
-      isActive: true,
-      isVerified: true,
-    },
-  });
 
   // 为管理员用户分配管理员角色
   await prisma.userRole.upsert({
