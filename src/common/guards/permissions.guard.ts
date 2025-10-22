@@ -90,10 +90,10 @@ export class PermissionsGuard implements CanActivate {
 
   /**
    * 缓存优先获取用户权限
-   * @param userId 用户 ID
+   * @param userId 用户 ID（UUID格式）
    * @returns 权限代码数组
    */
-  private async getUserPermissionsWithCache(userId: number): Promise<string[]> {
+  private async getUserPermissionsWithCache(userId: string): Promise<string[]> {
     // 1. 尝试从缓存获取
     const cachedPermissions =
       await this.rbacCacheService.getUserPermissions(userId);
@@ -112,10 +112,10 @@ export class PermissionsGuard implements CanActivate {
 
   /**
    * 从数据库查询用户的所有权限代码
-   * @param userId 用户 ID
+   * @param userId 用户 ID（UUID格式）
    * @returns 权限代码数组
    */
-  private async getUserPermissionsFromDB(userId: number): Promise<string[]> {
+  private async getUserPermissionsFromDB(userId: string): Promise<string[]> {
     const userRoles = await this.prisma.userRole.findMany({
       where: {
         userId,

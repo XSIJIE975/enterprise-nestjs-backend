@@ -36,7 +36,7 @@ export class RbacCacheService {
   /**
    * 获取用户的角色缓存
    */
-  async getUserRoles(userId: number): Promise<string[] | null> {
+  async getUserRoles(userId: string): Promise<string[] | null> {
     const key = this.cacheService.generateKey(this.USER_ROLES_PREFIX, userId);
     return await this.cacheService.get<string[]>(key);
   }
@@ -45,7 +45,7 @@ export class RbacCacheService {
    * 设置用户的角色缓存
    */
   async setUserRoles(
-    userId: number,
+    userId: string,
     roles: string[],
     ttl: number = this.DEFAULT_TTL,
   ): Promise<void> {
@@ -70,7 +70,7 @@ export class RbacCacheService {
   /**
    * 获取用户的权限缓存
    */
-  async getUserPermissions(userId: number): Promise<string[] | null> {
+  async getUserPermissions(userId: string): Promise<string[] | null> {
     const key = this.cacheService.generateKey(
       this.USER_PERMISSIONS_PREFIX,
       userId,
@@ -82,7 +82,7 @@ export class RbacCacheService {
    * 设置用户的权限缓存
    */
   async setUserPermissions(
-    userId: number,
+    userId: string,
     permissions: string[],
     ttl: number = this.DEFAULT_TTL,
   ): Promise<void> {
@@ -98,7 +98,7 @@ export class RbacCacheService {
         this.PERMISSION_USERS_PREFIX,
         permission,
       );
-      await this.cacheService.sadd(permissionUsersKey, userId.toString());
+      await this.cacheService.sadd(permissionUsersKey, userId);
     }
 
     this.logger.debug(
@@ -110,7 +110,7 @@ export class RbacCacheService {
   /**
    * 删除用户的角色和权限缓存
    */
-  async deleteUserCache(userId: number): Promise<void> {
+  async deleteUserCache(userId: string): Promise<void> {
     // 先获取用户的角色和权限，以便清理反向索引
     const roles = await this.getUserRoles(userId);
     const permissions = await this.getUserPermissions(userId);
@@ -144,7 +144,7 @@ export class RbacCacheService {
           this.PERMISSION_USERS_PREFIX,
           permission,
         );
-        await this.cacheService.srem(permissionUsersKey, userId.toString());
+        await this.cacheService.srem(permissionUsersKey, userId);
       }
     }
 
@@ -181,9 +181,7 @@ export class RbacCacheService {
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      await Promise.all(
-        batch.map(userId => this.deleteUserCache(Number(userId))),
-      );
+      await Promise.all(batch.map(userId => this.deleteUserCache(userId)));
       clearedCount += batch.length;
       this.logger.debug(
         `已清除 ${clearedCount}/${userIds.length} 个用户缓存`,
@@ -231,9 +229,7 @@ export class RbacCacheService {
 
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      await Promise.all(
-        batch.map(userId => this.deleteUserCache(Number(userId))),
-      );
+      await Promise.all(batch.map(userId => this.deleteUserCache(userId)));
       clearedCount += batch.length;
       this.logger.debug(
         `已清除 ${clearedCount}/${userIds.length} 个用户缓存`,

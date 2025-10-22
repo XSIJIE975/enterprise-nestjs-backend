@@ -74,10 +74,10 @@ export class RolesGuard implements CanActivate {
 
   /**
    * 缓存优先获取用户角色
-   * @param userId 用户 ID
+   * @param userId 用户 ID（UUID格式）
    * @returns 角色代码数组
    */
-  private async getUserRolesWithCache(userId: number): Promise<string[]> {
+  private async getUserRolesWithCache(userId: string): Promise<string[]> {
     // 1. 尝试从缓存获取
     const cachedRoles = await this.rbacCacheService.getUserRoles(userId);
     if (cachedRoles) {
@@ -95,10 +95,10 @@ export class RolesGuard implements CanActivate {
 
   /**
    * 从数据库查询用户的所有角色代码
-   * @param userId 用户 ID
+   * @param userId 用户 ID（UUID格式）
    * @returns 角色代码数组
    */
-  private async getUserRolesFromDB(userId: number): Promise<string[]> {
+  private async getUserRolesFromDB(userId: string): Promise<string[]> {
     const userRoles = await this.prisma.userRole.findMany({
       where: {
         userId,

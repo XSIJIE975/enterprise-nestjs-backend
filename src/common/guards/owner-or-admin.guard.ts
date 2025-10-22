@@ -59,17 +59,17 @@ export class OwnerOrAdminGuard implements CanActivate {
    */
   private extractResourceUserId(
     request: any,
-    currentUserId: number,
-  ): number | null {
+    currentUserId: string,
+  ): string | null {
     // 尝试从路由参数中获取 userId 或 id
     const params = request.params;
 
     if (params.userId) {
-      return parseInt(params.userId, 10);
+      return params.userId;
     }
 
     if (params.id) {
-      return parseInt(params.id, 10);
+      return params.id;
     }
 
     // 如果是个人资料接口（如 /users/profile/me），直接返回当前用户 ID
