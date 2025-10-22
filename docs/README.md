@@ -43,6 +43,12 @@
   - 数据一致性保障机制
   - 从物理外键迁移指南
 
+- [**Prisma Migrate Deploy 使用指南**](./guides/prisma-migrate-deploy.md)
+  - 模拟在一个受限数据库用户环境下的迁移方案
+  - Baseline 设置和迁移部署流程
+  - 模拟 MySQL 5.6 等旧版本数据库的兼容性配置及注意事项
+  - 生产环境迁移最佳实践
+
 ### 🏗️ 架构文档 (architecture/)
 
 系统架构设计和核心原理
