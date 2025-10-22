@@ -29,10 +29,9 @@ export class AuthResponseDto {
   expiresIn: number;
 
   @ApiProperty({
-    description: '用户信息',
+    description: '用户信息（不包含敏感ID）',
   })
   user: {
-    id: number;
     email: string;
     username: string;
     firstName?: string;

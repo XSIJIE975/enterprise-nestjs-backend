@@ -40,11 +40,13 @@ export class QueryApiLogsDto {
   @IsNumber()
   statusCode?: number;
 
-  @ApiPropertyOptional({ description: '用户 ID', example: 1 })
+  @ApiPropertyOptional({
+    description: '用户 ID（UUID格式）',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  userId?: number;
+  @IsString()
+  userId?: string;
 
   @ApiPropertyOptional({ description: '开始日期', example: '2025-10-01' })
   @IsOptional()
@@ -73,16 +75,18 @@ export class QueryErrorLogsDto {
   @IsNumber()
   pageSize?: number = 20;
 
-  @ApiPropertyOptional({ description: '错误代码', example: 'INTERNAL_ERROR' })
+  @ApiPropertyOptional({ description: '错误代码', example: 'USER_NOT_FOUND' })
   @IsOptional()
   @IsString()
   errorCode?: string;
 
-  @ApiPropertyOptional({ description: '用户 ID', example: 1 })
+  @ApiPropertyOptional({
+    description: '用户 ID（UUID格式）',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  userId?: number;
+  @IsString()
+  userId?: string;
 
   @ApiPropertyOptional({ description: '开始日期', example: '2025-10-01' })
   @IsOptional()
@@ -125,11 +129,13 @@ export class QueryAuditLogsDto {
   @IsString()
   resource?: string;
 
-  @ApiPropertyOptional({ description: '用户 ID', example: 1 })
+  @ApiPropertyOptional({
+    description: '用户 ID（UUID格式）',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  userId?: number;
+  @IsString()
+  userId?: string;
 
   @ApiPropertyOptional({ description: '开始日期', example: '2025-10-01' })
   @IsOptional()
@@ -146,10 +152,10 @@ export class QueryAuditLogsDto {
  * 创建审计日志 DTO
  */
 export class CreateAuditLogDto {
-  @ApiPropertyOptional({ description: '用户 ID' })
+  @ApiPropertyOptional({ description: '用户 ID（UUID格式）' })
   @IsOptional()
-  @IsNumber()
-  userId?: number;
+  @IsString()
+  userId?: string;
 
   @ApiPropertyOptional({ description: '操作类型', example: 'UPDATE' })
   @IsString()
