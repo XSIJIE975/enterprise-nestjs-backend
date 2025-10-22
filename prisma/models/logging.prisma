@@ -6,8 +6,8 @@ model ApiLog {
   id         String   @id @default(uuid())
   /// 请求ID - 唯一，用于追踪单次请求的完整生命周期
   requestId  String   @unique
-  /// 用户ID - 发起请求的用户ID，未登录时为空
-  userId     Int?
+  /// 用户ID - 发起请求的用户ID，未登录时为空，UUID格式
+  userId     String?
   /// 请求方法 - HTTP方法（GET、POST、PUT、DELETE等）
   method     String
   /// 请求URL - 完整的请求路径
@@ -55,8 +55,8 @@ model ErrorLog {
   stack     String?  @db.Text
   /// 错误上下文 - 错误发生时的相关上下文信息（JSON格式）
   context   Json?
-  /// 用户ID - 触发错误的用户ID
-  userId    Int?
+  /// 用户ID - 触发错误的用户ID，UUID格式
+  userId    String?
   /// 客户端IP - 发起请求的IP地址
   ip        String?
   /// 用户代理 - 客户端信息
@@ -74,8 +74,8 @@ model ErrorLog {
 model AuditLog {
   /// 日志ID - 主键，UUID格式
   id         String   @id @default(uuid())
-  /// 用户ID - 执行操作的用户ID
-  userId     Int?
+  /// 用户ID - 执行操作的用户ID，UUID格式
+  userId     String?
   /// 操作动作 - 操作类型（create、update、delete等）
   action     String
   /// 资源类型 - 被操作的资源类型（user、role、permission等）

@@ -2,8 +2,8 @@
 
 /// 用户表 - 存储系统用户的基本信息和认证数据
 model User {
-  /// 用户ID - 主键，自增
-  id          Int      @id @default(autoincrement())
+  /// 用户ID - 主键，UUID格式
+  id          String   @id @default(uuid())
   /// 邮箱地址 - 唯一，用于登录和通知
   email       String   @unique
   /// 用户名 - 唯一，用于登录和显示
@@ -43,8 +43,8 @@ model User {
 model UserSession {
   /// 会话ID - 主键，UUID格式
   id           String    @id @default(uuid())
-  /// 用户ID - 关联到用户表
-  userId       Int
+  /// 用户ID - 关联到用户表，UUID格式
+  userId       String
   /// 访问令牌 - JWT访问令牌
   accessToken  String    @db.Text
   /// 刷新令牌 - JWT刷新令牌，用于获取新的访问令牌
@@ -79,14 +79,14 @@ model UserSession {
 model UserRole {
   /// 关联ID - 主键，自增
   id         Int      @id @default(autoincrement())
-  /// 用户ID - 关联到用户表
-  userId     Int
+  /// 用户ID - 关联到用户表，UUID格式
+  userId     String
   /// 角色ID - 关联到角色表
   roleId     Int
   /// 分配时间 - 角色分配给用户的时间
   assignedAt DateTime @default(now())
-  /// 分配人ID - 执行分配操作的管理员ID
-  assignedBy Int?
+  /// 分配人ID - 执行分配操作的管理员ID，UUID格式
+  assignedBy String?
 
   // 关联关系（仅 Prisma 层面，不创建数据库外键）
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

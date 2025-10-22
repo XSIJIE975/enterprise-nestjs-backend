@@ -61,8 +61,8 @@ model RolePermission {
   permissionId Int
   /// 分配时间 - 权限分配给角色的时间
   assignedAt   DateTime @default(now())
-  /// 分配人ID - 执行分配操作的管理员ID
-  assignedBy   Int?
+  /// 分配人ID - 执行分配操作的管理员ID，UUID格式
+  assignedBy   String?
 
   // 关联关系（仅 Prisma 层面，不创建数据库外键）
   role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
