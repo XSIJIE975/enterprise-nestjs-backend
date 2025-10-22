@@ -189,7 +189,6 @@ export class AuthController {
   @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '未授权' })
   async getCurrentUser(@Request() req: any) {
     return {
-      userId: req.user.userId,
       username: req.user.username,
       email: req.user.email,
       roles: req.user.roles,

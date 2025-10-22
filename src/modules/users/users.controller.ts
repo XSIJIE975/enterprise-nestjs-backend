@@ -136,9 +136,7 @@ export class UsersController {
     type: UserResponseDto,
   })
   @ApiResponse({ status: 404, description: '用户不存在' })
-  async findOne(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<UserResponseDto> {
+  async findOne(@Param('id') id: string): Promise<UserResponseDto> {
     return this.usersService.findOne(id);
   }
 
@@ -158,7 +156,7 @@ export class UsersController {
   @ApiResponse({ status: 404, description: '用户不存在' })
   @ApiResponse({ status: 409, description: '邮箱/用户名/手机号已被使用' })
   async update(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
   ): Promise<UserResponseDto> {
     return this.usersService.update(id, updateUserDto);
@@ -175,7 +173,7 @@ export class UsersController {
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiResponse({ status: 204, description: '成功删除用户' })
   @ApiResponse({ status: 404, description: '用户不存在' })
-  async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
+  async remove(@Param('id') id: string): Promise<void> {
     return this.usersService.remove(id);
   }
 
@@ -192,9 +190,9 @@ export class UsersController {
     description: '成功更新用户状态',
     type: UserResponseDto,
   })
-  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiResponse({ status: 409, description: '用户邮箱已验证' })
   async updateStatus(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() updateUserStatusDto: UpdateUserStatusDto,
   ): Promise<UserResponseDto> {
     return this.usersService.updateUserStatus(id, updateUserStatusDto.isActive);
@@ -215,9 +213,7 @@ export class UsersController {
   })
   @ApiResponse({ status: 404, description: '用户不存在' })
   @ApiResponse({ status: 409, description: '用户邮箱已验证' })
-  async verifyUser(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<UserResponseDto> {
+  async verifyUser(@Param('id') id: string): Promise<UserResponseDto> {
     return this.usersService.verifyUser(id);
   }
 
@@ -234,11 +230,10 @@ export class UsersController {
   @ApiResponse({ status: 200, description: '成功重置密码' })
   @ApiResponse({ status: 404, description: '用户不存在' })
   async resetPassword(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() resetPasswordDto: ResetPasswordDto,
-  ): Promise<{ message: string }> {
+  ): Promise<void> {
     await this.usersService.resetUserPassword(id, resetPasswordDto.newPassword);
-    return { message: '密码重置成功' };
   }
 
   /**
@@ -254,11 +249,11 @@ export class UsersController {
     description: '成功分配角色',
     type: UserResponseDto,
   })
-  @ApiResponse({ status: 404, description: '用户不存在或部分角色不存在' })
+  @ApiResponse({ status: 409, description: '用户未拥有该角色' })
   async assignRoles(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Body() assignRolesDto: AssignRolesDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<any> {
     return this.usersService.assignRoles(id, assignRolesDto.roleIds);
   }
 
@@ -273,9 +268,9 @@ export class UsersController {
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiParam({ name: 'roleId', description: '角色 ID' })
   @ApiResponse({ status: 204, description: '成功移除角色' })
-  @ApiResponse({ status: 404, description: '用户不存在或角色不存在' })
+  @ApiResponse({ status: 404, description: '角色不存在或用户未拥有该角色' })
   async removeRole(
-    @Param('id', ParseIntPipe) id: number,
+    @Param('id') id: string,
     @Param('roleId', ParseIntPipe) roleId: number,
   ): Promise<void> {
     return this.usersService.removeRole(id, roleId);
@@ -291,7 +286,7 @@ export class UsersController {
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiResponse({ status: 200, description: '成功获取角色列表' })
   @ApiResponse({ status: 404, description: '用户不存在' })
-  async getUserRoles(@Param('id', ParseIntPipe) id: number): Promise<any[]> {
+  async getUserRoles(@Param('id') id: string): Promise<any[]> {
     return this.usersService.getUserRoles(id);
   }
 
