@@ -72,7 +72,7 @@ export class LoggerService implements NestLoggerService {
     duration: number;
     ip: string;
     userAgent?: string;
-    userId?: number;
+    userId?: string;
   }) {
     this.logger.info('API Call', {
       type: 'api_call',
@@ -87,7 +87,7 @@ export class LoggerService implements NestLoggerService {
     requestId?: string;
     error: Error;
     context?: string;
-    userId?: number;
+    userId?: string;
   }) {
     const requestId = data.requestId || RequestContextService.getRequestId();
     const userId = data.userId || RequestContextService.getUserId();
@@ -107,7 +107,7 @@ export class LoggerService implements NestLoggerService {
    */
   logBusinessEvent(data: {
     event: string;
-    userId?: number;
+    userId?: string;
     data?: any;
     requestId?: string;
   }) {

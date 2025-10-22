@@ -124,11 +124,9 @@ export class UsersService {
   }
 
   /**
-   * 根据 ID 查找用户
-   * @param id 用户 ID
-   * @returns 用户信息
+   * 根据 ID 查询单个用户
    */
-  async findOne(id: number): Promise<UserResponseDto> {
+  async findOne(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -145,6 +143,29 @@ export class UsersService {
     }
 
     return this.toUserResponse(user);
+  }
+
+  /**
+   * 根据 ID 查询用户
+   * @internal
+   */
+  async findOneInternal(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    return user;
   }
 
   /**
@@ -219,7 +240,7 @@ export class UsersService {
    * @returns 更新后的用户信息
    */
   async update(
-    id: number,
+    id: string,
     updateUserDto: UpdateUserDto,
   ): Promise<UserResponseDto> {
     // 检查用户是否存在
@@ -285,7 +306,7 @@ export class UsersService {
    * @param id 用户 ID
    * @param newPassword 新密码（明文）
    */
-  async updatePassword(id: number, newPassword: string): Promise<void> {
+  async updatePassword(id: string, newPassword: string): Promise<void> {
     const hashedPassword = await bcrypt.hash(newPassword, this.bcryptRounds);
 
     await this.prisma.user.update({
@@ -298,7 +319,7 @@ export class UsersService {
    * 更新最后登录时间
    * @param id 用户 ID
    */
-  async updateLastLoginAt(id: number): Promise<void> {
+  async updateLastLoginAt(id: string): Promise<void> {
     await this.prisma.user.update({
       where: { id },
       data: { lastLoginAt: new Date() },
@@ -309,7 +330,7 @@ export class UsersService {
    * 删除用户（软删除）
    * @param id 用户 ID
    */
-  async remove(id: number): Promise<void> {
+  async remove(id: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -435,7 +456,7 @@ export class UsersService {
    * @returns 更新后的用户信息
    */
   async updateProfile(
-    userId: number,
+    userId: string,
     updateProfileDto: any,
   ): Promise<UserResponseDto> {
     // 检查用户是否存在
@@ -501,7 +522,7 @@ export class UsersService {
    * @param newPassword 新密码
    */
   async changePassword(
-    userId: number,
+    userId: string,
     oldPassword: string,
     newPassword: string,
   ): Promise<void> {
@@ -541,13 +562,13 @@ export class UsersService {
   }
 
   /**
-   * 更新用户状态（激活/禁用）
+   * 更新用户状态（激活/停用）
    * @param id 用户 ID
    * @param isActive 是否激活
    * @returns 更新后的用户信息
    */
   async updateUserStatus(
-    id: number,
+    id: string,
     isActive: boolean,
   ): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
@@ -578,7 +599,7 @@ export class UsersService {
    * @param id 用户 ID
    * @returns 更新后的用户信息
    */
-  async verifyUser(id: number): Promise<UserResponseDto> {
+  async verifyUser(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -611,7 +632,7 @@ export class UsersService {
    * @param id 用户 ID
    * @param newPassword 新密码
    */
-  async resetUserPassword(id: number, newPassword: string): Promise<void> {
+  async resetUserPassword(id: string, newPassword: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id },
     });
@@ -630,7 +651,7 @@ export class UsersService {
    * @returns 更新后的用户信息
    */
   async assignRoles(
-    userId: number,
+    userId: string,
     roleIds: number[],
   ): Promise<UserResponseDto> {
     // 检查用户是否存在
@@ -690,7 +711,7 @@ export class UsersService {
    * @param userId 用户 ID
    * @param roleId 角色 ID
    */
-  async removeRole(userId: number, roleId: number): Promise<void> {
+  async removeRole(userId: string, roleId: number): Promise<void> {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -742,7 +763,7 @@ export class UsersService {
    * @param userId 用户 ID
    * @returns 角色列表
    */
-  async getUserRoles(userId: number): Promise<any[]> {
+  async getUserRoles(userId: string): Promise<any[]> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -772,7 +793,7 @@ export class UsersService {
    * @param userId 用户 ID
    * @returns 权限代码数组
    */
-  async getUserPermissions(userId: number): Promise<string[]> {
+  async getUserPermissions(userId: string): Promise<string[]> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -811,13 +832,13 @@ export class UsersService {
   }
 
   /**
-   * 获取用户的会话列表
+   * 获取用户的登录会话列表
    * @param userId 用户 ID
    * @param currentAccessToken 当前请求的 access token（从 JWT 鉴权中获取）
    * @returns 会话列表
    */
   async getUserSessions(
-    userId: number,
+    userId: string,
     currentAccessToken?: string,
   ): Promise<any[]> {
     // 检查用户是否存在
@@ -862,7 +883,7 @@ export class UsersService {
    * @param currentAccessToken 当前访问令牌
    */
   async logoutOtherSessions(
-    userId: number,
+    userId: string,
     currentAccessToken: string,
   ): Promise<void> {
     // 检查用户是否存在
@@ -972,7 +993,7 @@ export class UsersService {
    * @param ids 用户 ID 数组
    * @returns 删除的用户数量
    */
-  async batchDelete(ids: number[]): Promise<number> {
+  async batchDelete(ids: string[]): Promise<number> {
     // 检查用户是否存在
     const users = await this.prisma.user.findMany({
       where: {
@@ -1000,7 +1021,7 @@ export class UsersService {
   }
 
   /**
-   * 将用户实体转换为响应 DTO（移除密码等敏感信息）
+   * 将用户实体转换为响应 DTO（移除密码、ID等敏感信息）
    * @param user 用户实体
    * @returns 用户响应 DTO
    */
@@ -1008,7 +1029,6 @@ export class UsersService {
     const roles = user.userRoles?.map((ur: any) => ur.role.code) || [];
 
     return {
-      id: user.id,
       email: user.email,
       username: user.username,
       firstName: user.firstName,

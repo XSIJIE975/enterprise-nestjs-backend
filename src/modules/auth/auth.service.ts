@@ -106,10 +106,7 @@ export class AuthService {
     // 创建用户
     const user = await this.usersService.create(registerDto);
 
-    this.logger.log(
-      `用户注册成功: ${user.username} (ID: ${user.id})`,
-      'AuthService',
-    );
+    this.logger.log(`用户注册成功: ${user.username}`, 'AuthService');
 
     return {
       username: user.username,
@@ -215,7 +212,7 @@ export class AuthService {
       }
 
       this.logger.warn(
-        `[${ErrorCode.MAX_SESSIONS_EXCEEDED}] 超出最大设备数限制(${maxConcurrentSessions})，已踢出 ${sessionsToRevoke.length} 个最早的会话: User ID ${user.id}`,
+        `[${ErrorCode.MAX_SESSIONS_EXCEEDED}] 超出最大设备数限制(${maxConcurrentSessions})，已踢出 ${sessionsToRevoke.length} 个最早的会话: ${user.username}`,
         'AuthService',
       );
     }
@@ -245,7 +242,7 @@ export class AuthService {
     await this.usersService.updateLastLoginAt(user.id);
 
     this.logger.log(
-      `用户登录成功: ${user.username} (ID: ${user.id}), 角色: ${roles.join(', ')}, 权限: ${permissions.length} 个`,
+      `用户登录成功: ${user.username}, 角色: ${roles.join(', ')}, 权限: ${permissions.length} 个`,
       'AuthService',
     );
 
@@ -258,7 +255,6 @@ export class AuthService {
       tokenType: 'Bearer',
       expiresIn,
       user: {
-        id: user.id,
         email: user.email,
         username: user.username,
         firstName: user.firstName,
@@ -294,7 +290,7 @@ export class AuthService {
       });
 
       // 检查用户是否存在
-      const user = await this.usersService.findOne(payload.sub);
+      const user = await this.usersService.findOneInternal(payload.sub);
 
       if (!user.isActive) {
         throw new UnauthorizedException({
@@ -389,7 +385,6 @@ export class AuthService {
         tokenType: 'Bearer',
         expiresIn,
         user: {
-          id: user.id,
           email: user.email,
           username: user.username,
           firstName: user.firstName,
@@ -411,7 +406,7 @@ export class AuthService {
    * @param userId 用户 ID
    * @param accessToken Access Token
    */
-  async logout(userId: number, accessToken: string): Promise<void> {
+  async logout(userId: string, accessToken: string): Promise<void> {
     // 查找当前会话
     const session = await this.prisma.userSession.findFirst({
       where: {
@@ -454,7 +449,7 @@ export class AuthService {
   }
 
   /**
-   * 注销其他会话（保留当前会话）
+   * 注销其他会话
    *
    * 用户主动注销除当前设备外的所有其他设备会话
    *
@@ -462,7 +457,7 @@ export class AuthService {
    * @param currentSessionId 当前会话 ID（UUID 格式，保留此会话）
    */
   async logoutOtherSessions(
-    userId: number,
+    userId: string,
     currentSessionId: string,
   ): Promise<void> {
     // 查找除当前会话外的所有活跃会话
@@ -512,9 +507,9 @@ export class AuthService {
   }
 
   /**
-   * 撤销用户的所有会话（安全相关操作）
+   * 撤销用户的所有会话（强制下线）
    *
-   * 此方法会强制撤销用户所有设备的登录会话，常用于以下场景：
+   * **仅用于以下安全场景：**
    * - 用户修改密码后，强制所有设备重新登录
    * - 账号安全事件（如账号被盗、异常登录）
    * - 管理员手动强制用户下线
@@ -524,7 +519,7 @@ export class AuthService {
    *
    * @param userId 用户 ID
    */
-  async revokeAllUserSessions(userId: number): Promise<void> {
+  async revokeAllUserSessions(userId: string): Promise<void> {
     const sessions = await this.prisma.userSession.findMany({
       where: {
         userId,
@@ -608,7 +603,7 @@ export class AuthService {
    * @param refreshToken Refresh Token
    */
   private async cacheTokenToRedis(
-    userId: number,
+    userId: string,
     accessToken: string,
     refreshToken: string,
   ): Promise<void> {
@@ -627,7 +622,7 @@ export class AuthService {
    * 从缓存服务中删除 Token 缓存
    * @param userId 用户 ID
    */
-  private async removeTokenFromRedis(userId: number): Promise<void> {
+  private async removeTokenFromRedis(userId: string): Promise<void> {
     const key = `user:session:${userId}`;
     await this.cacheService.del(key);
   }

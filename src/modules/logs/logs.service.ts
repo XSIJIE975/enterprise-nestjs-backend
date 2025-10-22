@@ -21,7 +21,7 @@ export class LogsService {
    */
   async createApiLog(data: {
     requestId: string;
-    userId?: number | null;
+    userId?: string | null;
     method: string;
     url: string;
     params?: any;
@@ -151,7 +151,7 @@ export class LogsService {
    */
   async createErrorLog(data: {
     requestId?: string | null;
-    userId?: number | null;
+    userId?: string | null;
     errorCode: string;
     message: string;
     stack?: string | null;
