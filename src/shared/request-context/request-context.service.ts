@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from 'async_hooks';
 
 export interface RequestContext {
   requestId: string;
-  userId?: number;
+  userId?: string;
   ip?: string;
   userAgent?: string;
   startTime?: number;
@@ -45,7 +45,7 @@ export class RequestContextService {
   /**
    * 获取当前用户ID
    */
-  static getUserId(): number | undefined {
+  static getUserId(): string | undefined {
     return this.getContext()?.userId;
   }
 
@@ -59,7 +59,7 @@ export class RequestContextService {
   /**
    * 设置用户ID到当前上下文
    */
-  static setUserId(userId: number): void {
+  static setUserId(userId: string): void {
     const context = this.getContext();
     if (context) {
       context.userId = userId;

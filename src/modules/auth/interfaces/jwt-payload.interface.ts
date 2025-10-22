@@ -3,9 +3,9 @@
  */
 export interface JwtPayload {
   /**
-   * 用户 ID（JWT 标准字段 sub）
+   * 用户 ID（JWT 标准字段 sub）- UUID 格式
    */
-  sub: number;
+  sub: string;
 
   /**
    * 用户名
@@ -52,7 +52,7 @@ export interface JwtPayload {
  * JWT 验证后的用户信息
  */
 export interface JwtUser {
-  userId: number;
+  userId: string;
   username: string;
   email: string;
   roles: string[];
