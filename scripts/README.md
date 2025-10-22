@@ -2,7 +2,67 @@
 
 本目录包含用于项目管理和部署的各种脚本文件。
 
-## 📜 脚本列表
+## 📁 目录结构
+
+```text
+scripts/
+├── tools/                          # 开发工具脚本（TypeScript/JavaScript）
+│   └── calculate-migration-checksum.ts  # Prisma 迁移 checksum 计算工具
+├── start.ps1                       # Windows 开发环境启动脚本
+├── start.sh                        # Linux/macOS 开发环境启动脚本
+├── deploy-test.ps1                 # Windows 测试环境部署脚本
+├── deploy-test.sh                  # Linux/macOS 测试环境部署脚本
+├── deploy-prod.ps1                 # Windows 生产环境部署脚本
+├── deploy-prod.sh                  # Linux/macOS 生产环境部署脚本
+└── README.md                       # 本文档
+```
+
+## 📜 脚本分类
+
+### 🛠️ 开发工具脚本 (`tools/`)
+
+存放用于开发辅助的 TypeScript/JavaScript 脚本。
+
+#### 1. `calculate-migration-checksum.ts` - Prisma 迁移 Checksum 计算工具
+
+**用途**: 计算 Prisma 迁移文件的 SHA256 checksum，用于手动设置 baseline。
+
+**使用方法**:
+
+```bash
+# 使用 tsx 运行（推荐）
+pnpm tsx scripts/tools/calculate-migration-checksum.ts <migration_folder_name>
+
+# 或使用 ts-node
+npx ts-node scripts/tools/calculate-migration-checksum.ts <migration_folder_name>
+
+# 计算所有迁移
+pnpm tsx scripts/tools/calculate-migration-checksum.ts --all
+```
+
+**示例**:
+
+```bash
+# 计算单个迁移
+pnpm tsx scripts/tools/calculate-migration-checksum.ts 20251018030905_init_databases
+
+# 计算所有迁移并生成批量 SQL
+pnpm tsx scripts/tools/calculate-migration-checksum.ts --all
+```
+
+**功能特性**:
+
+- ✅ 使用 TypeScript 编写，类型安全
+- ✅ 支持单个或批量计算 checksum
+- ✅ 自动生成 SQL 插入语句
+- ✅ 彩色输出，易于阅读
+- ✅ 完善的错误处理
+
+**相关文档**: [Prisma Migrate Deploy 使用指南](../docs/guides/prisma-migrate-deploy.md)
+
+---
+
+### 🚀 启动和部署脚本
 
 ### PowerShell 脚本（推荐 Windows 用户使用）
 
