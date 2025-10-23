@@ -132,9 +132,7 @@ class MigrationChecksumCalculator {
       .readdirSync(this.migrationsDir)
       .filter(item => {
         const itemPath = path.join(this.migrationsDir, item);
-        return (
-          fs.statSync(itemPath).isDirectory() && item !== 'migration_lock.toml'
-        );
+        return fs.statSync(itemPath).isDirectory();
       })
       .sort(); // 按时间戳排序
   }
