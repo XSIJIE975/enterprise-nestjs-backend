@@ -32,6 +32,11 @@
     "db:migrate": "dotenv -e .env.development -- prisma migrate dev",
     "db:migrate:test": "dotenv -e .env.test -- prisma migrate dev",
     "db:migrate:deploy": "dotenv -e .env.production -- prisma migrate deploy",
+    "db:migrate:deploy:dev": "dotenv -e .env.development -- prisma migrate deploy",
+    "db:migrate:deploy:test": "dotenv -e .env.test -- prisma migrate deploy",
+    "db:migrate:status": "dotenv -e .env.development -- prisma migrate status",
+    "db:migrate:status:test": "dotenv -e .env.test -- prisma migrate status",
+    "db:migrate:status:prod": "dotenv -e .env.production -- prisma migrate status",
     "db:migrate:reset": "dotenv -e .env.development -- prisma migrate reset",
     "db:migrate:reset:test": "dotenv -e .env.test -- prisma migrate reset",
     "db:studio": "dotenv -e .env.development -- prisma studio",
@@ -130,6 +135,7 @@
     "ts-loader": "^9.5.4",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2"
   },
   "jest": {
