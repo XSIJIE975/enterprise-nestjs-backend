@@ -7,6 +7,7 @@ import {
   QueryAuditLogsDto,
   QueryErrorLogsDto,
 } from './dto/query-logs.dto';
+import { JsonUtil } from '@/common/utils/json.util';
 
 /**
  * 日志服务
@@ -40,9 +41,10 @@ export class LogsService {
           userId: data.userId,
           method: data.method,
           url: this.truncateText(data.url, 65535),
-          params: data.params,
-          body: data.body,
-          response: data.response,
+          // JSON 字段序列化为字符串（兼容 MySQL 5.6）
+          params: JsonUtil.serialize(data.params),
+          body: JsonUtil.serialize(data.body),
+          response: JsonUtil.serialize(data.response),
           statusCode: data.statusCode,
           duration: data.duration,
           ip: data.ip,
@@ -119,8 +121,16 @@ export class LogsService {
       this.prisma.apiLog.count({ where }),
     ]);
 
+    // 反序列化 JSON 字段
+    const deserializedData = data.map(log => ({
+      ...log,
+      params: JsonUtil.deserialize(log.params),
+      body: JsonUtil.deserialize(log.body),
+      response: JsonUtil.deserialize(log.response),
+    }));
+
     return {
-      data,
+      data: deserializedData,
       total,
       page,
       pageSize,
@@ -132,7 +142,7 @@ export class LogsService {
    * 根据 requestId 查询 API 日志
    */
   async findApiLogByRequestId(requestId: string) {
-    return this.prisma.apiLog.findFirst({
+    const log = await this.prisma.apiLog.findFirst({
       where: { requestId },
       include: {
         user: {
@@ -144,6 +154,18 @@ export class LogsService {
         },
       },
     });
+
+    if (!log) {
+      return null;
+    }
+
+    // 反序列化 JSON 字段
+    return {
+      ...log,
+      params: JsonUtil.deserialize(log.params),
+      body: JsonUtil.deserialize(log.body),
+      response: JsonUtil.deserialize(log.response),
+    };
   }
 
   /**
@@ -166,7 +188,8 @@ export class LogsService {
           errorCode: data.errorCode,
           message: this.truncateText(data.message, 65535), // TEXT 类型最大 65535 字节
           stack: this.truncateText(data.stack, 65535),
-          context: data.context,
+          // JSON 字段序列化为字符串（兼容 MySQL 5.6）
+          context: JsonUtil.serialize(data.context),
           userId: data.userId,
           ip: data.ip,
           userAgent: this.truncateText(data.userAgent, 65535),
@@ -246,8 +269,14 @@ export class LogsService {
       this.prisma.errorLog.count({ where }),
     ]);
 
+    // 反序列化 JSON 字段
+    const deserializedData = data.map(log => ({
+      ...log,
+      context: JsonUtil.deserialize(log.context),
+    }));
+
     return {
-      data,
+      data: deserializedData,
       total,
       page,
       pageSize,
@@ -266,8 +295,9 @@ export class LogsService {
           action: data.action,
           resource: data.resource,
           resourceId: data.resourceId,
-          oldData: data.oldData ? JSON.stringify(data.oldData) : null,
-          newData: data.newData ? JSON.stringify(data.newData) : null,
+          // JSON 字段序列化为字符串（兼容 MySQL 5.6）
+          oldData: JsonUtil.serialize(data.oldData),
+          newData: JsonUtil.serialize(data.newData),
           ip: data.ip,
           userAgent: data.userAgent,
         },
@@ -326,8 +356,15 @@ export class LogsService {
       this.prisma.auditLog.count({ where }),
     ]);
 
+    // 反序列化 JSON 字段
+    const deserializedData = data.map(log => ({
+      ...log,
+      oldData: JsonUtil.deserialize(log.oldData),
+      newData: JsonUtil.deserialize(log.newData),
+    }));
+
     return {
-      data,
+      data: deserializedData,
       total,
       page,
       pageSize,
