@@ -6,22 +6,6 @@ import { SkipThrottle } from '@nestjs/throttler';
 @Controller()
 @SkipThrottle()
 export class PublicApiController {
-  @Get()
-  @ApiOperation({ summary: 'API根路径' })
-  @ApiResponse({
-    status: 200,
-    description: 'API欢迎信息',
-  })
-  getWelcome() {
-    return {
-      message: '欢迎访问企业级NestJS API',
-      version: '1.0.0',
-      docs: '/api/docs',
-      health: '/api/v1/health',
-      timestamp: new Date().toISOString(),
-    };
-  }
-
   @Get('api')
   @ApiOperation({ summary: 'API信息' })
   @ApiResponse({
