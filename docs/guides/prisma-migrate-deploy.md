@@ -203,7 +203,7 @@ CREATE TABLE IF NOT EXISTS `_prisma_migrations` (
 SHOW TABLES; -- 应该看到 Prisma 的表和原有的其他表都在
 ```
 
-#### 步骤 3: 标记迁移为已完成
+#### 步骤 4: 标记迁移为已完成
 
 ```bash
 # 1. 计算 checksum
@@ -219,7 +219,7 @@ VALUES
   (UUID(), '你计算出的checksum', NOW(3), '[timestamp]_init', NULL, NOW(3), 1);
 ```
 
-#### 步骤 4: 验证设置
+#### 步骤 5: 验证设置
 
 ```bash
 # 在目标环境执行
