@@ -12,8 +12,6 @@
 
 ```
 public/
-├── README.md                    # 目录说明
-├── HOW-TO-ADD-FAVICON.md       # Favicon 添加指南
 ├── favicon.ico                  # 网站图标
 ├── robots.txt                   # 搜索引擎爬虫配置
 └── index.html                   # 欢迎页面
