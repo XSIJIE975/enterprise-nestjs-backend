@@ -39,7 +39,7 @@ async function bootstrap() {
   });
 
   // 全局前缀，排除根路径和API信息路径
-  app.setGlobalPrefix('api/v1', {
+  app.setGlobalPrefix(`${configService.get('app.apiPrefix')}`, {
     exclude: [
       '', // 根路径 /
       'api', // API信息路径 /api
@@ -75,9 +75,54 @@ async function bootstrap() {
   // 响应压缩
   app.use(compression());
 
-  // 请求大小限制
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  // ==================== 请求体大小限制 ====================
+  // 注意：这些限制只针对 JSON、表单等非文件上传的请求
+  // 文件上传使用 multer，大小限制在 upload.config.ts 中配置
+
+  /**
+   * JSON 请求体大小限制
+   * Content-Type: application/json
+   * 适用于: API 请求、前端 JSON 提交
+   */
+  app.use(
+    express.json({
+      limit: configService.get<string>('app.bodyLimit.json') || '10mb',
+    }),
+  );
+
+  /**
+   * URL 编码表单大小限制
+   * Content-Type: application/x-www-form-urlencoded
+   * 适用于: 传统 HTML 表单提交
+   */
+  app.use(
+    express.urlencoded({
+      extended: true,
+      limit: configService.get<string>('app.bodyLimit.urlencoded') || '10mb',
+    }),
+  );
+
+  /**
+   * 原始请求体大小限制
+   * Content-Type: application/octet-stream
+   * 适用于: 二进制数据传输（非文件上传）
+   */
+  app.use(
+    express.raw({
+      limit: configService.get<string>('app.bodyLimit.raw') || '10mb',
+    }),
+  );
+
+  /**
+   * 文本请求体大小限制
+   * Content-Type: text/plain
+   * 适用于: 纯文本数据传输
+   */
+  app.use(
+    express.text({
+      limit: configService.get<string>('app.bodyLimit.text') || '1mb',
+    }),
+  );
 
   // 全局管道
   app.useGlobalPipes(
@@ -100,8 +145,8 @@ async function bootstrap() {
   // Swagger文档配置
   if (configService.get('app.env') !== 'production') {
     const config = new DocumentBuilder()
-      .setTitle('Enterprise NestJS API')
-      .setDescription('企业级NestJS后端API文档')
+      .setTitle(`${configService.get('app.name')} API`)
+      .setDescription(`${configService.get('app.name')} 接口文档`)
       .setVersion('1.0')
       .addBearerAuth(
         {
