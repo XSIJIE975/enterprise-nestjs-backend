@@ -12,12 +12,12 @@ model ApiLog {
   method     String
   /// 请求URL - 完整的请求路径
   url        String   @db.Text
-  /// 查询参数 - URL查询参数（JSON格式）
-  params     Json?
-  /// 请求体 - POST/PUT请求的请求体（JSON格式）
-  body       Json?
-  /// 响应数据 - 接口返回的响应内容（JSON格式）
-  response   Json?
+  /// 查询参数 - URL查询参数
+  params     String?  @db.Text
+  /// 请求体 - POST/PUT请求的请求体
+  body       String?  @db.Text
+  /// 响应数据 - 接口返回的响应内容
+  response   String?  @db.Text
   /// 状态码 - HTTP状态码（200、404、500等）
   statusCode Int
   /// 响应时间 - 请求处理耗时（毫秒）
@@ -53,8 +53,8 @@ model ErrorLog {
   message   String   @db.Text
   /// 堆栈信息 - 完整的错误堆栈跟踪
   stack     String?  @db.Text
-  /// 错误上下文 - 错误发生时的相关上下文信息（JSON格式）
-  context   Json?
+  /// 错误上下文 - 错误发生时的相关上下文信息
+  context   String?  @db.Text
   /// 用户ID - 触发错误的用户ID，UUID格式
   userId    String?
   /// 客户端IP - 发起请求的IP地址
@@ -82,10 +82,10 @@ model AuditLog {
   resource   String
   /// 资源ID - 被操作的具体资源的ID
   resourceId String?
-  /// 操作前数据 - 修改或删除前的原始数据（JSON格式）
-  oldData    Json?
-  /// 操作后数据 - 创建或修改后的新数据（JSON格式）
-  newData    Json?
+  /// 操作前数据 - 修改或删除前的原始数据
+  oldData    String?  @db.Text
+  /// 操作后数据 - 创建或修改后的新数据
+  newData    String?  @db.Text
   /// 客户端IP - 发起操作的IP地址
   ip         String?
   /// 用户代理 - 客户端信息
