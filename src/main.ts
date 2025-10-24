@@ -171,6 +171,8 @@ async function bootstrap() {
       swaggerOptions: {
         persistAuthorization: true,
       },
+      jsonDocumentUrl: 'api/docs-json',
+      yamlDocumentUrl: 'api/docs-yaml',
     });
   }
 
@@ -181,6 +183,8 @@ async function bootstrap() {
 
   loggerService.log(`🚀 Application is running on: http://${host}:${port}`);
   loggerService.log(`📚 API Documentation: http://${host}:${port}/api/docs`);
+  loggerService.log(`📄 OpenAPI JSON: http://${host}:${port}/api/docs-json`);
+  loggerService.log(`📄 OpenAPI YAML: http://${host}:${port}/api/docs-yaml`);
 }
 
 bootstrap().catch(error => {
