@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
-import { ErrorCode } from '../enums/error-codes.enum';
+import { ErrorCode, ErrorMessages } from '../enums/error-codes.enum';
 import { BusinessException } from '../exceptions/business.exception';
 import { LogsService } from '../../modules/logs/logs.service';
 import { LoggerService } from '../../shared/logger/logger.service';
@@ -87,8 +87,19 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = errorResponse?.toString() || 'HTTP Exception';
       }
 
-      // 根据HTTP状态码映射到错误码
-      errorCode = this.mapHttpStatusToErrorCode(statusCode);
+      // 优先使用 errorResponse 中的 code，如果没有则根据HTTP状态码映射
+      if (
+        typeof errorResponse === 'object' &&
+        errorResponse &&
+        'code' in errorResponse
+      ) {
+        errorCode = (errorResponse as any).code;
+      } else {
+        errorCode = this.mapHttpStatusToErrorCode(statusCode);
+      }
+
+      // 根据错误码获取对应的消息，如果没有自定义消息则使用默认消息
+      message = ErrorMessages[errorCode] || message;
     } else {
       errorCode = ErrorCode.SYSTEM_ERROR;
       message = '系统内部错误';

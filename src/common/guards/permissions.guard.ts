@@ -1,9 +1,9 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import {
+  PermissionLogic,
   PERMISSIONS_KEY,
   PermissionsOptions,
-  PermissionLogic,
 } from '../decorators/permissions.decorator';
 import { RequestContextService } from '../../shared/request-context/request-context.service';
 import { PrismaService } from '../../shared/database/prisma.service';
@@ -48,6 +48,8 @@ export class PermissionsGuard implements CanActivate {
         context.getClass(),
       ]);
 
+    console.log('需要的权限', permissionsOptions);
+
     // 如果没有设置权限要求，则允许访问
     if (!permissionsOptions || permissionsOptions.permissions.length === 0) {
       return true;
@@ -63,6 +65,7 @@ export class PermissionsGuard implements CanActivate {
 
     // 缓存优先策略：先从缓存获取，缓存未命中则查询数据库
     const userPermissions = await this.getUserPermissionsWithCache(userId);
+    console.log('用户拥有的权限', userPermissions);
 
     // 根据逻辑类型验证权限
     let hasPermission = false;
@@ -139,7 +142,7 @@ export class PermissionsGuard implements CanActivate {
     });
 
     // 提取所有权限代码（去重，只包含激活的角色和权限）
-    const permissions = Array.from(
+    return Array.from(
       new Set(
         userRoles
           .filter(ur => ur.role.isActive) // 只包含激活的角色
@@ -148,7 +151,5 @@ export class PermissionsGuard implements CanActivate {
           .map(rp => rp.permission.code),
       ),
     );
-
-    return permissions;
   }
 }

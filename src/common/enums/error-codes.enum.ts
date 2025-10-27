@@ -53,6 +53,10 @@ export enum ErrorCode {
   ROLE_NOT_FOUND = 'P10002', // 角色不存在
   PERMISSION_DENIED = 'P10003', // 权限被拒绝
   RESOURCE_ACCESS_DENIED = 'P10004', // 资源访问被拒绝
+  PERMISSION_NOT_FOUND = 'P10005', // 权限不存在
+  PERMISSION_NAME_ALREADY_EXISTS = 'P10006', // 权限名称已存在
+  PERMISSION_CODE_ALREADY_EXISTS = 'P10007', // 权限代码已存在
+  PERMISSION_BATCH_DELETE_EMPTY = 'P10008', // 批量删除时没有找到可删除的权限
 
   // ===========================================
   // U系列 - User 用户错误 (U10000-U19999)
@@ -186,6 +190,10 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.ROLE_NOT_FOUND]: '角色不存在',
   [ErrorCode.PERMISSION_DENIED]: '权限被拒绝',
   [ErrorCode.RESOURCE_ACCESS_DENIED]: '资源访问被拒绝',
+  [ErrorCode.PERMISSION_NOT_FOUND]: '权限不存在',
+  [ErrorCode.PERMISSION_NAME_ALREADY_EXISTS]: '权限名称已被使用',
+  [ErrorCode.PERMISSION_CODE_ALREADY_EXISTS]: '权限代码已被使用',
+  [ErrorCode.PERMISSION_BATCH_DELETE_EMPTY]: '没有找到可删除的权限',
 
   // 用户错误
   [ErrorCode.USER_NOT_FOUND]: '用户不存在',
