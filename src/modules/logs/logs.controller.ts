@@ -17,7 +17,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
  * 日志控制器
  * 提供日志查询接口
  */
-@ApiTags('日志管理')
+@ApiTags('Logs')
 @Controller('logs')
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')

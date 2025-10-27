@@ -45,7 +45,7 @@ import { UserSessionDto } from './dto/user-session.dto';
  * 用户管理控制器
  * 提供用户 CRUD、角色管理、会话管理等功能
  */
-@ApiTags('用户管理')
+@ApiTags('Users')
 @ApiBearerAuth('JWT-auth')
 @Controller('users')
 export class UsersController {

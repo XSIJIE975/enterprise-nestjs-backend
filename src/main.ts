@@ -159,11 +159,12 @@ async function bootstrap() {
         },
         'JWT-auth',
       )
-      .addTag('Auth', '认证相关接口')
+      .addTag('Health', '健康检查')
+      .addTag('Auth', '认证管理')
       .addTag('Users', '用户管理')
       .addTag('Admin', '管理后台')
       .addTag('Public', '公开接口')
-      .addTag('Health', '健康检查')
+      .addTag('Logs', '日志管理')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);

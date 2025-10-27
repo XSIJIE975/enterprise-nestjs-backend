@@ -35,7 +35,7 @@ import { AuthUser } from './types/user.types';
  * - 刷新Token：1分钟内最多10次（正常使用）
  * - 其他接口：使用全局默认限流
  */
-@ApiTags('认证管理')
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
