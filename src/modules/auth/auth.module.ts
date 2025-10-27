@@ -7,9 +7,6 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
-import { DatabaseModule } from '../../shared/database/database.module';
-import { CacheModule } from '../../shared/cache/cache.module';
-import { LoggerModule } from '../../shared/logger/logger.module';
 
 /**
  * 认证模块
@@ -40,15 +37,6 @@ import { LoggerModule } from '../../shared/logger/logger.module';
 
     // 用户模块
     forwardRef(() => UsersModule),
-
-    // 数据库模块
-    DatabaseModule,
-
-    // 缓存模块
-    CacheModule,
-
-    // 日志模块
-    LoggerModule,
   ],
 
   controllers: [AuthController],
