@@ -122,6 +122,62 @@ async function main() {
         description: '系统配置管理权限',
       },
     }),
+    // 权限管理权限
+    prisma.permission.upsert({
+      where: { code: 'permission:read' },
+      update: {},
+      create: {
+        name: '查看权限',
+        code: 'permission:read',
+        resource: 'permission',
+        action: 'read',
+        description: '查看权限信息的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'permission:create' },
+      update: {},
+      create: {
+        name: '创建权限',
+        code: 'permission:create',
+        resource: 'permission',
+        action: 'create',
+        description: '创建新权限的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'permission:update' },
+      update: {},
+      create: {
+        name: '更新权限',
+        code: 'permission:update',
+        resource: 'permission',
+        action: 'update',
+        description: '更新权限信息的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'permission:delete' },
+      update: {},
+      create: {
+        name: '删除权限',
+        code: 'permission:delete',
+        resource: 'permission',
+        action: 'delete',
+        description: '删除权限的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'permission:manage' },
+      update: {},
+      create: {
+        name: '权限管理',
+        code: 'permission:manage',
+        resource: 'permission',
+        action: 'manage',
+        description: '权限管理的综合权限（包含状态管理等）',
+      },
+    }),
   ]);
 
   console.log(`✅ 已创建 ${permissions.length} 个权限`);
