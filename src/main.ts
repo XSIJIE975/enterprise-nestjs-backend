@@ -164,6 +164,7 @@ async function bootstrap() {
       .addTag('Users', '用户管理')
       .addTag('Admin', '管理后台')
       .addTag('Public', '公开接口')
+      .addTag('Permissions', '权限管理')
       .addTag('Logs', '日志管理')
       .build();
 
