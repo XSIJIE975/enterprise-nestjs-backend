@@ -57,6 +57,9 @@ export enum ErrorCode {
   PERMISSION_NAME_ALREADY_EXISTS = 'P10006', // 权限名称已存在
   PERMISSION_CODE_ALREADY_EXISTS = 'P10007', // 权限代码已存在
   PERMISSION_BATCH_DELETE_EMPTY = 'P10008', // 批量删除时没有找到可删除的权限
+  ROLE_NAME_ALREADY_EXISTS = 'P10009', // 角色名称已存在
+  ROLE_CODE_ALREADY_EXISTS = 'P10010', // 角色代码已存在
+  ROLE_IN_USE = 'P10011', // 角色正在被使用
 
   // ===========================================
   // U系列 - User 用户错误 (U10000-U19999)
@@ -194,6 +197,9 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.PERMISSION_NAME_ALREADY_EXISTS]: '权限名称已被使用',
   [ErrorCode.PERMISSION_CODE_ALREADY_EXISTS]: '权限代码已被使用',
   [ErrorCode.PERMISSION_BATCH_DELETE_EMPTY]: '没有找到可删除的权限',
+  [ErrorCode.ROLE_NAME_ALREADY_EXISTS]: '角色名称已被使用',
+  [ErrorCode.ROLE_CODE_ALREADY_EXISTS]: '角色代码已被使用',
+  [ErrorCode.ROLE_IN_USE]: '角色正在被用户使用，无法删除',
 
   // 用户错误
   [ErrorCode.USER_NOT_FOUND]: '用户不存在',
