@@ -204,6 +204,37 @@ async function main() {
     },
   });
 
+  // 创建测试角色
+  const contentManagerRole = await prisma.role.upsert({
+    where: { code: 'content_manager' },
+    update: {},
+    create: {
+      name: '内容管理员',
+      code: 'content_manager',
+      description: '负责内容管理和审核的角色',
+    },
+  });
+
+  const financeManagerRole = await prisma.role.upsert({
+    where: { code: 'finance_manager' },
+    update: {},
+    create: {
+      name: '财务管理员',
+      code: 'finance_manager',
+      description: '负责财务管理和报表的角色',
+    },
+  });
+
+  const auditorRole = await prisma.role.upsert({
+    where: { code: 'auditor' },
+    update: {},
+    create: {
+      name: '审计员',
+      code: 'auditor',
+      description: '负责系统审计和监控的角色',
+    },
+  });
+
   console.log('✅ 已创建默认角色');
 
   // 创建默认管理员用户（需要在分配权限前创建，以便使用其 ID）
@@ -263,6 +294,72 @@ async function main() {
         roleId: userRole.id,
         permissionId: permission.id,
         assignedBy: adminUser.id, // 使用管理员用户ID
+      },
+    });
+  }
+
+  // 为内容管理员角色分配权限
+  const contentPermissions = permissions.filter(
+    p => p.code.startsWith('user:') || p.code.startsWith('permission:read'),
+  );
+
+  for (const permission of contentPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: contentManagerRole.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: contentManagerRole.id,
+        permissionId: permission.id,
+        assignedBy: adminUser.id,
+      },
+    });
+  }
+
+  // 为财务管理员角色分配权限
+  const financePermissions = permissions.filter(
+    p => p.code.startsWith('user:') || p.code === 'system:config',
+  );
+
+  for (const permission of financePermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: financeManagerRole.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: financeManagerRole.id,
+        permissionId: permission.id,
+        assignedBy: adminUser.id,
+      },
+    });
+  }
+
+  // 为审计员角色分配只读权限
+  const auditPermissions = permissions.filter(
+    p => p.action === 'read' || p.code === 'system:admin',
+  );
+
+  for (const permission of auditPermissions) {
+    await prisma.rolePermission.upsert({
+      where: {
+        roleId_permissionId: {
+          roleId: auditorRole.id,
+          permissionId: permission.id,
+        },
+      },
+      update: {},
+      create: {
+        roleId: auditorRole.id,
+        permissionId: permission.id,
+        assignedBy: adminUser.id,
       },
     });
   }
