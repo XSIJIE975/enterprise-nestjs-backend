@@ -166,6 +166,7 @@ async function bootstrap() {
       .addTag('Public', '公开接口')
       .addTag('Permissions', '权限管理')
       .addTag('Logs', '日志管理')
+      .addTag('Roles', '角色管理')
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
