@@ -10,6 +10,7 @@ import {
 import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
 import { BusinessException } from '../../common/exceptions/business.exception';
 import { ErrorCode } from '../../common/enums/error-codes.enum';
+import { ErrorMessages } from '../../common/enums/error-codes.enum';
 
 /**
  * 权限服务
@@ -37,7 +38,7 @@ export class PermissionsService {
     if (existingPermissionByName) {
       throw new BusinessException(
         ErrorCode.PERMISSION_NAME_ALREADY_EXISTS,
-        '该权限名称已被使用',
+        ErrorMessages[ErrorCode.PERMISSION_NAME_ALREADY_EXISTS],
       );
     }
 
@@ -49,7 +50,7 @@ export class PermissionsService {
     if (existingPermissionByCode) {
       throw new BusinessException(
         ErrorCode.PERMISSION_CODE_ALREADY_EXISTS,
-        '该权限代码已被使用',
+        ErrorMessages[ErrorCode.PERMISSION_CODE_ALREADY_EXISTS],
       );
     }
 
@@ -93,7 +94,10 @@ export class PermissionsService {
     });
 
     if (!permission) {
-      throw new BusinessException(ErrorCode.PERMISSION_NOT_FOUND, '权限不存在');
+      throw new BusinessException(
+        ErrorCode.PERMISSION_NOT_FOUND,
+        ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+      );
     }
 
     return this.toPermissionResponse(permission);
@@ -126,7 +130,10 @@ export class PermissionsService {
     });
 
     if (!permission) {
-      throw new BusinessException(ErrorCode.PERMISSION_NOT_FOUND, '权限不存在');
+      throw new BusinessException(
+        ErrorCode.PERMISSION_NOT_FOUND,
+        ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+      );
     }
 
     // 如果更新权限名称，检查是否已被其他权限使用
@@ -141,7 +148,7 @@ export class PermissionsService {
       if (existingPermission) {
         throw new BusinessException(
           ErrorCode.PERMISSION_NAME_ALREADY_EXISTS,
-          '该权限名称已被使用',
+          ErrorMessages[ErrorCode.PERMISSION_NAME_ALREADY_EXISTS],
         );
       }
     }
@@ -158,7 +165,7 @@ export class PermissionsService {
       if (existingPermission) {
         throw new BusinessException(
           ErrorCode.PERMISSION_CODE_ALREADY_EXISTS,
-          '该权限代码已被使用',
+          ErrorMessages[ErrorCode.PERMISSION_CODE_ALREADY_EXISTS],
         );
       }
     }
@@ -185,7 +192,10 @@ export class PermissionsService {
     });
 
     if (!permission) {
-      throw new BusinessException(ErrorCode.PERMISSION_NOT_FOUND, '权限不存在');
+      throw new BusinessException(
+        ErrorCode.PERMISSION_NOT_FOUND,
+        ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+      );
     }
 
     // 删除权限（硬删除，因为权限是系统核心数据）
@@ -291,7 +301,10 @@ export class PermissionsService {
     });
 
     if (!permission) {
-      throw new BusinessException(ErrorCode.PERMISSION_NOT_FOUND, '权限不存在');
+      throw new BusinessException(
+        ErrorCode.PERMISSION_NOT_FOUND,
+        ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+      );
     }
 
     const updatedPermission = await this.prisma.permission.update({
@@ -363,7 +376,7 @@ export class PermissionsService {
     if (permissions.length === 0) {
       throw new BusinessException(
         ErrorCode.PERMISSION_BATCH_DELETE_EMPTY,
-        '没有找到可删除的权限',
+        ErrorMessages[ErrorCode.PERMISSION_BATCH_DELETE_EMPTY],
       );
     }
 

@@ -5,6 +5,8 @@ import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
 import { BusinessException } from '../../common/exceptions/business.exception';
+import { ErrorCode } from '../../common/enums/error-codes.enum';
+import { ErrorMessages } from '../../common/enums/error-codes.enum';
 
 describe('PermissionsService', () => {
   let service: PermissionsService;
@@ -119,10 +121,10 @@ describe('PermissionsService', () => {
       mockPrismaService.permission.findUnique.mockResolvedValue(mockPermission);
 
       await expect(service.create(createPermissionDto)).rejects.toThrow(
-        BusinessException,
-      );
-      await expect(service.create(createPermissionDto)).rejects.toThrow(
-        '该权限名称已被使用',
+        new BusinessException(
+          ErrorCode.PERMISSION_NAME_ALREADY_EXISTS,
+          ErrorMessages[ErrorCode.PERMISSION_NAME_ALREADY_EXISTS],
+        ),
       );
 
       // 重置 mock
@@ -135,17 +137,10 @@ describe('PermissionsService', () => {
         .mockResolvedValue(mockPermission); // code 已存在
 
       await expect(service.create(createPermissionDto)).rejects.toThrow(
-        BusinessException,
-      );
-
-      // 重置 mock 并重新设置
-      mockPrismaService.permission.findUnique.mockReset();
-      mockPrismaService.permission.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValue(mockPermission);
-
-      await expect(service.create(createPermissionDto)).rejects.toThrow(
-        '权限代码已被使用',
+        new BusinessException(
+          ErrorCode.PERMISSION_CODE_ALREADY_EXISTS,
+          ErrorMessages[ErrorCode.PERMISSION_CODE_ALREADY_EXISTS],
+        ),
       );
 
       mockPrismaService.permission.findUnique.mockReset();
@@ -195,8 +190,12 @@ describe('PermissionsService', () => {
     it('当权限不存在时应该抛出 BusinessException', async () => {
       mockPrismaService.permission.findUnique.mockResolvedValue(null);
 
-      await expect(service.findOne(999)).rejects.toThrow(BusinessException);
-      await expect(service.findOne(999)).rejects.toThrow('权限不存在');
+      await expect(service.findOne(999)).rejects.toThrow(
+        new BusinessException(
+          ErrorCode.PERMISSION_NOT_FOUND,
+          ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+        ),
+      );
     });
   });
 
@@ -264,10 +263,10 @@ describe('PermissionsService', () => {
         .mockResolvedValue(mockPermission2); // 新名称已存在
 
       await expect(service.update(1, { name: '已存在的名称' })).rejects.toThrow(
-        BusinessException,
-      );
-      await expect(service.update(1, { name: '已存在的名称' })).rejects.toThrow(
-        '该权限名称已被使用',
+        new BusinessException(
+          ErrorCode.PERMISSION_NAME_ALREADY_EXISTS,
+          ErrorMessages[ErrorCode.PERMISSION_NAME_ALREADY_EXISTS],
+        ),
       );
 
       mockPrismaService.permission.findUnique.mockReset();
@@ -279,10 +278,10 @@ describe('PermissionsService', () => {
         .mockResolvedValue(mockPermission2); // 新代码已存在
 
       await expect(service.update(1, { code: '已存在的代码' })).rejects.toThrow(
-        BusinessException,
-      );
-      await expect(service.update(1, { code: '已存在的代码' })).rejects.toThrow(
-        '该权限代码已被使用',
+        new BusinessException(
+          ErrorCode.PERMISSION_CODE_ALREADY_EXISTS,
+          ErrorMessages[ErrorCode.PERMISSION_CODE_ALREADY_EXISTS],
+        ),
       );
 
       mockPrismaService.permission.findUnique.mockReset();
@@ -308,8 +307,12 @@ describe('PermissionsService', () => {
     it('当权限不存在时应该抛出 BusinessException', async () => {
       mockPrismaService.permission.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove(999)).rejects.toThrow(BusinessException);
-      await expect(service.remove(999)).rejects.toThrow('权限不存在');
+      await expect(service.remove(999)).rejects.toThrow(
+        new BusinessException(
+          ErrorCode.PERMISSION_NOT_FOUND,
+          ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+        ),
+      );
     });
   });
 
@@ -475,10 +478,10 @@ describe('PermissionsService', () => {
       mockPrismaService.permission.findMany.mockResolvedValue([]);
 
       await expect(service.batchDelete([999])).rejects.toThrow(
-        BusinessException,
-      );
-      await expect(service.batchDelete([999])).rejects.toThrow(
-        '没有找到可删除的权限',
+        new BusinessException(
+          ErrorCode.PERMISSION_BATCH_DELETE_EMPTY,
+          ErrorMessages[ErrorCode.PERMISSION_BATCH_DELETE_EMPTY],
+        ),
       );
     });
   });
