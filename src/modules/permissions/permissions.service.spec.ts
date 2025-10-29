@@ -286,6 +286,52 @@ describe('PermissionsService', () => {
 
       mockPrismaService.permission.findUnique.mockReset();
     });
+
+    it('应该在更新权限代码与当前代码相同时不进行冲突检查', async () => {
+      // Reset mocks
+      mockPrismaService.permission.findUnique.mockClear();
+      mockPrismaService.permission.update.mockClear();
+      mockRbacCacheService.flushAllRbacCache.mockClear();
+
+      mockPrismaService.permission.findUnique.mockResolvedValue(mockPermission); // 原权限存在
+
+      mockPrismaService.permission.update.mockResolvedValue({
+        ...mockPermission,
+        code: mockPermission.code, // 代码没有变化
+        updatedAt: new Date(),
+      });
+
+      const result = await service.update(1, { code: mockPermission.code });
+
+      expect(result).toBeDefined();
+      expect(result.code).toBe(mockPermission.code);
+      expect(mockPrismaService.permission.findUnique).toHaveBeenCalledTimes(1); // 只检查原权限
+      expect(mockPrismaService.permission.update).toHaveBeenCalled();
+    });
+
+    it('应该在更新权限代码为不存在的代码时成功更新', async () => {
+      // Reset mocks
+      mockPrismaService.permission.findUnique.mockClear();
+      mockPrismaService.permission.update.mockClear();
+      mockRbacCacheService.flushAllRbacCache.mockClear();
+
+      mockPrismaService.permission.findUnique
+        .mockResolvedValueOnce(mockPermission) // 原权限存在
+        .mockResolvedValueOnce(null); // 新代码不存在
+
+      mockPrismaService.permission.update.mockResolvedValue({
+        ...mockPermission,
+        code: 'new_unique_code',
+        updatedAt: new Date(),
+      });
+
+      const result = await service.update(1, { code: 'new_unique_code' });
+
+      expect(result).toBeDefined();
+      expect(result.code).toBe('new_unique_code');
+      expect(mockPrismaService.permission.findUnique).toHaveBeenCalledTimes(2); // 检查原权限和新代码
+      expect(mockPrismaService.permission.update).toHaveBeenCalled();
+    });
   });
 
   describe('删除', () => {
