@@ -21,7 +21,6 @@ export class LoggerMiddleware implements NestMiddleware {
     // 将 requestId 添加到响应头中，方便客户端追踪
     res.setHeader('X-Request-Id', requestId);
 
-    // 将 requestId 添加到请求对象中（兼容旧代码）
     req['requestId'] = requestId;
 
     // 使用 AsyncLocalStorage 存储请求上下文
