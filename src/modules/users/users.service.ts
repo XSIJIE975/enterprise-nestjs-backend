@@ -30,7 +30,7 @@ export class UsersService {
   ) {
     this.bcryptRounds = this.configService.get<number>(
       'security.bcrypt.rounds',
-      10,
+      12,
     );
   }
 
