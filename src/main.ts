@@ -47,9 +47,10 @@ async function bootstrap() {
     ],
   });
 
-  // 安全中间件
+  // Helmet：添加常用安全头（CSP、HSTS、Referrer-Policy、Frameguard 等）
   app.use(
     helmet({
+      // 内容安全策略（保守默认，必要时可改为 nonce/hash 策略）
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
@@ -58,18 +59,72 @@ async function bootstrap() {
           imgSrc: ["'self'", 'data:', 'https:'],
         },
       },
+      // 保持原有设置
       crossOriginEmbedderPolicy: false,
+      // HSTS：仅在生产并且启用了 HTTPS 时生效（请确保在生产环境下启用）
+      hsts: {
+        maxAge: 63072000, // 2 years in seconds
+        includeSubDomains: true,
+        preload: true,
+      },
+      // 禁止被嵌入到其他站点（防止 clickjacking）。如需 iframe 嵌套改为 'sameorigin'
+      frameguard: {
+        action: 'deny',
+      },
+      // 严格的 Referrer-Policy
+      referrerPolicy: {
+        policy: 'strict-origin-when-cross-origin',
+      },
+      // 其余 Helmet 默认保护（X-Content-Type-Options, X-DNS-Prefetch-Control 等）将保持启用
     }),
   );
 
-  // CORS配置
+  // CORS 配置：解析 ALLOWED_ORIGINS 并做基本校验
+  const allowedOriginsRaw = configService.get<string>('app.allowedOrigins');
+  const allowedOrigins = allowedOriginsRaw
+    ? allowedOriginsRaw
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean)
+    : ['http://localhost:8000'];
+
+  // 校验：空值记录警告；若包含 '*'，非生产环境警告，生产环境拒绝启动（避免凭证泄露风险）
+  const env = configService.get('app.env');
+  if (!allowedOrigins || allowedOrigins.length === 0) {
+    loggerService.warn(
+      'ALLOWED_ORIGINS is empty — CORS will be restrictive. Please configure ALLOWED_ORIGINS in your environment variables.',
+    );
+  }
+
+  if (allowedOrigins.includes('*')) {
+    const msg =
+      'ALLOWED_ORIGINS contains "*" — allowing all origins with credentials is insecure.';
+    if (env === 'production') {
+      loggerService.error(
+        msg + ' Refusing to start in production with credentials allowed.',
+      );
+      console.error(msg);
+      process.exit(1);
+    } else {
+      loggerService.warn(
+        msg +
+          ' This is allowed in non-production environments for convenience.',
+      );
+    }
+  }
+
   app.enableCors({
-    origin: configService.get('app.allowedOrigins')?.split(',') || [
-      'http://localhost:8000',
-    ],
+    origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    // 允许前端常用自定义 header（含 CSRF header）
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'X-XSRF-TOKEN',
+      'X-CSRF-Token',
+    ],
   });
 
   // 响应压缩
