@@ -30,10 +30,27 @@ export const securityConfig = registerAs('security', () => {
       maxConcurrentSessions,
     },
 
-    // CSRF 配置
+    // CSRF 配置（启用 csurf 或 double-submit 策略的情况下）
     csrf: {
+      enabled: process.env.CSRF_ENABLED === 'true' || false,
       secret:
         process.env.CSRF_SECRET || 'default-csrf-secret-change-in-production',
+      // CSRF cookie / header 名称
+      cookieName: process.env.CSRF_COOKIE_NAME || 'XSRF-TOKEN',
+      headerName: process.env.CSRF_HEADER_NAME || 'X-XSRF-TOKEN',
+      // CSRF cookie 选项（生产请启用 secure）
+      cookieOptions: {
+        httpOnly: false, // 必须为 false 以允许前端读取（double-submit）
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.CSRF_COOKIE_SAMESITE || 'lax',
+        maxAge:
+          parseInt(process.env.CSRF_COOKIE_MAXAGE || '0', 10) || undefined,
+      },
+      // 白名单路径（用逗号分隔）
+      exemptPaths: (process.env.CSRF_EXEMPT_PATHS || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean),
     },
   };
 });
