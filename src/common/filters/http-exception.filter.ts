@@ -100,6 +100,23 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
       // 根据错误码获取对应的消息，如果没有自定义消息则使用默认消息
       message = ErrorMessages[errorCode] || message;
+      // 如果是参数验证类的错误（400），把详细验证信息加入 data 字段，便于前端展示
+      if (statusCode === HttpStatus.BAD_REQUEST) {
+        try {
+          const resp = errorResponse as any;
+          if (resp && typeof resp === 'object') {
+            if (Array.isArray(resp.message)) {
+              data = { validationErrors: resp.message };
+            } else if (resp['error'] || resp['message']) {
+              data = { validationErrors: resp.message || resp.error };
+            } else {
+              data = resp;
+            }
+          }
+        } catch {
+          // 忽略解析错误，不影响主流程
+        }
+      }
     } else {
       errorCode = ErrorCode.SYSTEM_ERROR;
       message = '系统内部错误';
