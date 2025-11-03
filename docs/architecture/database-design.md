@@ -1,5 +1,7 @@
 # 数据库设计规范
 
+> 📌 **维护者**: XSIJIE | **最后更新**: 2025-11-03
+
 > Prisma + MySQL 数据库设计最佳实践
 
 ## 表设计规范
@@ -521,6 +523,3 @@ await prisma.$transaction(async tx => {
 - [架构概览](./overview.md)
 
 ---
-
-**维护者**: XSIJIE
-**最后更新**: 2025-10-10
