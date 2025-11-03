@@ -1,5 +1,7 @@
 # 静态文件服务配置
 
+> 📌 **维护者**: XSIJIE | **最后更新**: 2025-11-03
+
 > 如何在 NestJS 中配置和使用静态文件服务
 
 ## 概述
@@ -280,5 +282,3 @@ mime.types['custom'] = 'application/x-custom';
 - [Nginx Static Files](https://nginx.org/en/docs/http/ngx_http_core_module.html#location)
 
 ---
-
-**更新日期**: 2025-10-18
