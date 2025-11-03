@@ -1,5 +1,7 @@
 # 限流策略文档
 
+> 📌 **维护者**: XSIJIE | **最后更新**: 2025-11-03
+
 > API 请求速率限制和保护机制
 
 ## 概述
@@ -440,6 +442,3 @@ protected async handleRequest(context: ExecutionContext): Promise<boolean> {
 - [错误码说明](../architecture/error-codes.md)
 
 ---
-
-**更新日期**: 2025-10-20  
-**维护者**: XSIJIE
