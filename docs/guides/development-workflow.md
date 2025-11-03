@@ -1,5 +1,7 @@
 # 开发工作流程
 
+> 📌 **维护者**: XSIJIE | **最后更新**: 2025-11-03
+
 > 日常开发的标准流程和最佳实践
 
 ## 日常开发流程
@@ -708,6 +710,3 @@ const dbUrl = this.configService.get('DATABASE_URL');
 - [认证授权模块](../modules/authentication.md)
 
 ---
-
-**维护者**: XSIJIE
-**最后更新**: 2025-10-10
