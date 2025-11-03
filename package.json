@@ -69,6 +69,7 @@
     "check:ci": "npm run type-check && npm run lint && npm run test:cov"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
     "@nestjs/common": "^11.1.6",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.6",
@@ -80,6 +81,7 @@
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/throttler": "^6.4.0",
     "@prisma/client": "^6.18.0",
+    "axios": "^1.13.1",
     "bcrypt": "^6.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
@@ -88,6 +90,7 @@
     "helmet": "^8.1.0",
     "ioredis": "^5.7.0",
     "lru-cache": "^11.2.2",
+    "luxon": "^3.7.2",
     "multer": "^2.0.2",
     "nest-winston": "^1.10.2",
     "passport": "^0.7.0",
@@ -111,6 +114,7 @@
     "@types/compression": "^1.8.1",
     "@types/express": "^5.0.3",
     "@types/jest": "^30.0.0",
+    "@types/luxon": "^3.7.1",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.3.1",
     "@types/passport-jwt": "^4.0.1",
