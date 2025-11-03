@@ -1,11 +1,24 @@
 /**
  * 时区转换工具类
- * 用于将 UTC 时间转换为指定时区的本地时间
+ *
+ * 功能包括：
+ * 1. 将 UTC 时间转换为指定时区的本地时间（用于响应输出）
+ * 2. 将本地时区的日期范围转换为 UTC 时间范围（用于数据库查询）
+ * 3. 验证时区的有效性
  */
+
+import { DateTime } from 'luxon';
+
+export interface DateRangeUTC {
+  startUtc: Date;
+  endUtc: Date;
+}
 
 /**
  * 将 UTC Date 对象转换为指定时区的 ISO 8601 字符串
- * @param date UTC Date 对象
+ * 用于响应输出，将存储的 UTC 时间转换为用户时区的显示格式
+ *
+ * @param date UTC Date 对象或 ISO 字符串
  * @param timezone IANA 时区标识符，如 'Asia/Shanghai', 'America/New_York'
  * @returns ISO 8601 格式的时间字符串，包含时区偏移量
  *
@@ -22,31 +35,24 @@ export function convertToTimezone(
   }
 
   try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    // 使用 Luxon 直接进行时区转换和格式化
+    // DateTime.fromISO() 可以接受 ISO 字符串，也可以用 fromJSDate() 处理 Date 对象
+    let dt: DateTime;
 
-    // 检查是否是有效的日期
-    if (isNaN(dateObj.getTime())) {
+    if (typeof date === 'string') {
+      dt = DateTime.fromISO(date, { zone: 'UTC' });
+    } else {
+      dt = DateTime.fromJSDate(date, { zone: 'UTC' });
+    }
+
+    // 检查是否是有效的日期时间
+    if (!dt.isValid) {
       return null;
     }
 
-    // 获取指定时区的本地时间字符串
-    const localString = dateObj.toLocaleString('sv-SE', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      fractionalSecondDigits: 3,
-      hour12: false,
-    });
-
-    // 获取时区偏移量
-    const offset = getTimezoneOffset(dateObj, timezone);
-
-    // 格式化为 ISO 8601 格式: 2025-10-06T16:44:25.558+08:00
-    return `${localString.replace(' ', 'T')}${offset}`;
+    // 转换到目标时区，toISO() 直接返回 ISO 8601 格式（包含时区偏移量）
+    // 例如: '2025-10-06T16:44:25.558+08:00'
+    return dt.setZone(timezone).toISO();
   } catch (error) {
     console.error('Time zone conversion error:', error);
     return date instanceof Date ? date.toISOString() : date.toString();
@@ -54,30 +60,89 @@ export function convertToTimezone(
 }
 
 /**
- * 获取指定时区相对于 UTC 的偏移量字符串
- * @param date Date 对象
- * @param timezone IANA 时区标识符
- * @returns 时区偏移量字符串，如 '+08:00', '-05:00'
+ * 将本地时区的日期范围转换为 UTC 时间范围
+ * 用于数据库查询，将用户输入的本地时区日期转换为 UTC 进行精确查询
+ *
+ * @param startDate - 开始日期 (YYYY-MM-DD 或 ISO8601 字符串)，以指定时区的本地时间理解
+ * @param endDate - 结束日期 (YYYY-MM-DD 或 ISO8601 字符串)，以指定时区的本地时间理解
+ * @param timezone - IANA 时区标识符 (如 'Asia/Shanghai')
+ * @returns 转换后的 UTC 时间范围对象 { startUtc, endUtc }
+ *
+ * @example
+ * // 北京时间 2025-11-01 整天的 UTC 时间范围
+ * const range = convertLocalDateRangeToUTC('2025-11-01', '2025-11-01', 'Asia/Shanghai');
+ * // 返回: {
+ * //   startUtc: 2025-10-31T16:00:00.000Z,
+ * //   endUtc: 2025-11-01T15:59:59.999Z
+ * // }
  */
-function getTimezoneOffset(date: Date, timezone: string): string {
-  // 获取 UTC 时间戳
-  const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
-  // 获取目标时区时间戳
-  const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+export function convertLocalDateRangeToUTC(
+  startDate: string | undefined,
+  endDate: string | undefined,
+  timezone: string,
+): DateRangeUTC | null {
+  if (!startDate && !endDate) {
+    return null;
+  }
 
-  // 计算偏移量（分钟）
-  const offsetMinutes = (tzDate.getTime() - utcDate.getTime()) / 60000;
+  try {
+    // 判断是否为仅日期格式 (YYYY-MM-DD)
+    const isDateOnly = (dateStr: string) => /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
 
-  // 格式化为 +HH:MM 或 -HH:MM
-  const sign = offsetMinutes >= 0 ? '+' : '-';
-  const hours = Math.floor(Math.abs(offsetMinutes) / 60);
-  const minutes = Math.abs(offsetMinutes) % 60;
+    // 使用 Luxon 进行日期解析和转换
+    let startUtc: Date | null = null;
+    let endUtc: Date | null = null;
 
-  return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    if (startDate) {
+      const dt = isDateOnly(startDate)
+        ? DateTime.fromISO(startDate, { zone: timezone })
+        : DateTime.fromISO(startDate, { zone: timezone });
+
+      if (!dt.isValid) {
+        throw new Error(`Invalid start date: ${startDate}`);
+      }
+
+      startUtc = dt.toUTC().toJSDate();
+    }
+
+    if (endDate) {
+      const dt = isDateOnly(endDate)
+        ? DateTime.fromISO(endDate, { zone: timezone }).endOf('day')
+        : DateTime.fromISO(endDate, { zone: timezone });
+
+      if (!dt.isValid) {
+        throw new Error(`Invalid end date: ${endDate}`);
+      }
+
+      endUtc = dt.toUTC().toJSDate();
+    }
+
+    // 如果只提供了开始日期，结束日期默认为开始日期的结束时刻
+    if (startUtc && !endUtc) {
+      const dt = DateTime.fromISO(startDate!, { zone: timezone }).endOf('day');
+      endUtc = dt.toUTC().toJSDate();
+    }
+
+    // 如果只提供了结束日期，开始日期默认为结束日期的开始时刻
+    if (!startUtc && endUtc) {
+      const dt = DateTime.fromISO(endDate!, { zone: timezone }).startOf('day');
+      startUtc = dt.toUTC().toJSDate();
+    }
+
+    return {
+      startUtc: startUtc!,
+      endUtc: endUtc!,
+    };
+  } catch (error) {
+    console.error('Failed to convert date range to UTC:', error);
+    return null;
+  }
 }
 
 /**
  * 递归转换对象中的所有 Date 字段到指定时区
+ * 用于响应输出，将查询结果中的所有日期转换为指定时区的格式
+ *
  * @param obj 要转换的对象
  * @param timezone 目标时区
  * @returns 转换后的对象
