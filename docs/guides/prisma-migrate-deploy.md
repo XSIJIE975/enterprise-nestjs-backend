@@ -1,5 +1,7 @@
 # Prisma Migrate Deploy 使用指南
 
+> 📌 **维护者**: XSIJIE | **最后更新**: 2025-11-03
+
 > 在受限数据库用户环境下使用 Prisma 迁移
 
 ## 场景说明
@@ -687,6 +689,3 @@ pnpm prisma studio
 - [生产环境迁移](https://www.prisma.io/docs/guides/migrate/production-troubleshooting)
 
 ---
-
-**维护者**: XSIJIE
-**更新时间**: 2025-10-22
