@@ -1,7 +1,7 @@
 import {
-  ExceptionFilter,
-  Catch,
   ArgumentsHost,
+  Catch,
+  ExceptionFilter,
   HttpException,
   HttpStatus,
   Injectable,
@@ -10,9 +10,11 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { ErrorCode, ErrorMessages } from '../enums/error-codes.enum';
 import { BusinessException } from '../exceptions/business.exception';
-import { LogsService } from '../../modules/logs/logs.service';
-import { LoggerService } from '../../shared/logger/logger.service';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
+import { ApiErrorResponse } from '@/common/dtos';
+import { LogsService } from '@/modules/logs/logs.service';
+import { LoggerService } from '@/shared/logger/logger.service';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
+import { isValidTimezone } from '../utils/timezone.util';
 
 /**
  * 全局异常过滤器
@@ -58,6 +60,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       (request as any)['user']?.id;
     const ip = request.ip || request.socket.remoteAddress || 'unknown';
     const userAgent = request.get('User-Agent') || '';
+
+    // 获取时区配置
+    const requestTimezone = request.headers['x-timezone'] as string;
+    let targetTimezone =
+      this.configService.get<string>('app.appTimezone') || 'Asia/Shanghai';
+    if (requestTimezone && isValidTimezone(requestTimezone)) {
+      targetTimezone = requestTimezone;
+    }
 
     let errorCode: ErrorCode;
     let message: string;
@@ -123,7 +133,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
     }
 
-    const errorResult = {
+    const errorResult: ApiErrorResponse = {
       code: errorCode,
       message,
       data,
@@ -131,6 +141,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
+      timezone: targetTimezone,
     };
 
     // 记录文件日志
