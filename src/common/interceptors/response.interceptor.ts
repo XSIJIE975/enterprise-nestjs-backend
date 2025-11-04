@@ -1,37 +1,29 @@
 import {
+  CallHandler,
+  ExecutionContext,
   Injectable,
   NestInterceptor,
-  ExecutionContext,
-  CallHandler,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { ApiSuccessResponse } from '@/common/dtos';
 import {
-  convertToTimezone,
   convertDatesInObject,
+  convertToTimezone,
   isValidTimezone,
 } from '../utils/timezone.util';
 
-export interface ApiResponse<T> {
-  code: string;
-  message: string;
-  data: T;
-  requestId: string;
-  timestamp: string;
-  timezone?: string; // 当前响应使用的时区
-}
-
 @Injectable()
 export class ResponseInterceptor<T>
-  implements NestInterceptor<T, ApiResponse<T>>
+  implements NestInterceptor<T, ApiSuccessResponse<T>>
 {
   constructor(private readonly configService: ConfigService) {}
 
   intercept(
     context: ExecutionContext,
     next: CallHandler,
-  ): Observable<ApiResponse<T>> {
+  ): Observable<ApiSuccessResponse<T>> {
     const request = context.switchToHttp().getRequest();
     const response = context.switchToHttp().getResponse();
 
@@ -44,10 +36,8 @@ export class ResponseInterceptor<T>
     // 获取时区配置
     // 优先级：请求头 > 环境变量
     const requestTimezone = request.headers['x-timezone'] as string;
-    const defaultTimezone =
+    let targetTimezone =
       this.configService.get<string>('app.appTimezone') || 'Asia/Shanghai';
-
-    let targetTimezone = defaultTimezone;
 
     // 如果客户端指定了时区且有效，则使用客户端指定的时区
     if (requestTimezone && isValidTimezone(requestTimezone)) {
