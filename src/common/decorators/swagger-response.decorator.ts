@@ -21,7 +21,7 @@ export interface ApiSuccessResponseOptions {
  * Swagger 成功响应装饰器
  * 用于为 ApiSuccessResponse<T> 泛型在 Swagger 中生成正确的 Schema
  *
- * @param model 响应数据类型
+ * @param model 响应数据类型（可选，如果不需要返回数据可不传）
  * @param options 配置选项，支持自定义状态码和描述
  *
  * @example
@@ -47,14 +47,59 @@ export interface ApiSuccessResponseOptions {
  * @ApiSuccessResponseDecorator(UserDto, { status: 201 })
  * @Post()
  * create() { ... }
+ *
+ * @example
+ * // 不需要返回数据，只返回统一的响应格式
+ * @ApiSuccessResponseDecorator()
+ * @Delete(':id')
+ * remove() { ... }
+ *
+ * @example
+ * // 不返回数据，但自定义描述
+ * @ApiSuccessResponseDecorator(undefined, { description: '删除成功' })
+ * @Delete(':id')
+ * remove() { ... }
+ *
+ * @example
+ * // 不返回数据，但自定义状态码
+ * @ApiSuccessResponseDecorator(undefined, { status: 204 })
+ * @Delete(':id')
+ * remove() { ... }
  */
 export const ApiSuccessResponseDecorator = <TModel extends Type<any>>(
-  model: TModel,
+  model?: TModel,
   options?: ApiSuccessResponseOptions,
 ) => {
   const status = options?.status ?? 200;
   const description = options?.description ?? '查询成功';
 
+  // 如果没有提供 model，返回统一的响应格式（不包含 data 字段的类型）
+  if (!model) {
+    const schema = {
+      allOf: [{ $ref: getSchemaPath(ApiSuccessResponse) }],
+    };
+
+    if (status === 200) {
+      return applyDecorators(
+        ApiExtraModels(ApiSuccessResponse),
+        ApiOkResponse({
+          schema,
+          description,
+        }),
+      );
+    }
+
+    return applyDecorators(
+      ApiExtraModels(ApiSuccessResponse),
+      ApiResponse({
+        status,
+        schema,
+        description,
+      }),
+    );
+  }
+
+  // 如果提供了 model，返回包含泛型数据的响应格式
   const schema = {
     allOf: [
       { $ref: getSchemaPath(ApiSuccessResponse) },
