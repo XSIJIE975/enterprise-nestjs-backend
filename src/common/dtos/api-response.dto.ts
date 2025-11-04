@@ -48,13 +48,13 @@ export class ApiSuccessResponse<T = any> {
 export class ApiErrorResponse {
   @ApiProperty({
     description: '错误码',
-    example: 'D10003',
+    example: 'S10000',
   })
   code: string;
 
   @ApiProperty({
     description: '错误消息',
-    example: '该项目模板名称已存在',
+    example: '系统内部错误',
   })
   message: string;
 
@@ -77,7 +77,7 @@ export class ApiErrorResponse {
 
   @ApiProperty({
     description: '请求路径',
-    example: '/api/v1/cs-project-templates',
+    example: '/api/v1/users',
   })
   path: string;
 
