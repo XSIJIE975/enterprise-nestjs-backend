@@ -221,6 +221,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return ErrorCode.FORBIDDEN;
       case HttpStatus.NOT_FOUND:
         return ErrorCode.DATABASE_NOT_FOUND;
+      case HttpStatus.CONFLICT:
+        return ErrorCode.DATABASE_DUPLICATE;
       case HttpStatus.TOO_MANY_REQUESTS:
         return ErrorCode.RATE_LIMIT_EXCEEDED;
       case HttpStatus.INTERNAL_SERVER_ERROR:
