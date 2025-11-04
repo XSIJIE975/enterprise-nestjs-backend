@@ -186,3 +186,59 @@ export const ApiErrorResponseDecorator = (
     }),
   );
 };
+
+/**
+ * Swagger 数组响应装饰器
+ * 用于返回数组类型的响应，在 data 字段中显示数组项的类型
+ *
+ * @param itemType 数组项的类型
+ * @param options 配置选项
+ *
+ * @example
+ * @ApiSuccessResponseArrayDecorator(CsDevStatsVo, { description: '统计成功' })
+ * @Post('stats')
+ * stats() { ... }
+ */
+export const ApiSuccessResponseArrayDecorator = <TModel extends Type<any>>(
+  itemType: TModel,
+  options?: ApiSuccessResponseOptions,
+) => {
+  const status = options?.status ?? 200;
+  const description = options?.description ?? '查询成功';
+
+  // 数组响应的 Schema 结构
+  const schema = {
+    allOf: [
+      { $ref: getSchemaPath(ApiSuccessResponse) },
+      {
+        properties: {
+          data: {
+            type: 'array',
+            items: {
+              $ref: getSchemaPath(itemType),
+            },
+          },
+        },
+      },
+    ],
+  };
+
+  if (status === 200) {
+    return applyDecorators(
+      ApiExtraModels(ApiSuccessResponse, itemType),
+      ApiOkResponse({
+        schema,
+        description,
+      }),
+    );
+  }
+
+  return applyDecorators(
+    ApiExtraModels(ApiSuccessResponse, itemType),
+    ApiResponse({
+      status,
+      schema,
+      description,
+    }),
+  );
+};
