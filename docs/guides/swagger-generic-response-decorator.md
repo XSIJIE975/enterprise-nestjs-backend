@@ -4,10 +4,11 @@
 
 ## 概述
 
-提供两个 Swagger 装饰器来解决 OpenAPI 泛型类型显示问题：
+提供三个 Swagger 装饰器来解决 OpenAPI 泛型类型显示问题：
 
-1. **`ApiSuccessResponseDecorator`** - 用于成功响应（200）
-2. **`ApiErrorResponseDecorator`** - 用于错误响应（4xx/5xx）
+1. **`ApiSuccessResponseDecorator`** - 用于成功响应（单个对象）
+2. **`ApiSuccessResponseArrayDecorator`** - 用于成功响应（数组对象）
+3. **`ApiErrorResponseDecorator`** - 用于错误响应（4xx/5xx）
 
 这些装饰器使用 `ApiExtraModels` 和 `getSchemaPath` 来在 Swagger Schema 中正确建立引用关系。
 
@@ -76,6 +77,24 @@ findAll(@Query() query: QueryUsersDto): Promise<PaginatedUsersDto> {
 }
 ```
 
+### 数组响应
+
+对于返回数组类型的端点，使用 `ApiSuccessResponseArrayDecorator`：
+
+```typescript
+/**
+ * 获取统计数据（返回数组）
+ */
+@ApiOperation({ summary: '按维度分组统计' })
+@ApiSuccessResponseArrayDecorator(StatisticsItemDto, { description: '统计成功' })
+@Post('stats')
+getStats(@Body() dto: QueryStatsDto): Promise<StatisticsItemDto[]> {
+  return this.statsService.groupByDimension(dto);
+}
+```
+
+此装饰器会在 Swagger 中正确显示 `data` 字段为数组类型，例如：`data: [StatisticsItemDto]`
+
 ### 创建资源
 
 对于 POST 端点（状态码为 201）：
@@ -99,19 +118,90 @@ create(@Body() createDto: CreateProjectDto): Promise<ProjectResponseDto> {
 
 ### ApiSuccessResponseDecorator
 
-用于处理成功的 API 响应（HTTP 200）
+用于处理成功的 API 响应，返回单个对象（HTTP 200 或自定义状态码）
 
 ```typescript
 export const ApiSuccessResponseDecorator = <TModel extends Type<any>>(
-  model: TModel,
-  description: string = '查询成功',
+  model?: TModel,
+  options?: {
+    status?: number; // HTTP 状态码，默认 200
+    description?: string; // 响应描述，默认 '查询成功'
+  },
 ) => MethodDecorator;
 ```
 
 **参数：**
 
-- `model`: 响应数据的类型（必需）。例如：`UserResponseDto`、`PaginatedUsersDto`
-- `description`: 响应的描述（可选）。默认为 `'查询成功'`
+- `model`: 响应数据的类型（可选）。例如：`UserResponseDto`、`PaginatedUsersDto`
+- `options.status`: HTTP 状态码（可选，默认 200）。例如：201 表示创建成功
+- `options.description`: 响应的描述（可选，默认 `'查询成功'`）
+
+**使用示例：**
+
+```typescript
+// 基本使用（200 状态码）
+@ApiSuccessResponseDecorator(UserResponseDto)
+
+
+// 自定义状态码和描述
+@ApiSuccessResponseDecorator(ProjectResponseDto, {
+  status: 201,
+  description: '项目创建成功'
+})
+
+
+// 无响应数据
+@ApiSuccessResponseDecorator(undefined, {
+  status: 204,
+  description: '删除成功'
+})
+```
+
+### ApiSuccessResponseArrayDecorator
+
+用于处理返回数组类型的成功 API 响应（HTTP 200 或自定义状态码）
+
+```typescript
+export const ApiSuccessResponseArrayDecorator = <TModel extends Type<any>>(
+  itemType: TModel,
+  options?: {
+    status?: number; // HTTP 状态码，默认 200
+    description?: string; // 响应描述，默认 '查询成功'
+  },
+) => MethodDecorator;
+```
+
+**参数：**
+
+- `itemType`: 数组中每一项的类型（必需）。例如：`UserResponseDto`、`StatisticsItemDto`
+- `options.status`: HTTP 状态码（可选，默认 200）
+- `options.description`: 响应的描述（可选，默认 `'查询成功'`）
+
+**使用示例：**
+
+```typescript
+// 基本使用
+@ApiSuccessResponseArrayDecorator(CsDevStatsVo)
+
+
+// 自定义描述
+@ApiSuccessResponseArrayDecorator(CsDevStatsVo, {
+  description: '统计成功'
+})
+```
+
+**生成的 Schema 示例：**
+
+```json
+{
+  "data": {
+    "type": "array",
+    "items": {
+      "$ref": "#/components/schemas/CsDevStatsVo"
+    }
+  }
+}
+```
 
 ### ApiErrorResponseDecorator
 
@@ -120,7 +210,7 @@ export const ApiSuccessResponseDecorator = <TModel extends Type<any>>(
 ```typescript
 export const ApiErrorResponseDecorator = (
   status: number,
-  description: string = '请求失败',
+  description?: string, // 错误描述
 ) => MethodDecorator;
 ```
 
@@ -227,21 +317,47 @@ update(@Param('id') id: string, @Body() dto: UpdateDto) { ... }
 
 ### Q: 是否支持数组响应？
 
-A: 对于数组响应，应该使用包含数组的 DTO，例如：
+A: **是的**，使用 `ApiSuccessResponseArrayDecorator` 可以正确处理数组响应：
 
 ```typescript
-class UsersListDto {
-  @ApiProperty({ type: [UserResponseDto] })
-  items: UserResponseDto[];
-
-  @ApiProperty()
-  total: number;
+@ApiOperation({ summary: '按维度分组统计' })
+@ApiSuccessResponseArrayDecorator(CsDevStatsVo, { description: '统计成功' })
+@Post('stats')
+async stats(@Body() body: StatsCsDevDto): Promise<CsDevStatsVo[]> {
+  return this.csdevService.stats(body);
 }
+```
 
-// 然后使用：
-@ApiSuccessResponseDecorator(UsersListDto)
-@Get()
-getList() { ... }
+装饰器会自动在 Swagger 中显示 `data` 字段为数组类型：
+
+```json
+{
+  "data": {
+    "type": "array",
+    "items": {
+      "$ref": "#/components/schemas/CsDevStatsVo"
+    }
+  }
+}
+```
+
+**对比方案：**
+
+❌ **错误做法** - 使用包含数组的 DTO（冗余）：
+
+```typescript
+class StatsResultDto {
+  @ApiProperty({ type: [CsDevStatsVo] })
+  items: CsDevStatsVo[];
+}
+// 响应被包装为：{ data: { items: [...] } } 多一层
+```
+
+✅ **正确做法** - 直接使用数组装饰器：
+
+```typescript
+@ApiSuccessResponseArrayDecorator(CsDevStatsVo)
+// 响应直接为：{ data: [...] } 结构清晰
 ```
 
 ## 扩展
@@ -257,6 +373,7 @@ export const ApiPaginatedResponse = <TModel extends Type<any>>(
 ) => {
   return ApiSuccessResponseDecorator(model, '查询成功');
 };
+
 
 // 使用：
 @ApiPaginatedResponse(UsersPageDto)
@@ -275,6 +392,7 @@ export const ApiCrudErrorResponses = () => {
     ApiErrorResponseDecorator(500, '服务器错误'),
   );
 };
+
 
 // 使用：
 @ApiCrudErrorResponses()
