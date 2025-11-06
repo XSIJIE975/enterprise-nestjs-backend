@@ -33,6 +33,7 @@ import { PermissionsModule } from './modules/permissions/permissions.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
 import { HealthModule } from './modules/health/health.module';
 import { LogsModule } from './modules/logs/logs.module';
+import { MockModule } from './modules/mock/mock.module';
 
 // 中间件
 import { LoggerMiddleware } from './common/middlewares/logger.middleware';
@@ -115,6 +116,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     PublicApiModule,
     HealthModule,
     LogsModule,
+    MockModule,
   ],
   providers: [
     // 全局异常过滤器
