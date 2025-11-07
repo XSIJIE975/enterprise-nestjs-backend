@@ -206,19 +206,34 @@ LOG_LEVEL=info
 
 ## 部署说明
 
-### Docker 部署
+本项目支持多种部署方式，选择最适合你的场景。
+
+### 🚀 快速部署
+
+#### PM2 部署 (推荐单机/小规模)
 
 ```bash
-docker build -t enterprise-nestjs .
+# 一键部署
+bash scripts/pm2-deploy-prod.sh    # Linux/macOS
+.\scripts\pm2-deploy-prod.ps1      # Windows
+
+# 或使用快捷命令
+pnpm pm2:start:prod                # 启动
+pnpm pm2:reload:prod               # 零停机更新
+```
+
+#### Docker 部署 (推荐微服务/容器化)
+
+```bash
+# Docker Compose 一键启动
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### 传统部署
+### 📚 完整部署文档
 
-```bash
-pnpm build
-pm2 start ecosystem.config.js
-```
+- **[PM2 部署指南](docs/guides/pm2-deployment.md)** - 完整的 PM2 部署流程、配置和故障排查
+- **[Docker 部署指南](docs/guides/docker-guide.md)** - Docker 容器化部署和编排
+- **更多部署方式** - 查看 [完整文档](docs/README.md#生产部署)
 
 ## 贡献指南
 
@@ -243,6 +258,6 @@ pm2 start ecosystem.config.js
 
 ---
 
-**最后更新**: 2025-10-20
+**最后更新**: 2025-11-07
 
 Made with ❤️ by XSIJIE

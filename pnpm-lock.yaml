@@ -59,6 +59,9 @@ importers:
       compression:
         specifier: ^1.8.1
         version: 1.8.1
+      express:
+        specifier: ^5.1.0
+        version: 5.1.0
       express-rate-limit:
         specifier: ^8.1.0
         version: 8.1.0(express@5.1.0)

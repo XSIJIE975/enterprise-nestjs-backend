@@ -101,6 +101,10 @@ dist
 /logs/
 *.log
 
+# PM2 日志
+logs/pm2/
+.pm2/
+
 # 数据库文件
 *.sqlite
 *.sqlite3
@@ -139,9 +143,6 @@ test-output/
 
 # Docker
 .dockerignore
-
-# PM2
-ecosystem.config.js
 
 # 备份文件
 *.bak
