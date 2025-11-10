@@ -29,8 +29,8 @@ model MockEndpoint {
   updatedAt   DateTime @updatedAt
   version     Int      @default(1)
 
-  @@unique([path, method], name: "unique_path_method")
-  @@index([path], name: "idx_path")
+  @@unique([path(length: 191), method], name: "unique_path_method")
+  @@index([path(length: 191)], name: "idx_path")
   @@index([enabled], name: "idx_enabled")
   @@index([createdAt], name: "idx_created_at")
 
@@ -81,7 +81,7 @@ model MockLog {
 
   @@index([endpointId], name: "idx_endpoint_id")
   @@index([createdAt], name: "idx_created_at")
-  @@index([path, method], name: "idx_path_method")
+  @@index([path(length: 191), method], name: "idx_path_method")
 
   @@map("mock_logs")
 }
