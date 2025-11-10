@@ -4,8 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { MockService } from '../services/mock.service';
 import { MockEngineService } from '../services/mock-engine.service';
-import { CacheService } from '@/shared/cache/cache.service';
-import { IMockContext } from '../interfaces/mock-context.interface';
+import { IMockContext } from '@/modules/mock/interfaces';
 
 @Injectable()
 export class MockProxyGuard implements CanActivate {
@@ -13,7 +12,6 @@ export class MockProxyGuard implements CanActivate {
     private readonly configService: ConfigService,
     private readonly mockService: MockService,
     private readonly mockEngine: MockEngineService,
-    private readonly cacheService: CacheService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
