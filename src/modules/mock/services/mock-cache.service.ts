@@ -91,6 +91,6 @@ export class MockCacheService {
       // ignore
     }
     await this.delPattern(`${this.PREFIX}:*`);
-    return { message: 'mock cache cleared' };
+    return { message: 'Mock 缓存已清除' };
   }
 }
