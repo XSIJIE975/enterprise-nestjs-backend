@@ -1,4 +1,4 @@
-import Mock from 'mockjs';
+import * as Mock from 'mockjs';
 import { createHash } from 'crypto';
 import { VM } from 'vm2';
 import { cloneDeep } from 'lodash-es';
@@ -80,6 +80,7 @@ export class MockJSEngine extends BaseEngine {
         // 2. 解析 JSON 模板
         parsed = JSON.parse(tpl);
       } catch (err) {
+        this.templateCache.delete(key);
         throw new Error(
           `MockJS 模板解析失败: ${err instanceof Error ? err.message : String(err)}`,
         );

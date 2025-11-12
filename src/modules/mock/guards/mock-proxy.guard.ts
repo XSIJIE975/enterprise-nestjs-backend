@@ -1,7 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { ConfigService } from '@nestjs/config';
-import { ErrorCode } from '@/common/enums/error-codes.enum';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 import { MockService } from '../services/mock.service';
 import { MockEngineService } from '../services/mock-engine.service';
 import { IMockContext } from '@/modules/mock/interfaces';
@@ -19,8 +19,16 @@ export class MockProxyGuard implements CanActivate {
     const res = context.switchToHttp().getResponse();
 
     const rawPath = req.path || req.url || '';
-    // 匹配，需要使用正则去掉整个应用的 API 前缀
     const apiPrefix = this.configService.get('app.apiPrefix');
+
+    // 只处理 /api/v1/mock/* 路径,排除 /api/v1/mock-endpoints/*
+    const mockPattern = new RegExp(`^/${apiPrefix}/mock(/|$)`);
+    if (!mockPattern.test(rawPath)) {
+      // 不是 Mock 代理路径,跳过处理
+      return true;
+    }
+
+    // 去掉 API 前缀和 /mock 前缀
     const path = rawPath.replace(new RegExp(`^/${apiPrefix}/mock`), '') || '/';
     const method = (req.method || 'GET').toUpperCase();
     const match = await this.mockService.findMatchingEndpoint(path, method);
@@ -30,16 +38,16 @@ export class MockProxyGuard implements CanActivate {
       throw new BusinessException(ErrorCode.MOCK_NOT_FOUND);
     }
 
-    const { endpoint, params } = match;
+    const { endpoint, params, cacheHit } = match;
 
     const startedAt = Date.now();
 
-    // optional delay
+    // 设置延迟
     if (endpoint.delay && endpoint.delay > 0) {
       await new Promise(resolve => setTimeout(resolve, endpoint.delay));
     }
 
-    // render template
+    // 渲染模板
     let data: unknown = null;
     try {
       const ctx: IMockContext = {
@@ -56,23 +64,19 @@ export class MockProxyGuard implements CanActivate {
         ctx,
       );
     } catch (err) {
-      // render failed -> return 500
-      res
-        .status(500)
-        .json({ message: 'Mock render error', error: String(err) });
-      return false;
+      throw new BusinessException(
+        ErrorCode.MOCK_RENDER_ERROR,
+        `${ErrorMessages[ErrorCode.MOCK_RENDER_ERROR]}: ${String(err)}`,
+      );
     }
 
-    // helper: normalize rendered result
     const normalizeRendered = (r: unknown): unknown => {
       if (r === undefined) return null;
       if (r === null) return null;
       if (typeof r === 'object') return r;
-      // primitive -> wrap into object to keep response predictable
       return { data: r };
     };
 
-    // set headers if any
     if (endpoint.headers) {
       try {
         res.set(endpoint.headers as Record<string, string>);
@@ -87,7 +91,6 @@ export class MockProxyGuard implements CanActivate {
 
     res.status(endpoint.statusCode || 200).json(normalized);
 
-    // async log - not awaiting
     this.mockService
       .logCall({
         endpointId: endpoint.id,
@@ -100,10 +103,11 @@ export class MockProxyGuard implements CanActivate {
         response: normalized,
         statusCode: endpoint.statusCode || 200,
         duration,
-        cacheHit: false,
+        cacheHit,
       })
       .catch(() => {});
 
-    return false; // response already sent
+    // 返回 true 表示请求已被处理,允许继续
+    return true;
   }
 }

@@ -7,8 +7,30 @@ import {
   Length,
   Max,
   Min,
+  ValidateBy,
+  ValidationOptions,
 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+
+/**
+ * 自定义验证器: 验证字段是否为字符串或对象
+ */
+function IsStringOrObject(validationOptions?: ValidationOptions) {
+  return ValidateBy(
+    {
+      name: 'isStringOrObject',
+      validator: {
+        validate: (value: any) => {
+          return typeof value === 'string' || typeof value === 'object';
+        },
+        defaultMessage: () => {
+          return '字段必须是字符串或对象类型';
+        },
+      },
+    },
+    validationOptions,
+  );
+}
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'ALL';
 type TemplateEngine = 'MOCKJS' | 'JSON' | 'HANDLEBARS';
@@ -75,12 +97,12 @@ export class UpdateMockEndpointDto {
   delay?: number;
 
   @ApiPropertyOptional({
-    description: '响应模板 (JSON 字符串)',
-    example: '{"code": 200, "data": []}',
+    description: '响应模板 (支持 JSON 对象或 JSON 字符串)',
+    example: { code: 200, data: [] },
   })
   @IsOptional()
-  @IsString()
-  responseTemplate?: string;
+  @IsStringOrObject({ message: '响应模板必须是字符串或对象类型' })
+  responseTemplate?: string | object;
 
   @ApiPropertyOptional({
     description: '模板引擎类型',

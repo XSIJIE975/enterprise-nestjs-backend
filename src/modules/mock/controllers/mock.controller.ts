@@ -64,6 +64,28 @@ export class MockController {
     return rows.map(mapToVo);
   }
 
+  @Get('export')
+  @ApiOperation({ summary: '导出所有 Mock 端点配置' })
+  @ApiSuccessResponseDecorator(MockEndpointVo, { description: '导出成功' })
+  async export(): Promise<MockEndpointVo[]> {
+    const endpoints = await this.mockService.exportConfig();
+    return endpoints.map(mapToVo);
+  }
+
+  @Get('stats')
+  @ApiOperation({ summary: '获取 Mock 统计信息' })
+  @ApiSuccessResponseDecorator(MockStatsVo, { description: '获取成功' })
+  async getStats(): Promise<MockStatsVo> {
+    return this.mockService.getStats();
+  }
+
+  @Get('logs')
+  @ApiOperation({ summary: '查询 Mock 调用日志' })
+  @ApiSuccessResponseDecorator(MockLogListVo, { description: '查询成功' })
+  async getLogs(@Query() query: QueryMockLogsDto): Promise<MockLogListVo> {
+    return this.mockService.queryLogs(query);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: '根据 ID 获取 Mock 端点详情' })
   @ApiSuccessResponseDecorator(MockEndpointVo, { description: '获取成功' })
@@ -146,14 +168,6 @@ export class MockController {
     return this.mockService.batchDelete(dto.ids);
   }
 
-  @Get('export')
-  @ApiOperation({ summary: '导出所有 Mock 端点配置' })
-  @ApiSuccessResponseDecorator(MockEndpointVo, { description: '导出成功' })
-  async export(): Promise<MockEndpointVo[]> {
-    const endpoints = await this.mockService.exportConfig();
-    return endpoints.map(mapToVo);
-  }
-
   @Post('import')
   @ApiOperation({ summary: '导入 Mock 端点配置' })
   @ApiSuccessResponseDecorator(ImportConfigResultVo, {
@@ -164,20 +178,6 @@ export class MockController {
     return this.mockService.importConfig(dto.endpoints, {
       overwrite: dto.overwrite,
     });
-  }
-
-  @Get('stats')
-  @ApiOperation({ summary: '获取 Mock 统计信息' })
-  @ApiSuccessResponseDecorator(MockStatsVo, { description: '获取成功' })
-  async getStats(): Promise<MockStatsVo> {
-    return this.mockService.getStats();
-  }
-
-  @Get('logs')
-  @ApiOperation({ summary: '查询 Mock 调用日志' })
-  @ApiSuccessResponseDecorator(MockLogListVo, { description: '查询成功' })
-  async getLogs(@Query() query: QueryMockLogsDto): Promise<MockLogListVo> {
-    return this.mockService.queryLogs(query);
   }
 
   @Delete('logs')

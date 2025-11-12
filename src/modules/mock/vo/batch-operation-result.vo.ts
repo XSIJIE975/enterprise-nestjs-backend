@@ -15,6 +15,14 @@ export class BatchOperationResultVo {
     example: 0,
   })
   failed: number;
+
+  @ApiProperty({
+    description: '失败的 ID 列表',
+    example: ['uuid-1', 'uuid-2'],
+    type: [String],
+    required: false,
+  })
+  failedIds?: string[];
 }
 
 /**
@@ -38,6 +46,29 @@ export class ImportConfigResultVo {
     example: 2,
   })
   skipped: number;
+
+  @ApiProperty({
+    description: '成功导入的端点 (path + method 组合)',
+    example: ['GET /users', 'POST /users', 'GET /articles'],
+    type: [String],
+  })
+  successEndpoints: string[];
+
+  @ApiProperty({
+    description: '跳过的端点 (path + method 组合)',
+    example: ['GET /users/123'],
+    type: [String],
+    required: false,
+  })
+  skippedEndpoints?: string[];
+
+  @ApiProperty({
+    description: '失败的端点 (path + method 组合)',
+    example: ['GET /invalid'],
+    type: [String],
+    required: false,
+  })
+  failedEndpoints?: string[];
 }
 
 /**

@@ -123,7 +123,7 @@ export class MockLogListVo {
     description: '日志列表',
     type: [MockLogVo],
   })
-  items: MockLogVo[];
+  list: MockLogVo[];
 
   @ApiProperty({
     description: '分页信息',
