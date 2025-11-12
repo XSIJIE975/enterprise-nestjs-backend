@@ -5,8 +5,11 @@ import { JsonUtil } from '@/common/utils/json.util';
 import { MockCacheService } from './mock-cache.service';
 import { MockLoggerService } from './mock-logger.service';
 import { PathMatcher } from '../utils/path-matcher.util';
-import type { CreateMockEndpointDto } from '../dto/create-mock-endpoint.dto';
-import type { UpdateMockEndpointDto } from '../dto/update-mock-endpoint.dto';
+import type {
+  CreateMockEndpointDto,
+  UpdateMockEndpointDto,
+  QueryMockEndpointsDto,
+} from '../dto';
 import type { MockLogCreateDto } from '../dto/log-mock.dto';
 import type { BatchOperationResultVo, ImportConfigResultVo } from '../vo';
 import type { IMockEndpoint } from '../interfaces/mock-endpoint.interface';
@@ -68,17 +71,69 @@ export class MockService implements OnModuleInit {
     await this.mockLogger.log(data as any);
   }
 
-  async list(): Promise<IMockEndpoint[]> {
+  async list(query?: QueryMockEndpointsDto): Promise<{
+    items: IMockEndpoint[];
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  }> {
+    const page = query?.page || 1;
+    const pageSize = query?.pageSize || 20;
+    const skip = (page - 1) * pageSize;
+
+    // 构建查询条件
+    const where: any = {};
+
+    // 关键字搜索 (匹配名称、描述、路径)
+    if (query?.keyword) {
+      where.OR = [
+        { name: { contains: query.keyword } },
+        { description: { contains: query.keyword } },
+        { path: { contains: query.keyword } },
+      ];
+    }
+
+    // 精确匹配筛选
+    if (query?.method) {
+      where.method = query.method;
+    }
+    if (query?.templateEngine) {
+      where.templateEngine = query.templateEngine;
+    }
+    if (query?.enabled !== undefined) {
+      where.enabled = query.enabled;
+    }
+    if (query?.createdBy) {
+      where.createdBy = query.createdBy;
+    }
+
+    // 查询总数
+    const total = await this.prisma.mockEndpoint.count({ where });
+
+    // 查询数据
     const rows = await this.prisma.mockEndpoint.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
+      skip,
+      take: pageSize,
     });
-    return rows.map(
+
+    const items = rows.map(
       r =>
         JsonUtil.deserializeFields(r, [
           'headers',
           'validation',
         ]) as IMockEndpoint,
     );
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages: Math.ceil(total / pageSize),
+    };
   }
 
   async create(dto: CreateMockEndpointDto): Promise<IMockEndpoint> {
@@ -357,7 +412,16 @@ export class MockService implements OnModuleInit {
    * 导出所有 Mock 配置
    */
   async exportConfig(): Promise<IMockEndpoint[]> {
-    return this.list();
+    const rows = await this.prisma.mockEndpoint.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map(
+      r =>
+        JsonUtil.deserializeFields(r, [
+          'headers',
+          'validation',
+        ]) as IMockEndpoint,
+    );
   }
 
   /**

@@ -1,7 +1,7 @@
 /**
  * 模板引擎类型枚举
  */
-export type TemplateEngineType = 'MOCKJS' | 'JSON' | 'HANDLEBARS';
+export type TemplateEngineType = 'MOCKJS' | 'JSON';
 
 import { IMockContext } from '../interfaces/mock-context.interface';
 

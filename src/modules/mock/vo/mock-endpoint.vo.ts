@@ -61,7 +61,7 @@ export class MockEndpointVo {
   @ApiProperty({
     description: '模板引擎类型',
     example: 'MOCKJS',
-    enum: ['MOCKJS', 'JSON', 'HANDLEBARS'],
+    enum: ['MOCKJS', 'JSON'],
   })
   templateEngine!: TemplateEngineType | string;
 
