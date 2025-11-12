@@ -1,15 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@/shared/database/prisma.service';
+import { LoggerService } from '@/shared/logger/logger.service';
+import { JsonUtil } from '@/common/utils/json.util';
 import { MockCacheService } from './mock-cache.service';
 import { MockLoggerService } from './mock-logger.service';
 import { PathMatcher } from '../utils/path-matcher.util';
-import { JsonUtil } from '@/common/utils/json.util';
 import type { CreateMockEndpointDto } from '../dto/create-mock-endpoint.dto';
 import type { UpdateMockEndpointDto } from '../dto/update-mock-endpoint.dto';
 import type { MockLogCreateDto } from '../dto/log-mock.dto';
+import type { BatchOperationResultVo, ImportConfigResultVo } from '../vo';
 import type { IMockEndpoint } from '../interfaces/mock-endpoint.interface';
-import { OnModuleInit } from '@nestjs/common';
-import { LoggerService } from '@/shared/logger/logger.service';
 
 @Injectable()
 export class MockService implements OnModuleInit {
@@ -64,12 +64,14 @@ export class MockService implements OnModuleInit {
     }
   }
 
+  async logCall(data: MockLogCreateDto): Promise<void> {
+    await this.mockLogger.log(data as any);
+  }
+
   async list(): Promise<IMockEndpoint[]> {
-    // simple list from DB
     const rows = await this.prisma.mockEndpoint.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    // deserialize JSON-like fields stored as TEXT
     return rows.map(
       r =>
         JsonUtil.deserializeFields(r, [
@@ -80,24 +82,24 @@ export class MockService implements OnModuleInit {
   }
 
   async create(dto: CreateMockEndpointDto): Promise<IMockEndpoint> {
-    // serialize JSON fields to string for TEXT columns
     const toSave = { ...dto };
+
+    // 验证并序列化,如果超过 TEXT 字段限制 (65535 字节) 则抛出异常
     if (dto.headers && typeof dto.headers !== 'string') {
-      toSave.headers = JsonUtil.serializeSafe(dto.headers) || null;
+      toSave.headers = JsonUtil.serializeOrThrow(dto.headers, 65535) || null;
     }
     if (dto.validation && typeof dto.validation !== 'string') {
-      toSave.validation = JsonUtil.serializeSafe(dto.validation) || null;
+      toSave.validation =
+        JsonUtil.serializeOrThrow(dto.validation, 65535) || null;
     }
-    // responseTemplate may be provided as object by callers; ensure string
     if (dto.responseTemplate && typeof dto.responseTemplate !== 'string') {
       toSave.responseTemplate =
-        JsonUtil.serializeSafe(dto.responseTemplate) || '{}';
+        JsonUtil.serializeOrThrow(dto.responseTemplate, 65535) || '{}';
     }
 
     const created = await this.prisma.mockEndpoint.create({
       data: toSave as any,
     });
-    // evict list cache
     await this.cacheService.del(this.ALL_KEY).catch(() => {});
     return JsonUtil.deserializeFields(created, [
       'headers',
@@ -122,21 +124,22 @@ export class MockService implements OnModuleInit {
   ): Promise<IMockEndpoint | null> {
     const toSave = { ...dto } as any;
     if (dto.headers && typeof dto.headers !== 'string') {
-      toSave.headers = JsonUtil.serializeSafe(dto.headers) || null;
+      toSave.headers = JsonUtil.serializeOrThrow(dto.headers, 65535);
     }
     if (dto.validation && typeof dto.validation !== 'string') {
-      toSave.validation = JsonUtil.serializeSafe(dto.validation) || null;
+      toSave.validation = JsonUtil.serializeOrThrow(dto.validation, 65535);
     }
     if (dto.responseTemplate && typeof dto.responseTemplate !== 'string') {
-      toSave.responseTemplate =
-        JsonUtil.serializeSafe(dto.responseTemplate) || '{}';
+      toSave.responseTemplate = JsonUtil.serializeOrThrow(
+        dto.responseTemplate,
+        65535,
+      );
     }
 
     const updated = await this.prisma.mockEndpoint.update({
       where: { id },
       data: { ...toSave, version: { increment: 1 } },
     });
-    // invalidate list cache and endpoint-specific caches
     await this.cacheService.del(this.ALL_KEY).catch(() => {});
     // 清除精确匹配缓存
     await this.cacheService
@@ -205,7 +208,7 @@ export class MockService implements OnModuleInit {
   }
 
   /**
-   * Find a matching enabled endpoint for a given path and method.
+   * 查找匹配的启用端点
    * 优化的缓存策略:
    * 1. 先尝试精确匹配缓存 (path + method)
    * 2. 如果未命中,查询数据库并缓存结果
@@ -214,7 +217,11 @@ export class MockService implements OnModuleInit {
   async findMatchingEndpoint(
     path: string,
     method: string,
-  ): Promise<{ endpoint: IMockEndpoint; params: Record<string, any> } | null> {
+  ): Promise<{
+    endpoint: IMockEndpoint;
+    params: Record<string, any>;
+    cacheHit: boolean;
+  } | null> {
     // 策略 1: 尝试精确匹配缓存 (适用于静态路径如 /users)
     const exactCacheKey = this.cacheService.generateKey(
       'mock:endpoint:exact',
@@ -227,7 +234,7 @@ export class MockService implements OnModuleInit {
     }>(exactCacheKey);
 
     if (cachedExact) {
-      return cachedExact;
+      return { ...cachedExact, cacheHit: true };
     }
 
     // 策略 2: 查询数据库中所有启用的端点 (带缓存)
@@ -264,30 +271,20 @@ export class MockService implements OnModuleInit {
         // 缓存精确匹配结果 (TTL 300秒)
         await this.cacheService.set(exactCacheKey, result, 300).catch(() => {});
 
-        return result;
+        return { ...result, cacheHit: false };
       }
     }
 
     return null;
   }
 
-  async logCall(data: MockLogCreateDto): Promise<void> {
-    // delegate to MockLoggerService for persistence (best-effort)
-    try {
-      await this.mockLogger.log(data as any);
-    } catch {
-      // swallow
-    }
-  }
-
   /**
    * 批量启用 Mock 端点
    */
-  async batchEnable(
-    ids: string[],
-  ): Promise<{ success: number; failed: number }> {
+  async batchEnable(ids: string[]): Promise<BatchOperationResultVo> {
     let success = 0;
     let failed = 0;
+    const failedIds: string[] = [];
 
     for (const id of ids) {
       try {
@@ -295,20 +292,24 @@ export class MockService implements OnModuleInit {
         success++;
       } catch {
         failed++;
+        failedIds.push(id);
       }
     }
 
-    return { success, failed };
+    return {
+      success,
+      failed,
+      ...(failedIds.length > 0 && { failedIds }),
+    };
   }
 
   /**
    * 批量禁用 Mock 端点
    */
-  async batchDisable(
-    ids: string[],
-  ): Promise<{ success: number; failed: number }> {
+  async batchDisable(ids: string[]): Promise<BatchOperationResultVo> {
     let success = 0;
     let failed = 0;
+    const failedIds: string[] = [];
 
     for (const id of ids) {
       try {
@@ -316,20 +317,24 @@ export class MockService implements OnModuleInit {
         success++;
       } catch {
         failed++;
+        failedIds.push(id);
       }
     }
 
-    return { success, failed };
+    return {
+      success,
+      failed,
+      ...(failedIds.length > 0 && { failedIds }),
+    };
   }
 
   /**
    * 批量删除 Mock 端点
    */
-  async batchDelete(
-    ids: string[],
-  ): Promise<{ success: number; failed: number }> {
+  async batchDelete(ids: string[]): Promise<BatchOperationResultVo> {
     let success = 0;
     let failed = 0;
+    const failedIds: string[] = [];
 
     for (const id of ids) {
       try {
@@ -337,10 +342,15 @@ export class MockService implements OnModuleInit {
         success++;
       } catch {
         failed++;
+        failedIds.push(id);
       }
     }
 
-    return { success, failed };
+    return {
+      success,
+      failed,
+      ...(failedIds.length > 0 && { failedIds }),
+    };
   }
 
   /**
@@ -356,12 +366,17 @@ export class MockService implements OnModuleInit {
   async importConfig(
     endpoints: CreateMockEndpointDto[],
     options?: { overwrite?: boolean },
-  ): Promise<{ success: number; failed: number; skipped: number }> {
+  ): Promise<ImportConfigResultVo> {
     let success = 0;
     let failed = 0;
     let skipped = 0;
+    const successEndpoints: string[] = [];
+    const skippedEndpoints: string[] = [];
+    const failedEndpoints: string[] = [];
 
     for (const dto of endpoints) {
+      const endpointKey = `${dto.method} ${dto.path}`;
+
       try {
         // 检查是否已存在相同 path + method 的端点
         const existing = await this.prisma.mockEndpoint.findFirst({
@@ -376,21 +391,32 @@ export class MockService implements OnModuleInit {
             // 覆盖模式:更新现有端点
             await this.update(existing.id, dto);
             success++;
+            successEndpoints.push(endpointKey);
           } else {
             // 跳过已存在的端点
             skipped++;
+            skippedEndpoints.push(endpointKey);
           }
         } else {
           // 创建新端点
           await this.create(dto);
           success++;
+          successEndpoints.push(endpointKey);
         }
       } catch {
         failed++;
+        failedEndpoints.push(endpointKey);
       }
     }
 
-    return { success, failed, skipped };
+    return {
+      success,
+      failed,
+      skipped,
+      successEndpoints,
+      ...(skippedEndpoints.length > 0 && { skippedEndpoints }),
+      ...(failedEndpoints.length > 0 && { failedEndpoints }),
+    };
   }
 
   /**
@@ -467,7 +493,7 @@ export class MockService implements OnModuleInit {
     ]);
 
     return {
-      items: items.map(item =>
+      list: items.map(item =>
         JsonUtil.deserializeFields(item, [
           'query',
           'body',
