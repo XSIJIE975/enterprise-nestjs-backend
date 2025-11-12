@@ -52,7 +52,6 @@ enum HttpMethod {
 /// 模板引擎枚举
 enum TemplateEngine {
   MOCKJS
-  HANDLEBARS
   JSON
 
   @@map("template_engine")
