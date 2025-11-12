@@ -62,8 +62,8 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
         mailConfig,
       ],
       envFilePath: [
-        `.env.${process.env.NODE_ENV || 'development'}`,
         '.env.local',
+        `.env.${process.env.NODE_ENV || 'development'}`,
         '.env',
       ],
       expandVariables: true,
