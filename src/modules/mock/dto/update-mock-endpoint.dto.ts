@@ -33,7 +33,7 @@ function IsStringOrObject(validationOptions?: ValidationOptions) {
 }
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'ALL';
-type TemplateEngine = 'MOCKJS' | 'JSON' | 'HANDLEBARS';
+type TemplateEngine = 'MOCKJS' | 'JSON';
 
 export class UpdateMockEndpointDto {
   @ApiPropertyOptional({
@@ -106,11 +106,11 @@ export class UpdateMockEndpointDto {
 
   @ApiPropertyOptional({
     description: '模板引擎类型',
-    enum: ['MOCKJS', 'JSON', 'HANDLEBARS'],
+    enum: ['MOCKJS', 'JSON'],
     example: 'MOCKJS',
   })
   @IsOptional()
-  @IsEnum(['MOCKJS', 'JSON', 'HANDLEBARS'])
+  @IsEnum(['MOCKJS', 'JSON'])
   templateEngine?: TemplateEngine;
 
   @ApiPropertyOptional({

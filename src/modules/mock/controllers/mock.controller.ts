@@ -13,16 +13,14 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
-import {
-  ApiSuccessResponseDecorator,
-  ApiSuccessResponseArrayDecorator,
-} from '@/common/decorators/swagger-response.decorator';
+import { ApiSuccessResponseDecorator } from '@/common/decorators/swagger-response.decorator';
 import {
   CreateMockEndpointDto,
   UpdateMockEndpointDto,
   QueryMockLogsDto,
   BatchOperationMockEndpointsDto,
   ImportConfigDto,
+  QueryMockEndpointsDto,
 } from '@/modules/mock/dto';
 import { MockService } from '../services/mock.service';
 import { mapToVo } from '../utils/mapper.util';
@@ -35,6 +33,7 @@ import {
   MockStatsVo,
   MockLogListVo,
   ClearLogsResultVo,
+  MockEndpointListVo,
 } from '../vo';
 
 @Controller('mock-endpoints')
@@ -58,10 +57,18 @@ export class MockController {
 
   @Get()
   @ApiOperation({ summary: '获取 Mock 端点列表' })
-  @ApiSuccessResponseArrayDecorator(MockEndpointVo, { description: '获取成功' })
-  async list(): Promise<MockEndpointVo[]> {
-    const rows = await this.mockService.list();
-    return rows.map(mapToVo);
+  @ApiSuccessResponseDecorator(MockEndpointListVo, { description: '获取成功' })
+  async list(
+    @Query() query: QueryMockEndpointsDto,
+  ): Promise<MockEndpointListVo> {
+    const result = await this.mockService.list(query);
+    return {
+      items: result.items.map(mapToVo),
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
+    };
   }
 
   @Get('export')

@@ -1,7 +1,7 @@
 /**
  * 模板引擎类型
  */
-export type TemplateEngineType = 'MOCKJS' | 'JSON' | 'HANDLEBARS';
+export type TemplateEngineType = 'MOCKJS' | 'JSON';
 
 /**
  * Mock 端点接口
