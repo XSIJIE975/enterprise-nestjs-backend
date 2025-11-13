@@ -3,6 +3,7 @@ import {
   ApiExtraModels,
   ApiOkResponse,
   ApiResponse,
+  ApiBody,
   getSchemaPath,
 } from '@nestjs/swagger';
 import { ApiSuccessResponse, ApiErrorResponse } from '../dtos';
@@ -239,6 +240,56 @@ export const ApiSuccessResponseArrayDecorator = <TModel extends Type<any>>(
       status,
       schema,
       description,
+    }),
+  );
+};
+
+/**
+ * Swagger 请求体配置选项
+ */
+export interface ApiBodyOneOfOptions {
+  /** 请求体描述 */
+  description?: string;
+  /** 是否必需（默认：true） */
+  required?: boolean;
+}
+
+/**
+ * Swagger 请求体装饰器（支持单个对象或数组）
+ * 用于在 Swagger 中生成支持单个对象或对象数组的请求体 Schema
+ *
+ * @param model 请求体数据类型
+ * @param options 配置选项
+ *
+ * @example
+ * // 支持单条或批量上传
+ * @ApiBodyOneOfDecorator(UploadCsDevLoggerDto, {
+ *   description: '单条日志对象或日志对象数组',
+ * })
+ * @Post('/logger/add')
+ * reportLog(@Body() data: UploadCsDevLoggerDto | UploadCsDevLoggerDto[]) { ... }
+ */
+export const ApiBodyOneOfDecorator = <TModel extends Type<any>>(
+  model: TModel,
+  options?: ApiBodyOneOfOptions,
+) => {
+  const description = options?.description ?? '单个对象或对象数组';
+  const required = options?.required ?? true;
+
+  return applyDecorators(
+    ApiExtraModels(model),
+    ApiBody({
+      description,
+      required,
+      schema: {
+        oneOf: [
+          { $ref: getSchemaPath(model) },
+          {
+            type: 'array',
+            items: { $ref: getSchemaPath(model) },
+          },
+        ],
+      },
     }),
   );
 };
