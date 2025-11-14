@@ -4,10 +4,10 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { UsersService } from '../users/users.service';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { CacheService } from '../../shared/cache/cache.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
-import { LoggerService } from '../../shared/logger/logger.service';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { CacheService } from '@/shared/cache';
+import { RbacCacheService } from '@/shared/cache';
+import { LoggerService } from '@/shared/logger/logger.service';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 
 describe('AuthService', () => {

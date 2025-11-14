@@ -8,23 +8,21 @@ import {
   HttpStatus,
   Ip,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { RegisterResponseDto } from './dto/register-response.dto';
-import { LoginDto } from './dto/login.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
 import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { DisableDatabaseLog } from '../../common/decorators/database-log.decorator';
+import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
+import {
+  ApiSuccessResponseDecorator,
+  ApiErrorResponseDecorator,
+} from '@/common/decorators/swagger-response.decorator';
 import { AuthUser } from './types/user.types';
+import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
+import { AuthResponseVo, RegisterResponseVo, AuthMeResponseVo } from './vo';
+import { JwtUser } from '@/modules/auth/interfaces/jwt-payload.interface';
 
 /**
  * 认证控制器
@@ -48,19 +46,19 @@ export class AuthController {
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: '用户注册' })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RegisterResponseVo, {
     status: HttpStatus.CREATED,
     description: '注册成功',
-    type: RegisterResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
+  @ApiErrorResponseDecorator(HttpStatus.CONFLICT, {
     description: '邮箱或用户名已存在',
   })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '参数验证失败' })
+  @ApiErrorResponseDecorator(HttpStatus.BAD_REQUEST, {
+    description: '参数验证失败',
+  })
   async register(
     @Body() registerDto: RegisterDto,
-  ): Promise<RegisterResponseDto> {
+  ): Promise<RegisterResponseVo> {
     return this.authService.register(registerDto);
   }
 
@@ -76,22 +74,22 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 1分钟内最多5次（防止暴力破解）
   @ApiOperation({ summary: '用户登录' })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(AuthResponseVo, {
     status: HttpStatus.OK,
     description: '登录成功',
-    type: AuthResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
+  @ApiErrorResponseDecorator(HttpStatus.UNAUTHORIZED, {
     description: '用户名或密码错误',
   })
-  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: '参数验证失败' })
+  @ApiErrorResponseDecorator(HttpStatus.BAD_REQUEST, {
+    description: '参数验证失败',
+  })
   @DisableDatabaseLog() // 登录接口不记录到数据库日志（敏感信息）
   async login(
     @Body() _loginDto: LoginDto,
     @Request() req: any,
     @Ip() ip: string,
-  ): Promise<AuthResponseDto> {
+  ): Promise<AuthResponseVo> {
     const deviceInfo = {
       userAgent: req.headers['user-agent'],
       ipAddress: ip,
@@ -111,13 +109,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 1分钟内最多10次
   @ApiOperation({ summary: '刷新 Token' })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(AuthResponseVo, {
     status: HttpStatus.OK,
     description: 'Token 刷新成功',
-    type: AuthResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
+  @ApiErrorResponseDecorator(HttpStatus.UNAUTHORIZED, {
     description: 'Refresh Token 无效或已过期',
   })
   @DisableDatabaseLog()
@@ -125,7 +121,7 @@ export class AuthController {
     @Body() refreshTokenDto: RefreshTokenDto,
     @Request() req: any,
     @Ip() ip: string,
-  ): Promise<AuthResponseDto> {
+  ): Promise<AuthResponseVo> {
     const deviceInfo = {
       userAgent: req.headers['user-agent'],
       ipAddress: ip,
@@ -147,9 +143,14 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: '退出登录' })
-  @ApiResponse({ status: HttpStatus.OK, description: '退出成功' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '未授权' })
-  async logout(@Request() req: any): Promise<{ message: string }> {
+  @ApiSuccessResponseDecorator(undefined, {
+    status: HttpStatus.OK,
+    description: '退出成功',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.UNAUTHORIZED, {
+    description: '未授权',
+  })
+  async logout(@Request() req: any) {
     const userId = req.user.userId;
 
     // 从请求头中提取 Token
@@ -159,10 +160,6 @@ export class AuthController {
     if (accessToken) {
       await this.authService.logout(userId, accessToken);
     }
-
-    return {
-      message: '退出登录成功',
-    };
   }
 
   /**
@@ -177,7 +174,6 @@ export class AuthController {
    * - 确保权限撤销立即生效，不依赖 Token 中的信息
    * - 即使 Token 中有旧权限，实际接口调用时仍会被拦截
    *
-   * @param req Request 对象
    * @returns 用户信息（包含角色和权限）
    */
   @UseGuards(JwtAuthGuard)
@@ -185,14 +181,20 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: '获取当前用户信息' })
-  @ApiResponse({ status: HttpStatus.OK, description: '获取成功' })
-  @ApiResponse({ status: HttpStatus.UNAUTHORIZED, description: '未授权' })
-  async getCurrentUser(@Request() req: any) {
+  @ApiSuccessResponseDecorator(AuthMeResponseVo, {
+    status: HttpStatus.OK,
+    description: '获取成功',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.UNAUTHORIZED, {
+    description: '未授权',
+  })
+  async getCurrentUser(): Promise<AuthMeResponseVo> {
+    const user = RequestContextService.get<JwtUser>('user');
     return {
-      username: req.user.username,
-      email: req.user.email,
-      roles: req.user.roles,
-      permissions: req.user.permissions,
+      username: user.username,
+      email: user.email,
+      roles: user.roles,
+      permissions: user.permissions,
     };
   }
 }

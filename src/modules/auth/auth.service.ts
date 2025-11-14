@@ -1,17 +1,16 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { CacheService } from '@/shared/cache';
+import { RbacCacheService } from '@/shared/cache';
+import { LoggerService } from '@/shared/logger/logger.service';
 import { UsersService } from '../users/users.service';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { CacheService } from '../../shared/cache/cache.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
-import { LoggerService } from '../../shared/logger/logger.service';
-import { RegisterDto } from './dto/register.dto';
-import { RegisterResponseDto } from './dto/register-response.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { RegisterDto } from './dto';
+import { RegisterResponseVo, AuthResponseVo } from './vo';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import type { AuthUser } from './types/user.types';
-import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 
 /**
  * 认证服务
@@ -100,7 +99,7 @@ export class AuthService {
    * @param registerDto 注册信息
    * @returns 注册响应
    */
-  async register(registerDto: RegisterDto): Promise<RegisterResponseDto> {
+  async register(registerDto: RegisterDto): Promise<RegisterResponseVo> {
     this.logger.log(`用户注册: ${registerDto.email}`, 'AuthService');
 
     // 创建用户
@@ -121,7 +120,7 @@ export class AuthService {
    * @param deviceInfo 设备信息
    * @returns 认证响应（包含 Token 和用户信息）
    */
-  async login(user: AuthUser, deviceInfo?: any): Promise<AuthResponseDto> {
+  async login(user: AuthUser, deviceInfo?: any): Promise<AuthResponseVo> {
     // 提取角色代码列表
     const roles = user.userRoles?.map(ur => ur.role.code) || [];
 
@@ -267,13 +266,13 @@ export class AuthService {
   /**
    * 刷新 Token
    * @param refreshToken Refresh Token
-   * @param deviceInfo 设备信息
+   * @param _deviceInfo 设备信息
    * @returns 新的认证响应
    */
   async refreshToken(
     refreshToken: string,
     _deviceInfo?: any,
-  ): Promise<AuthResponseDto> {
+  ): Promise<AuthResponseVo> {
     try {
       // 检查 Refresh Token 是否在黑名单中
       const isBlacklisted = await this.isTokenBlacklisted(refreshToken);
