@@ -222,6 +222,48 @@ export class JsonUtil {
   }
 
   /**
+   * 序列化并验证字节长度
+   * 如果超过限制则抛出异常,不会静默截断
+   *
+   * @param data - 要序列化的数据
+   * @param maxBytes - 最大字节数限制 (默认 65535 = TEXT 类型)
+   * @returns 序列化后的 JSON 字符串
+   * @throws Error - 当序列化失败或超过字节限制时抛出异常
+   *
+   * @example
+   * ```typescript
+   * try {
+   *   const jsonStr = JsonUtil.serializeOrThrow({ large: 'data...' }, 65535);
+   * } catch (error) {
+   *   // 处理超长数据错误
+   * }
+   * ```
+   */
+  static serializeOrThrow(data: any, maxBytes: number = 65535): string {
+    if (data === null || data === undefined) {
+      return null as any;
+    }
+
+    let jsonStr: string;
+    try {
+      jsonStr = JSON.stringify(data);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(`JSON 序列化失败: ${errorMessage}`);
+    }
+
+    const byteLength = Buffer.byteLength(jsonStr, 'utf8');
+    if (byteLength > maxBytes) {
+      throw new Error(
+        `数据大小 (${byteLength} 字节) 超过数据库字段限制 (${maxBytes} 字节), 请减少数据量`,
+      );
+    }
+
+    return jsonStr;
+  }
+
+  /**
    * 深度克隆对象（通过 JSON 序列化/反序列化）
    *
    * @param obj - 要克隆的对象
