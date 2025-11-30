@@ -23,6 +23,14 @@ export const appConfig = registerAs('app', () => ({
     text: process.env.BODY_LIMIT_TEXT || '10mb',
   },
 
+  // Swagger 文档认证配置
+  swagger: {
+    enabled: process.env.SWAGGER_ENABLED !== 'false', // 是否启用 Swagger
+    authEnabled: process.env.SWAGGER_AUTH_ENABLED === 'true', // 是否启用认证
+    username: process.env.SWAGGER_USERNAME || 'admin', // 访问用户名
+    password: process.env.SWAGGER_PASSWORD || 'admin123', // 访问密码
+  },
+
   // 日志配置
   log: {
     level: process.env.LOG_LEVEL || 'info',
