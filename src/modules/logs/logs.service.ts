@@ -129,12 +129,18 @@ export class LogsService {
       response: JsonUtil.deserialize(log.response),
     }));
 
+    const totalPages = Math.ceil(total / pageSize);
+
     return {
       data: deserializedData,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+        hasPreviousPage: page > 1,
+        hasNextPage: page < totalPages,
+      },
     };
   }
 
@@ -275,12 +281,18 @@ export class LogsService {
       context: JsonUtil.deserialize(log.context),
     }));
 
+    const totalPages = Math.ceil(total / pageSize);
+
     return {
       data: deserializedData,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+        hasPreviousPage: page > 1,
+        hasNextPage: page < totalPages,
+      },
     };
   }
 
@@ -363,12 +375,18 @@ export class LogsService {
       newData: JsonUtil.deserialize(log.newData),
     }));
 
+    const totalPages = Math.ceil(total / pageSize);
+
     return {
       data: deserializedData,
-      total,
-      page,
-      pageSize,
-      totalPages: Math.ceil(total / pageSize),
+      meta: {
+        page,
+        pageSize,
+        total,
+        totalPages,
+        hasPreviousPage: page > 1,
+        hasNextPage: page < totalPages,
+      },
     };
   }
 
