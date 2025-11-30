@@ -7,6 +7,7 @@ import * as compression from 'compression';
 import * as express from 'express';
 import helmet from 'helmet';
 import { join } from 'path';
+import * as basicAuth from 'express-basic-auth';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './shared/logger/logger.service';
@@ -198,7 +199,27 @@ async function bootstrap() {
   // - LoggingInterceptor: API 日志记录
 
   // Swagger文档配置
-  if (configService.get('app.env') !== 'production') {
+  const swaggerEnabled = configService.get('app.swagger.enabled');
+  if (swaggerEnabled && configService.get('app.env') !== 'production') {
+    // Swagger Basic Auth 认证
+    const swaggerAuthEnabled = configService.get('app.swagger.authEnabled');
+    if (swaggerAuthEnabled) {
+      const swaggerUsername = configService.get('app.swagger.username');
+      const swaggerPassword = configService.get('app.swagger.password');
+
+      app.use(
+        ['/api/docs', '/api/docs-json', '/api/docs-yaml'],
+        basicAuth({
+          challenge: true,
+          users: { [swaggerUsername]: swaggerPassword },
+          realm: 'Swagger Documentation',
+        }),
+      );
+      loggerService.log(
+        '🔒 Swagger documentation is protected with Basic Auth',
+      );
+    }
+
     const config = new DocumentBuilder()
       .setTitle(`${configService.get('app.name')} API`)
       .setDescription(`${configService.get('app.name')} 接口文档`)
