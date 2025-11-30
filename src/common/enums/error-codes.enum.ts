@@ -153,6 +153,7 @@ export enum ErrorCode {
   MOCK_ALREADY_EXISTS = 'M10001', // Mock 数据已存在
   MOCK_INVALID_DATA = 'M10002', // Mock 数据无效
   MOCK_SERVICE_UNAVAILABLE = 'M10003', // Mock 服务不可用
+  MOCK_RENDER_ERROR = 'M10004', // Mock 渲染错误
 }
 
 // 错误码到中文消息的映射
@@ -273,4 +274,5 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.MOCK_ALREADY_EXISTS]: 'Mock 数据已存在',
   [ErrorCode.MOCK_INVALID_DATA]: 'Mock 数据无效',
   [ErrorCode.MOCK_SERVICE_UNAVAILABLE]: 'Mock 服务不可用',
+  [ErrorCode.MOCK_RENDER_ERROR]: 'Mock 数据渲染错误',
 };
