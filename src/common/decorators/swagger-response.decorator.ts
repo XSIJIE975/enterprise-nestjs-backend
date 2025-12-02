@@ -263,11 +263,11 @@ export interface ApiBodyOneOfOptions {
  *
  * @example
  * // 支持单条或批量上传
- * @ApiBodyOneOfDecorator(UploadCsDevLoggerDto, {
+ * @ApiBodyOneOfDecorator(UploadLoggerDto, {
  *   description: '单条日志对象或日志对象数组',
  * })
  * @Post('/logger/add')
- * reportLog(@Body() data: UploadCsDevLoggerDto | UploadCsDevLoggerDto[]) { ... }
+ * reportLog(@Body() data: UploadLoggerDto | UploadLoggerDto[]) { ... }
  */
 export const ApiBodyOneOfDecorator = <TModel extends Type<any>>(
   model: TModel,
