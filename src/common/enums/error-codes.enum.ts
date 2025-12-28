@@ -145,6 +145,15 @@ export enum ErrorCode {
   CACHE_KEY_NOT_FOUND = 'C10001', // 缓存键不存在
   CACHE_CONNECTION_FAILED = 'C10002', // 缓存连接失败
   CACHE_TIMEOUT = 'C10003', // 缓存超时
+
+  // ===========================================
+  // M系列 - Mock 模拟数据错误 (M10000-M19999)
+  // ===========================================
+  MOCK_NOT_FOUND = 'M10000', // Mock 数据未找到
+  MOCK_ALREADY_EXISTS = 'M10001', // Mock 数据已存在
+  MOCK_INVALID_DATA = 'M10002', // Mock 数据无效
+  MOCK_SERVICE_UNAVAILABLE = 'M10003', // Mock 服务不可用
+  MOCK_RENDER_ERROR = 'M10004', // Mock 渲染错误
 }
 
 // 错误码到中文消息的映射
@@ -259,4 +268,11 @@ export const ErrorMessages: Record<ErrorCode, string> = {
   [ErrorCode.CACHE_KEY_NOT_FOUND]: '缓存数据不存在',
   [ErrorCode.CACHE_CONNECTION_FAILED]: '缓存服务连接失败',
   [ErrorCode.CACHE_TIMEOUT]: '缓存操作超时',
+
+  // Mock 错误
+  [ErrorCode.MOCK_NOT_FOUND]: 'Mock 数据未找到',
+  [ErrorCode.MOCK_ALREADY_EXISTS]: 'Mock 数据已存在',
+  [ErrorCode.MOCK_INVALID_DATA]: 'Mock 数据无效',
+  [ErrorCode.MOCK_SERVICE_UNAVAILABLE]: 'Mock 服务不可用',
+  [ErrorCode.MOCK_RENDER_ERROR]: 'Mock 数据渲染错误',
 };

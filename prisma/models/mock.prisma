@@ -1,0 +1,86 @@
+// 动态 Mock 服务模型
+
+/// Mock 端点配置表
+model MockEndpoint {
+  id          String   @id @default(uuid())
+
+  // ========== 基础信息 ==========
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  path        String   @db.VarChar(255)
+  method      HttpMethod
+
+  // ========== 状态控制 ==========
+  enabled     Boolean  @default(true)
+  statusCode  Int      @default(200)
+  delay       Int      @default(0)
+
+  // ========== 模板配置 ==========
+  responseTemplate String @db.Text
+  templateEngine   TemplateEngine @default(MOCKJS)
+
+  // ========== 高级配置 ==========
+  headers     String?  @db.Text
+  validation  String?  @db.Text
+
+  // ========== 元数据 ==========
+  createdBy   String?  @db.VarChar(50)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  version     Int      @default(1)
+
+  @@unique([path(length: 191), method], name: "unique_path_method")
+  @@index([path(length: 191)], name: "idx_path")
+  @@index([enabled], name: "idx_enabled")
+  @@index([createdAt], name: "idx_created_at")
+
+  @@map("mock_endpoints")
+}
+
+/// HTTP 方法枚举
+enum HttpMethod {
+  GET
+  POST
+  PUT
+  DELETE
+  PATCH
+  ALL
+
+  @@map("http_method")
+}
+
+/// 模板引擎枚举
+enum TemplateEngine {
+  MOCKJS
+  JSON
+
+  @@map("template_engine")
+}
+
+/// Mock 调用日志表
+model MockLog {
+  id          String   @id @default(uuid())
+
+  endpointId  String?  @db.VarChar(50)
+  method      String   @db.VarChar(10)
+  path        String   @db.VarChar(255)
+
+  query       String?  @db.Text
+  body        String?  @db.Text
+  headers     String?  @db.Text
+  ip          String?  @db.VarChar(50)
+
+  response    String?  @db.Text
+  statusCode  Int
+
+  duration    Int
+  cacheHit    Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@index([endpointId], name: "idx_endpoint_id")
+  @@index([createdAt], name: "idx_created_at")
+  @@index([path(length: 191), method], name: "idx_path_method")
+
+  @@map("mock_logs")
+}
