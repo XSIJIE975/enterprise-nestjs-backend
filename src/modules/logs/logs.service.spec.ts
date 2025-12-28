@@ -221,10 +221,10 @@ describe('日志服务 - JSON 序列化与数据操作', () => {
 
       const result = await service.findApiLogs({ page: 2, pageSize: 10 });
 
-      expect(result.page).toBe(2);
-      expect(result.pageSize).toBe(10);
-      expect(result.total).toBe(25);
-      expect(result.totalPages).toBe(3);
+      expect(result.meta.page).toBe(2);
+      expect(result.meta.pageSize).toBe(10);
+      expect(result.meta.total).toBe(25);
+      expect(result.meta.totalPages).toBe(3);
     });
   });
 
