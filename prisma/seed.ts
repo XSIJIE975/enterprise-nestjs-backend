@@ -1,10 +1,142 @@
-import { PrismaClient } from '../src/generated/prisma/client';
+import {
+  PrismaClient,
+  HttpMethod,
+  TemplateEngine,
+} from '../src/generated/prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 开始填充种子数据...');
+
+  // 创建 Mock 数据
+  console.log('🎭 创建 Mock 数据...');
+  const mockEndpoints = [
+    {
+      name: '模拟用户列表',
+      description: '返回随机生成的用户列表数据',
+      path: '/users',
+      method: HttpMethod.GET,
+      enabled: true,
+      statusCode: 200,
+      delay: 500,
+      templateEngine: TemplateEngine.MOCKJS,
+      responseTemplate: JSON.stringify({
+        code: 200,
+        message: 'success',
+        'data|10': [
+          {
+            'id|+1': 1,
+            username: '@word(5, 10)',
+            email: '@email',
+            'role|1': ['user', 'admin', 'editor'],
+            'status|1': ['active', 'inactive'],
+            createdAt: '@datetime',
+            profile: {
+              avatar: '@image("200x200", "#50B347", "#FFF", "Mock")',
+              'age|18-60': 1,
+              bio: '@sentence(10, 20)',
+            },
+          },
+        ],
+      }),
+      headers: JSON.stringify({
+        'Content-Type': 'application/json',
+        'X-Mock-By': 'NestJS-Enterprise',
+      }),
+    },
+    {
+      name: '模拟登录成功',
+      description: '模拟用户登录成功的响应',
+      path: '/auth/login',
+      method: HttpMethod.POST,
+      enabled: true,
+      statusCode: 200,
+      delay: 200,
+      templateEngine: TemplateEngine.JSON,
+      responseTemplate: JSON.stringify({
+        code: 200,
+        message: '登录成功',
+        data: {
+          accessToken:
+            'mock_access_token_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          refreshToken:
+            'mock_refresh_token_eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
+          expiresIn: 3600,
+          user: {
+            id: 'user_123456',
+            username: 'mock_user',
+            roles: ['user'],
+          },
+        },
+      }),
+    },
+    {
+      name: '模拟服务器错误',
+      description: '模拟 500 内部服务器错误',
+      path: '/errors/500',
+      method: HttpMethod.GET,
+      enabled: true,
+      statusCode: 500,
+      delay: 0,
+      templateEngine: TemplateEngine.JSON,
+      responseTemplate: JSON.stringify({
+        code: 500,
+        message: 'Internal Server Error',
+        error: 'Unexpected database connection error',
+        timestamp: new Date().toISOString(),
+      }),
+    },
+    {
+      name: '模拟动态数据',
+      description: '使用 Mock.js 生成动态数值和布尔值',
+      path: '/dashboard/stats',
+      method: HttpMethod.GET,
+      enabled: true,
+      statusCode: 200,
+      delay: 100,
+      templateEngine: TemplateEngine.MOCKJS,
+      responseTemplate: JSON.stringify({
+        code: 200,
+        message: 'success',
+        data: {
+          'totalUsers|1000-5000': 1,
+          'activeUsers|100-500': 1,
+          'revenue|10000-50000.2': 1,
+          systemStatus: {
+            'cpu|1-100': 1,
+            'memory|1-100': 1,
+            'disk|1-100': 1,
+            'healthy|1-2': true,
+          },
+          'recentActivity|5': [
+            {
+              'id|+1': 100,
+              action:
+                '@pick(["login", "logout", "update_profile", "view_report"])',
+              ip: '@ip',
+              time: '@now',
+            },
+          ],
+        },
+      }),
+    },
+  ];
+
+  for (const endpoint of mockEndpoints) {
+    await prisma.mockEndpoint.upsert({
+      where: {
+        unique_path_method: {
+          path: endpoint.path,
+          method: endpoint.method,
+        },
+      },
+      update: endpoint,
+      create: endpoint,
+    });
+  }
+  console.log(`✅ 已创建 ${mockEndpoints.length} 个 Mock 端点`);
 
   // 创建默认权限
   console.log('📝 创建默认权限...');
