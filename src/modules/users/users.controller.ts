@@ -15,31 +15,40 @@ import {
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
-import { UsersService } from './users.service';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { DisableDatabaseLog } from '../../common/decorators/database-log.decorator';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
+import {
+  ApiSuccessResponseDecorator,
+  ApiErrorResponseDecorator,
+  ApiSuccessResponseArrayDecorator,
+} from '@/common/decorators/swagger-response.decorator';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { CurrentUser } from '@/common/decorators/current-user.decorator';
+import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
 import { JwtUser } from '../auth/interfaces/jwt-payload.interface';
-import { CreateUserDto } from './dto/create-user.dto';
-import { QueryUsersDto } from './dto/query-users.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
-import { UpdateUserStatusDto } from './dto/update-user-status.dto';
-import { AssignRolesDto } from './dto/assign-roles.dto';
-import { ResetPasswordDto } from './dto/reset-password.dto';
-import { BatchOperationDto } from './dto/batch-operation.dto';
-import { UserResponseDto } from './dto/user-response.dto';
-import { PaginatedUsersDto } from './dto/paginated-users.dto';
-import { UserStatisticsDto } from './dto/user-statistics.dto';
-import { UserSessionDto } from './dto/user-session.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UsersService } from './users.service';
+import {
+  CreateUserDto,
+  QueryUsersDto,
+  AssignRolesDto,
+  UpdateUserDto,
+  UpdateUserStatusDto,
+  ResetPasswordDto,
+  BatchOperationDto,
+  UpdateProfileDto,
+  ChangePasswordDto,
+} from './dto';
+import {
+  UserStatisticsVo,
+  UserResponseVo,
+  UserPageVo,
+  UserRoleVo,
+  UserSessionVo,
+} from './vo';
 
 /**
  * 用户管理控制器
@@ -57,13 +66,14 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: '创建新用户（管理员）' })
-  @ApiResponse({
-    status: 201,
+  @ApiSuccessResponseDecorator(UserResponseVo, {
+    status: HttpStatus.CREATED,
     description: '成功创建新用户',
-    type: UserResponseDto,
   })
-  @ApiResponse({ status: 409, description: '邮箱/用户名/手机号已被使用' })
-  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
+  @ApiErrorResponseDecorator(HttpStatus.CONFLICT, {
+    description: '邮箱/用户名/手机号已被使用',
+  })
+  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponseVo> {
     return this.usersService.create(createUserDto);
   }
 
@@ -74,12 +84,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: '获取用户列表（管理员）' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserPageVo, {
+    status: HttpStatus.OK,
     description: '成功获取用户列表',
-    type: PaginatedUsersDto,
   })
-  async findAll(@Query() query: QueryUsersDto): Promise<PaginatedUsersDto> {
+  async findAll(@Query() query: QueryUsersDto): Promise<UserPageVo> {
     return this.usersService.findAllPaginated(query);
   }
 
@@ -90,12 +99,11 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: '获取用户统计数据（管理员）' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserStatisticsVo, {
+    status: HttpStatus.OK,
     description: '成功获取统计数据',
-    type: UserStatisticsDto,
   })
-  async getStatistics(): Promise<UserStatisticsDto> {
+  async getStatistics(): Promise<UserStatisticsVo> {
     return this.usersService.getUserStatistics();
   }
 
@@ -107,13 +115,14 @@ export class UsersController {
   @Roles('admin')
   @ApiOperation({ summary: '获取用户详情（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserResponseVo, {
+    status: HttpStatus.OK,
     description: '成功获取用户信息',
-    type: UserResponseDto,
   })
-  @ApiResponse({ status: 404, description: '用户不存在' })
-  async findOne(@Param('id') id: string): Promise<UserResponseDto> {
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  async findOne(@Param('id') id: string): Promise<UserResponseVo> {
     return this.usersService.findOne(id);
   }
 
@@ -125,17 +134,20 @@ export class UsersController {
   @Roles('admin')
   @ApiOperation({ summary: '更新用户信息（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserResponseVo, {
+    status: HttpStatus.OK,
     description: '成功更新用户信息',
-    type: UserResponseDto,
   })
-  @ApiResponse({ status: 404, description: '用户不存在' })
-  @ApiResponse({ status: 409, description: '邮箱/用户名/手机号已被使用' })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.CONFLICT, {
+    description: '邮箱/用户名/手机号已被使用',
+  })
   async update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseVo> {
     return this.usersService.update(id, updateUserDto);
   }
 
@@ -148,8 +160,13 @@ export class UsersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '删除用户（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
-  @ApiResponse({ status: 204, description: '成功删除用户' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiSuccessResponseDecorator(undefined, {
+    status: HttpStatus.NO_CONTENT,
+    description: '成功删除用户',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
   async remove(@Param('id') id: string): Promise<void> {
     return this.usersService.remove(id);
   }
@@ -162,16 +179,17 @@ export class UsersController {
   @Roles('admin')
   @ApiOperation({ summary: '更新用户状态（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserResponseVo, {
+    status: HttpStatus.OK,
     description: '成功更新用户状态',
-    type: UserResponseDto,
   })
-  @ApiResponse({ status: 409, description: '用户邮箱已验证' })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
   async updateStatus(
     @Param('id') id: string,
     @Body() updateUserStatusDto: UpdateUserStatusDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseVo> {
     return this.usersService.updateUserStatus(id, updateUserStatusDto.isActive);
   }
 
@@ -183,14 +201,17 @@ export class UsersController {
   @Roles('admin')
   @ApiOperation({ summary: '验证用户邮箱（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserResponseVo, {
+    status: HttpStatus.OK,
     description: '成功验证用户邮箱',
-    type: UserResponseDto,
   })
-  @ApiResponse({ status: 404, description: '用户不存在' })
-  @ApiResponse({ status: 409, description: '用户邮箱已验证' })
-  async verifyUser(@Param('id') id: string): Promise<UserResponseDto> {
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.CONFLICT, {
+    description: '用户邮箱已验证',
+  })
+  async verifyUser(@Param('id') id: string): Promise<UserResponseVo> {
     return this.usersService.verifyUser(id);
   }
 
@@ -204,8 +225,13 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '重置用户密码（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
-  @ApiResponse({ status: 200, description: '成功重置密码' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
+  @ApiSuccessResponseDecorator(undefined, {
+    status: HttpStatus.OK,
+    description: '成功重置密码',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
   async resetPassword(
     @Param('id') id: string,
     @Body() resetPasswordDto: ResetPasswordDto,
@@ -221,12 +247,16 @@ export class UsersController {
   @Roles('admin')
   @ApiOperation({ summary: '分配角色给用户（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserResponseVo, {
+    status: HttpStatus.OK,
     description: '成功分配角色',
-    type: UserResponseDto,
   })
-  @ApiResponse({ status: 409, description: '用户未拥有该角色' })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.UNPROCESSABLE_ENTITY, {
+    description: '部分分配的角色不存在',
+  })
   async assignRoles(
     @Param('id') id: string,
     @Body() assignRolesDto: AssignRolesDto,
@@ -244,8 +274,13 @@ export class UsersController {
   @ApiOperation({ summary: '移除用户的角色（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiParam({ name: 'roleId', description: '角色 ID' })
-  @ApiResponse({ status: 204, description: '成功移除角色' })
-  @ApiResponse({ status: 404, description: '角色不存在或用户未拥有该角色' })
+  @ApiSuccessResponseDecorator(undefined, {
+    status: HttpStatus.NO_CONTENT,
+    description: '成功移除角色',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在或者角色不存在',
+  })
   async removeRole(
     @Param('id') id: string,
     @Param('roleId', ParseIntPipe) roleId: number,
@@ -261,9 +296,14 @@ export class UsersController {
   @Roles('admin')
   @ApiOperation({ summary: '获取用户的角色列表（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
-  @ApiResponse({ status: 200, description: '成功获取角色列表' })
-  @ApiResponse({ status: 404, description: '用户不存在' })
-  async getUserRoles(@Param('id') id: string): Promise<any[]> {
+  @ApiSuccessResponseDecorator(UserResponseVo, {
+    status: HttpStatus.OK,
+    description: '成功获取角色列表',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  async getUserRoles(@Param('id') id: string): Promise<UserRoleVo[]> {
     return this.usersService.getUserRoles(id);
   }
 
@@ -275,13 +315,16 @@ export class UsersController {
   @Roles('admin')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '批量删除用户（管理员）' })
-  @ApiResponse({ status: 200, description: '成功删除用户' })
-  @ApiResponse({ status: 404, description: '没有找到可删除的用户' })
+  @ApiSuccessResponseDecorator(undefined, {
+    description: '成功删除用户',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '没有找到可删除的用户',
+  })
   async batchDelete(
     @Body() batchOperationDto: BatchOperationDto,
-  ): Promise<{ message: string; count: number }> {
-    const count = await this.usersService.batchDelete(batchOperationDto.ids);
-    return { message: '批量删除成功', count };
+  ): Promise<number> {
+    return await this.usersService.batchDelete(batchOperationDto.ids);
   }
 
   /* ==================== 普通用户接口 ==================== */
@@ -292,12 +335,13 @@ export class UsersController {
   @Get('profile/me')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '获取当前用户资料' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserResponseVo, {
     description: '成功获取个人资料',
-    type: UserResponseDto,
   })
-  async getProfile(@CurrentUser() user: JwtUser): Promise<UserResponseDto> {
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  async getProfile(@CurrentUser() user: JwtUser): Promise<UserResponseVo> {
     return this.usersService.findOne(user.userId);
   }
 
@@ -307,16 +351,19 @@ export class UsersController {
   @Patch('profile/me')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '更新个人资料' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(UserResponseVo, {
     description: '成功更新个人资料',
-    type: UserResponseDto,
   })
-  @ApiResponse({ status: 409, description: '用户名/手机号已被使用' })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.CONFLICT, {
+    description: '用户名/邮箱/手机号已被使用',
+  })
   async updateProfile(
     @CurrentUser() user: JwtUser,
     @Body() updateProfileDto: UpdateProfileDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseVo> {
     return this.usersService.updateProfile(user.userId, updateProfileDto);
   }
 
@@ -328,18 +375,25 @@ export class UsersController {
   @DisableDatabaseLog()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '修改密码' })
-  @ApiResponse({ status: 200, description: '密码修改成功' })
-  @ApiResponse({ status: 409, description: '旧密码不正确或新密码与旧密码相同' })
+  @ApiSuccessResponseDecorator(undefined, {
+    status: HttpStatus.NO_CONTENT,
+    description: '密码修改成功',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.CONFLICT, {
+    description: '旧密码不正确/新密码与旧密码相同',
+  })
   async changePassword(
     @CurrentUser() user: JwtUser,
     @Body() changePasswordDto: ChangePasswordDto,
-  ): Promise<{ message: string }> {
+  ) {
     await this.usersService.changePassword(
       user.userId,
       changePasswordDto.oldPassword,
       changePasswordDto.newPassword,
     );
-    return { message: '密码修改成功' };
   }
 
   /**
@@ -348,12 +402,13 @@ export class UsersController {
   @Get('profile/sessions')
   @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '获取当前用户的会话列表' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseArrayDecorator(UserSessionVo, {
     description: '成功获取会话列表',
-    type: [UserSessionDto],
   })
-  async getSessions(@CurrentUser() user: JwtUser): Promise<UserSessionDto[]> {
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  async getSessions(@CurrentUser() user: JwtUser): Promise<UserSessionVo[]> {
     // 从 RequestContext 中获取 access token（由 JwtStrategy 设置）
     const accessToken = RequestContextService.get<string>('accessToken');
 
@@ -367,19 +422,16 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '注销其他会话' })
-  @ApiResponse({ status: 200, description: '成功注销其他会话' })
-  async logoutOtherSessions(
-    @CurrentUser() user: JwtUser,
-  ): Promise<{ message: string }> {
+  @ApiSuccessResponseDecorator(undefined, {
+    status: HttpStatus.NO_CONTENT,
+    description: '成功注销其他会话',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在/当前会话不存在',
+  })
+  async logoutOtherSessions(@CurrentUser() user: JwtUser) {
     // 从 RequestContext 中获取 access token（由 JwtStrategy 设置）
     const accessToken = RequestContextService.get<string>('accessToken');
-
-    if (!accessToken) {
-      return { message: '无法获取当前会话信息' };
-    }
-
     await this.usersService.logoutOtherSessions(user.userId, accessToken);
-
-    return { message: '成功注销其他会话' };
   }
 }

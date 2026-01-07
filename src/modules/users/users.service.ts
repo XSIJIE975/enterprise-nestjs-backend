@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  UnprocessableEntityException,
   forwardRef,
   Inject,
   BadRequestException,
@@ -14,10 +15,8 @@ import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { AuthService } from '../auth/auth.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { UserResponseDto } from './dto/user-response.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import { CreateUserDto, UpdateUserDto, UpdateProfileDto } from './dto';
+import { UserRoleVo, UserResponseVo } from './vo';
 
 /**
  * 用户服务
@@ -44,7 +43,7 @@ export class UsersService {
    * @param createUserDto 创建用户 DTO
    * @returns 用户信息（不含密码）
    */
-  async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
+  async create(createUserDto: CreateUserDto): Promise<UserResponseVo> {
     // 检查唯一性冲突 (邮箱、用户名、手机号)
     const conflictChecks: Prisma.UserWhereInput[] = [
       { email: createUserDto.email },
@@ -112,7 +111,7 @@ export class UsersService {
    * 查找所有用户
    * @returns 用户列表
    */
-  async findAll(): Promise<UserResponseDto[]> {
+  async findAll(): Promise<UserResponseVo[]> {
     const users = await this.prisma.user.findMany({
       where: {
         deletedAt: null,
@@ -139,7 +138,7 @@ export class UsersService {
   /**
    * 根据 ID 查询单个用户
    */
-  async findOne(id: string): Promise<UserResponseDto> {
+  async findOne(id: string): Promise<UserResponseVo> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       include: {
@@ -259,7 +258,7 @@ export class UsersService {
   async update(
     id: string,
     updateUserDto: UpdateUserDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseVo> {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -485,7 +484,7 @@ export class UsersService {
   async updateProfile(
     userId: string,
     updateProfileDto: UpdateProfileDto,
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseVo> {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -621,7 +620,7 @@ export class UsersService {
   async updateUserStatus(
     id: string,
     isActive: boolean,
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseVo> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: { deletedAt: true },
@@ -655,7 +654,7 @@ export class UsersService {
    * @param id 用户 ID
    * @returns 更新后的用户信息
    */
-  async verifyUser(id: string): Promise<UserResponseDto> {
+  async verifyUser(id: string): Promise<UserResponseVo> {
     const user = await this.prisma.user.findUnique({
       where: { id },
       select: { deletedAt: true, isVerified: true },
@@ -718,7 +717,7 @@ export class UsersService {
   async assignRoles(
     userId: string,
     roleIds: number[],
-  ): Promise<UserResponseDto> {
+  ): Promise<UserResponseVo> {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -737,7 +736,7 @@ export class UsersService {
     });
 
     if (rolesCount !== roleIds.length) {
-      throw new NotFoundException('部分角色不存在');
+      throw new UnprocessableEntityException('部分分配的角色不存在');
     }
 
     // 使用事务确保原子性：删除旧角色并添加新角色
@@ -807,12 +806,10 @@ export class UsersService {
       },
     });
 
-    if (count === 0) {
-      throw new NotFoundException('用户没有该角色');
+    if (count !== 0) {
+      // 清除用户的 RBAC 缓存，确保下次请求获取最新的角色和权限
+      await this.rbacCacheService.deleteUserCache(userId);
     }
-
-    // 清除用户的 RBAC 缓存，确保下次请求获取最新的角色和权限
-    await this.rbacCacheService.deleteUserCache(userId);
   }
 
   /**
@@ -820,7 +817,7 @@ export class UsersService {
    * @param userId 用户 ID
    * @returns 角色列表
    */
-  async getUserRoles(userId: string): Promise<any[]> {
+  async getUserRoles(userId: string): Promise<UserRoleVo[]> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -1062,7 +1059,7 @@ export class UsersService {
    */
   private toUserResponse(
     user: UserModel & { userRoles?: { role: { code: string } }[] },
-  ): UserResponseDto {
+  ): UserResponseVo {
     const roles = user.userRoles?.map(ur => ur.role.code) || [];
 
     return {

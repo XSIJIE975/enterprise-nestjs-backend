@@ -5,12 +5,12 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { UsersService } from './users.service';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { AuthService } from '../auth/auth.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
 import * as bcrypt from 'bcrypt';
-import { ErrorCode } from '../../common/enums/error-codes.enum';
+import { RbacCacheService } from '@/shared/cache';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { ErrorCode } from '@/common/enums/error-codes.enum';
+import { AuthService } from '../auth/auth.service';
+import { UsersService } from './users.service';
 
 // Mock bcrypt
 jest.mock('bcrypt');
