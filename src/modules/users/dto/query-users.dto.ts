@@ -6,7 +6,7 @@ import {
   IsBoolean,
   IsIn,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
@@ -51,7 +51,11 @@ export class QueryUsersDto {
     example: true,
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean({ message: '用户状态必须是布尔值' })
   isActive?: boolean;
 
@@ -60,7 +64,11 @@ export class QueryUsersDto {
     example: true,
   })
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   @IsBoolean({ message: '邮箱验证状态必须是布尔值' })
   isVerified?: boolean;
 
