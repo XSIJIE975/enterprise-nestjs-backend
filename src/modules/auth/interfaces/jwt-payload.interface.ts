@@ -1,7 +1,7 @@
 /**
  * JWT Payload 接口
  */
-export interface JwtPayload {
+export interface AuthJwtPayload {
   /**
    * 用户 ID（JWT 标准字段 sub）- UUID 格式
    */

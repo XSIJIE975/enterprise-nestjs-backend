@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import { AuthService } from '../auth.service';
-import { JwtPayload, JwtUser } from '../interfaces/jwt-payload.interface';
+import { AuthJwtPayload, JwtUser } from '../interfaces/jwt-payload.interface';
 import { RequestContextService } from '../../../shared/request-context/request-context.service';
 import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 
@@ -32,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
    * @param payload JWT Payload
    * @returns 用户信息
    */
-  async validate(req: Request, payload: JwtPayload): Promise<JwtUser> {
+  async validate(req: Request, payload: AuthJwtPayload): Promise<JwtUser> {
     // 提取 Token
     const token = ExtractJwt.fromAuthHeaderAsBearerToken()(req);
 

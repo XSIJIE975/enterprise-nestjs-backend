@@ -9,7 +9,7 @@ import { LoggerService } from '@/shared/logger/logger.service';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto';
 import { RegisterResponseVo, AuthResponseVo } from './vo';
-import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { AuthJwtPayload } from './interfaces/jwt-payload.interface';
 import type { AuthUser } from './types/user.types';
 
 /**
@@ -133,7 +133,7 @@ export class AuthService {
       ),
     );
 
-    const payload: JwtPayload = {
+    const payload: AuthJwtPayload = {
       sub: user.id,
       username: user.username,
       email: user.email,
@@ -143,7 +143,7 @@ export class AuthService {
 
     // 生成 Access Token
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: this.accessTokenExpires,
+      expiresIn: this.parseExpiresIn(this.accessTokenExpires),
       issuer: this.jwtIssuer,
       audience: this.jwtAudience,
     });
@@ -151,7 +151,7 @@ export class AuthService {
     // 生成 Refresh Token
     const refreshToken = this.jwtService.sign(payload, {
       secret: this.refreshTokenSecret,
-      expiresIn: this.refreshTokenExpires,
+      expiresIn: this.parseExpiresIn(this.refreshTokenExpires),
       issuer: this.jwtIssuer,
       audience: this.jwtAudience,
     });
@@ -327,7 +327,7 @@ export class AuthService {
       await this.rbacCacheService.setUserRoles(user.id, roles);
       await this.rbacCacheService.setUserPermissions(user.id, permissions);
 
-      const newPayload: JwtPayload = {
+      const newPayload: AuthJwtPayload = {
         sub: user.id,
         username: user.username,
         email: user.email,
@@ -336,14 +336,14 @@ export class AuthService {
       };
 
       const newAccessToken = this.jwtService.sign(newPayload, {
-        expiresIn: this.accessTokenExpires,
+        expiresIn: this.parseExpiresIn(this.accessTokenExpires),
         issuer: this.jwtIssuer,
         audience: this.jwtAudience,
       });
 
       const newRefreshToken = this.jwtService.sign(newPayload, {
         secret: this.refreshTokenSecret,
-        expiresIn: this.refreshTokenExpires,
+        expiresIn: this.parseExpiresIn(this.refreshTokenExpires),
         issuer: this.jwtIssuer,
         audience: this.jwtAudience,
       });
@@ -517,8 +517,12 @@ export class AuthService {
    * 注意：普通登录流程现在使用智能会话管理，不会调用此方法
    *
    * @param userId 用户 ID
+   * @param reason 撤销原因
    */
-  async revokeAllUserSessions(userId: string): Promise<void> {
+  async revokeAllUserSessions(
+    userId: string,
+    reason: ErrorCode = ErrorCode.SESSION_REVOKED,
+  ): Promise<void> {
     const sessions = await this.prisma.userSession.findMany({
       where: {
         userId,
@@ -528,15 +532,11 @@ export class AuthService {
 
     // 将所有 Token 加入黑名单（原因：安全操作，如修改密码）
     for (const session of sessions) {
-      await this.addTokenToBlacklist(
-        session.accessToken,
-        15 * 60,
-        ErrorCode.SESSION_REVOKED,
-      );
+      await this.addTokenToBlacklist(session.accessToken, 15 * 60, reason);
       await this.addTokenToBlacklist(
         session.refreshToken,
         7 * 24 * 60 * 60,
-        ErrorCode.SESSION_REVOKED,
+        reason,
       );
     }
 
@@ -555,7 +555,10 @@ export class AuthService {
     // 从缓存服务中删除缓存
     await this.removeTokenFromRedis(userId);
 
-    this.logger.log(`撤销用户所有会话: User ID ${userId}`, 'AuthService');
+    this.logger.log(
+      `撤销用户所有会话: User ID ${userId}, 原因: ${reason}`,
+      'AuthService',
+    );
   }
 
   /**
