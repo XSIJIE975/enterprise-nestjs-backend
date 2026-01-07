@@ -58,7 +58,7 @@ export class RbacCacheService {
         this.ROLE_USERS_PREFIX,
         role,
       );
-      await this.cacheService.sadd(roleUsersKey, userId.toString());
+      await this.cacheService.sadd(roleUsersKey, userId);
     }
 
     this.logger.debug(
