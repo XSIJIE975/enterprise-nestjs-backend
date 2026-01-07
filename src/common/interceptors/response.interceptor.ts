@@ -7,7 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ApiSuccessResponse } from '@/common/dtos';
+import { ApiSuccessResponse } from '@/common/vo';
 import {
   convertDatesInObject,
   convertToTimezone,

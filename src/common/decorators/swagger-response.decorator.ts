@@ -6,7 +6,7 @@ import {
   ApiBody,
   getSchemaPath,
 } from '@nestjs/swagger';
-import { ApiSuccessResponse, ApiErrorResponse } from '../dtos';
+import { ApiSuccessResponse, ApiErrorResponse } from '../vo';
 
 /**
  * Swagger 成功响应配置选项

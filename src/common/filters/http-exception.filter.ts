@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import { ErrorCode, ErrorMessages } from '../enums/error-codes.enum';
 import { BusinessException } from '../exceptions/business.exception';
-import { ApiErrorResponse } from '@/common/dtos';
+import { ApiErrorResponse } from '@/common/vo';
 import { LogsService } from '@/modules/logs/logs.service';
 import { LoggerService } from '@/shared/logger/logger.service';
 import { RequestContextService } from '@/shared/request-context/request-context.service';

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { PaginationMetaVo } from './pagination-meta.dto';
+import { PaginationMetaVo } from './pagination-meta.vo';
 
 /**
  * 通用分页响应 VO 基类
