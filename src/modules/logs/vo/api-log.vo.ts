@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaginatedDto } from '@/common/dtos/paginated.dto';
+import { PaginatedVo } from '@/common/vo';
 
 /**
  * API 日志 VO - 用户信息
@@ -129,7 +129,7 @@ export class ApiLogVo {
 /**
  * API 日志分页响应 VO
  */
-export class ApiLogPageVo extends PaginatedDto<ApiLogVo> {
+export class ApiLogPageVo extends PaginatedVo<ApiLogVo> {
   @ApiProperty({
     description: 'API 日志列表',
     type: () => [ApiLogVo],

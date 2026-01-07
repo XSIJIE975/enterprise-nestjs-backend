@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PaginatedDto } from '@/common/dtos/paginated.dto';
+import { PaginatedVo } from '@/common/vo';
 
 /**
  * 错误日志详情 VO
@@ -75,7 +75,7 @@ export class ErrorLogVo {
 /**
  * 错误日志分页响应 VO
  */
-export class ErrorLogPageVo extends PaginatedDto<ErrorLogVo> {
+export class ErrorLogPageVo extends PaginatedVo<ErrorLogVo> {
   @ApiProperty({
     description: '错误日志列表',
     type: () => [ErrorLogVo],

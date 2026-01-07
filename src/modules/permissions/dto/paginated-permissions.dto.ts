@@ -4,7 +4,7 @@ import { PermissionResponseDto } from './permission-response.dto';
 /**
  * 分页元数据
  */
-export class PaginationMetaDto {
+export class PaginationMetaVo {
   @ApiProperty({
     description: '当前页码',
     example: 1,
@@ -55,7 +55,7 @@ export class PaginatedPermissionsDto {
 
   @ApiProperty({
     description: '分页元数据',
-    type: PaginationMetaDto,
+    type: PaginationMetaVo,
   })
-  meta: PaginationMetaDto;
+  meta: PaginationMetaVo;
 }

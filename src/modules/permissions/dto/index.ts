@@ -5,5 +5,5 @@ export { QueryPermissionsDto } from './query-permissions.dto';
 export { UpdatePermissionStatusDto } from './update-permission-status.dto';
 export {
   PaginatedPermissionsDto,
-  PaginationMetaDto,
+  PaginationMetaVo,
 } from './paginated-permissions.dto';
