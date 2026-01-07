@@ -1,10 +1,10 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { UserResponseDto } from './user-response.dto';
 
 /**
- * 分页元数据
+ * 分页元数据 VO
+ * 在分页响应中返回分页信息
  */
-export class PaginationMetaDto {
+export class PaginationMetaVo {
   @ApiProperty({
     description: '当前页码',
     example: 1,
@@ -40,22 +40,4 @@ export class PaginationMetaDto {
     example: true,
   })
   hasNextPage: boolean;
-}
-
-/**
- * 分页用户列表响应 DTO
- * 返回带分页信息的用户列表
- */
-export class PaginatedUsersDto {
-  @ApiProperty({
-    description: '用户列表',
-    type: [UserResponseDto],
-  })
-  data: UserResponseDto[];
-
-  @ApiProperty({
-    description: '分页元数据',
-    type: PaginationMetaDto,
-  })
-  meta: PaginationMetaDto;
 }
