@@ -2,9 +2,15 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * 用户响应 DTO
- * 注意：不包含敏感信息如密码和用户ID
+ * 注意：不包含敏感信息
  */
 export class UserResponseDto {
+  @ApiProperty({
+    description: '用户ID',
+    example: '123e4567-e89b-12d3-a456-426614174000',
+  })
+  id: string;
+
   @ApiProperty({
     description: '邮箱地址',
     example: 'user@example.com',

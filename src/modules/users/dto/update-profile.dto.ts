@@ -1,4 +1,10 @@
-import { IsString, IsOptional, Length, Matches } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  Length,
+  Matches,
+  IsEmail,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
@@ -6,6 +12,14 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
  * 普通用户只能修改自己的基本信息，不能修改敏感字段
  */
 export class UpdateProfileDto {
+  @ApiPropertyOptional({
+    description: '邮箱地址',
+    example: 'user@example.com',
+  })
+  @IsEmail({}, { message: '邮箱格式不正确' })
+  @IsOptional()
+  email?: string;
+
   @ApiPropertyOptional({
     description: '用户名（3-20个字符，只能包含字母、数字、下划线）',
     example: 'johndoe',

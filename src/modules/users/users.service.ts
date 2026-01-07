@@ -4,15 +4,20 @@ import {
   ConflictException,
   forwardRef,
   Inject,
+  BadRequestException,
 } from '@nestjs/common';
-import { PrismaService } from '../../shared/database/prisma.service';
+import type * as Prisma from '@/prisma/prisma/internal/prismaNamespace';
+import { UserModel } from '@/prisma/prisma/models/User';
+import { ConfigService } from '@nestjs/config';
+import * as bcrypt from 'bcrypt';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { RbacCacheService } from '@/shared/cache';
+import { ErrorCode } from '@/common/enums/error-codes.enum';
+import { AuthService } from '../auth/auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
-import * as bcrypt from 'bcrypt';
-import { ConfigService } from '@nestjs/config';
-import { AuthService } from '../auth/auth.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 /**
  * 用户服务
@@ -40,31 +45,35 @@ export class UsersService {
    * @returns 用户信息（不含密码）
    */
   async create(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    // 检查邮箱是否已存在
-    const existingUserByEmail = await this.prisma.user.findUnique({
-      where: { email: createUserDto.email },
-    });
+    // 检查唯一性冲突 (邮箱、用户名、手机号)
+    const conflictChecks: Prisma.UserWhereInput[] = [
+      { email: createUserDto.email },
+      { username: createUserDto.username },
+    ];
 
-    if (existingUserByEmail) {
-      throw new ConflictException('该邮箱已被注册');
-    }
-
-    // 检查用户名是否已存在
-    const existingUserByUsername = await this.prisma.user.findUnique({
-      where: { username: createUserDto.username },
-    });
-
-    if (existingUserByUsername) {
-      throw new ConflictException('该用户名已被使用');
-    }
-
-    // 检查手机号是否已存在（如果提供了手机号）
     if (createUserDto.phone) {
-      const existingUserByPhone = await this.prisma.user.findUnique({
-        where: { phone: createUserDto.phone },
-      });
+      conflictChecks.push({ phone: createUserDto.phone });
+    }
 
-      if (existingUserByPhone) {
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: conflictChecks,
+      },
+      select: {
+        email: true,
+        username: true,
+        phone: true,
+      },
+    });
+
+    if (existingUser) {
+      if (existingUser.email === createUserDto.email) {
+        throw new ConflictException('该邮箱已被注册');
+      }
+      if (existingUser.username === createUserDto.username) {
+        throw new ConflictException('该用户名已被使用');
+      }
+      if (createUserDto.phone && existingUser.phone === createUserDto.phone) {
         throw new ConflictException('该手机号已被注册');
       }
     }
@@ -85,7 +94,7 @@ export class UsersService {
         lastName: createUserDto.lastName,
         phone: createUserDto.phone,
         isActive: true,
-        isVerified: false, // 默认未验证
+        isVerified: false,
       },
       include: {
         userRoles: {
@@ -111,7 +120,11 @@ export class UsersService {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -132,7 +145,11 @@ export class UsersService {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -252,36 +269,42 @@ export class UsersService {
       throw new NotFoundException('用户不存在');
     }
 
-    // 如果更新邮箱，检查是否已被其他用户使用
+    // 检查唯一性冲突 (邮箱、用户名、手机号)
+    const conflictChecks: Prisma.UserWhereInput[] = [];
+
     if (updateUserDto.email && updateUserDto.email !== user.email) {
-      const existingUser = await this.prisma.user.findUnique({
-        where: { email: updateUserDto.email },
-      });
-
-      if (existingUser) {
-        throw new ConflictException('该邮箱已被使用');
-      }
+      conflictChecks.push({ email: updateUserDto.email });
     }
 
-    // 如果更新用户名，检查是否已被其他用户使用
     if (updateUserDto.username && updateUserDto.username !== user.username) {
-      const existingUser = await this.prisma.user.findUnique({
-        where: { username: updateUserDto.username },
-      });
-
-      if (existingUser) {
-        throw new ConflictException('该用户名已被使用');
-      }
+      conflictChecks.push({ username: updateUserDto.username });
     }
 
-    // 如果更新手机号，检查是否已被其他用户使用
     if (updateUserDto.phone && updateUserDto.phone !== user.phone) {
-      const existingUser = await this.prisma.user.findUnique({
-        where: { phone: updateUserDto.phone },
+      conflictChecks.push({ phone: updateUserDto.phone });
+    }
+
+    if (conflictChecks.length > 0) {
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          AND: [{ id: { not: id } }, { OR: conflictChecks }],
+        },
+        select: { email: true, username: true, phone: true },
       });
 
       if (existingUser) {
-        throw new ConflictException('该手机号已被使用');
+        if (updateUserDto.email && existingUser.email === updateUserDto.email) {
+          throw new ConflictException('该邮箱已被使用');
+        }
+        if (
+          updateUserDto.username &&
+          existingUser.username === updateUserDto.username
+        ) {
+          throw new ConflictException('该用户名已被使用');
+        }
+        if (updateUserDto.phone && existingUser.phone === updateUserDto.phone) {
+          throw new ConflictException('该手机号已被使用');
+        }
       }
     }
 
@@ -292,7 +315,11 @@ export class UsersService {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -333,10 +360,15 @@ export class UsersService {
   async remove(id: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      select: { deletedAt: true, isActive: true },
     });
 
     if (!user || user.deletedAt) {
       throw new NotFoundException('用户不存在');
+    }
+
+    if (user.isActive) {
+      throw new BadRequestException('激活状态的用户不能被删除');
     }
 
     // 软删除
@@ -376,43 +408,34 @@ export class UsersService {
       order = 'desc',
     } = query;
 
-    const skip = (page - 1) * pageSize;
-    const take = pageSize;
+    // 确保分页参数有效
+    const safePage = Math.max(1, page);
+    const safePageSize = Math.max(1, pageSize);
+    const skip = (safePage - 1) * safePageSize;
 
     // 构建查询条件
-    const where: any = {
+    const where: Prisma.UserWhereInput = {
       deletedAt: null,
-    };
-
-    // 关键词搜索（用户名、邮箱、姓名）
-    if (keyword) {
-      where.OR = [
-        { username: { contains: keyword } },
-        { email: { contains: keyword } },
-        { firstName: { contains: keyword } },
-        { lastName: { contains: keyword } },
-      ];
-    }
-
-    // 状态筛选
-    if (isActive !== undefined) {
-      where.isActive = isActive;
-    }
-
-    if (isVerified !== undefined) {
-      where.isVerified = isVerified;
-    }
-
-    // 角色筛选
-    if (role) {
-      where.userRoles = {
-        some: {
-          role: {
-            code: role,
+      ...(keyword && {
+        OR: [
+          { username: { contains: keyword } },
+          { email: { contains: keyword } },
+          { firstName: { contains: keyword } },
+          { lastName: { contains: keyword } },
+        ],
+      }),
+      ...(isActive !== undefined && { isActive }),
+      ...(isVerified !== undefined && { isVerified }),
+      ...(role && {
+        userRoles: {
+          some: {
+            role: {
+              code: { contains: role },
+            },
           },
         },
-      };
-    }
+      }),
+    };
 
     // 查询总数和数据
     const [total, users] = await Promise.all([
@@ -420,11 +443,15 @@ export class UsersService {
       this.prisma.user.findMany({
         where,
         skip,
-        take,
+        take: safePageSize,
         include: {
           userRoles: {
             include: {
-              role: true,
+              role: {
+                select: {
+                  code: true,
+                },
+              },
             },
           },
         },
@@ -434,30 +461,30 @@ export class UsersService {
       }),
     ]);
 
-    const totalPages = Math.ceil(total / pageSize);
+    const totalPages = Math.ceil(total / safePageSize);
 
     return {
       data: users.map(user => this.toUserResponse(user)),
       meta: {
-        page,
-        pageSize,
+        page: safePage,
+        pageSize: safePageSize,
         total,
         totalPages,
-        hasPreviousPage: page > 1,
-        hasNextPage: page < totalPages,
+        hasPreviousPage: safePage > 1,
+        hasNextPage: safePage < totalPages,
       },
     };
   }
 
   /**
-   * 更新个人资料（受限版本，只能修改非敏感字段）
+   * 更新个人资料（受限版本，只能修改部分字段信息）
    * @param userId 用户 ID
    * @param updateProfileDto 更新资料 DTO
    * @returns 更新后的用户信息
    */
   async updateProfile(
     userId: string,
-    updateProfileDto: any,
+    updateProfileDto: UpdateProfileDto,
   ): Promise<UserResponseDto> {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
@@ -468,45 +495,66 @@ export class UsersService {
       throw new NotFoundException('用户不存在');
     }
 
-    // 如果更新用户名，检查是否已被使用
+    // 检查唯一性冲突 (用户名、手机号)
+    const conflictChecks: Prisma.UserWhereInput[] = [];
+
     if (
       updateProfileDto.username &&
       updateProfileDto.username !== user.username
     ) {
-      const existingUser = await this.prisma.user.findUnique({
-        where: { username: updateProfileDto.username },
-      });
-
-      if (existingUser) {
-        throw new ConflictException('该用户名已被使用');
-      }
+      conflictChecks.push({ username: updateProfileDto.username });
     }
 
-    // 如果更新手机号，检查是否已被使用
     if (updateProfileDto.phone && updateProfileDto.phone !== user.phone) {
-      const existingUser = await this.prisma.user.findUnique({
-        where: { phone: updateProfileDto.phone },
+      conflictChecks.push({ phone: updateProfileDto.phone });
+    }
+
+    if (updateProfileDto.email && updateProfileDto.email !== user.email) {
+      conflictChecks.push({ email: updateProfileDto.email });
+    }
+
+    if (conflictChecks.length > 0) {
+      const existingUser = await this.prisma.user.findFirst({
+        where: {
+          AND: [{ id: { not: userId } }, { OR: conflictChecks }],
+        },
+        select: { username: true, phone: true, email: true },
       });
 
       if (existingUser) {
-        throw new ConflictException('该手机号已被使用');
+        if (
+          updateProfileDto.username &&
+          existingUser.username === updateProfileDto.username
+        ) {
+          throw new ConflictException('该用户名已被使用');
+        }
+        if (
+          updateProfileDto.phone &&
+          existingUser.phone === updateProfileDto.phone
+        ) {
+          throw new ConflictException('该手机号已被使用');
+        }
+        if (
+          updateProfileDto.email &&
+          existingUser.email === updateProfileDto.email
+        ) {
+          throw new ConflictException('该邮箱已被使用');
+        }
       }
     }
 
     // 更新用户（只允许更新特定字段）
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        username: updateProfileDto.username,
-        firstName: updateProfileDto.firstName,
-        lastName: updateProfileDto.lastName,
-        phone: updateProfileDto.phone,
-        avatar: updateProfileDto.avatar,
-      },
+      data: updateProfileDto,
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -558,7 +606,10 @@ export class UsersService {
     });
 
     // 密码修改后，撤销所有会话，强制用户重新登录
-    await this.authService.revokeAllUserSessions(userId);
+    await this.authService.revokeAllUserSessions(
+      userId,
+      ErrorCode.SESSION_EXPIRED,
+    );
   }
 
   /**
@@ -573,6 +624,7 @@ export class UsersService {
   ): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      select: { deletedAt: true },
     });
 
     if (!user || user.deletedAt) {
@@ -585,7 +637,11 @@ export class UsersService {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -602,6 +658,7 @@ export class UsersService {
   async verifyUser(id: string): Promise<UserResponseDto> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      select: { deletedAt: true, isVerified: true },
     });
 
     if (!user || user.deletedAt) {
@@ -618,7 +675,11 @@ export class UsersService {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -635,6 +696,7 @@ export class UsersService {
   async resetUserPassword(id: string, newPassword: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { id },
+      select: { deletedAt: true },
     });
 
     if (!user || user.deletedAt) {
@@ -642,6 +704,9 @@ export class UsersService {
     }
 
     await this.updatePassword(id, newPassword);
+
+    // 密码重置后，撤销所有会话，强制用户重新登录
+    await this.authService.revokeAllUserSessions(id, ErrorCode.SESSION_EXPIRED);
   }
 
   /**
@@ -664,29 +729,29 @@ export class UsersService {
     }
 
     // 检查所有角色是否存在
-    const roles = await this.prisma.role.findMany({
+    const rolesCount = await this.prisma.role.count({
       where: {
         id: { in: roleIds },
         isActive: true,
       },
     });
 
-    if (roles.length !== roleIds.length) {
+    if (rolesCount !== roleIds.length) {
       throw new NotFoundException('部分角色不存在');
     }
 
-    // 删除用户现有的所有角色
-    await this.prisma.userRole.deleteMany({
-      where: { userId },
-    });
-
-    // 添加新的角色关联
-    await this.prisma.userRole.createMany({
-      data: roleIds.map(roleId => ({
-        userId,
-        roleId,
-      })),
-    });
+    // 使用事务确保原子性：删除旧角色并添加新角色
+    await this.prisma.$transaction([
+      this.prisma.userRole.deleteMany({
+        where: { userId },
+      }),
+      this.prisma.userRole.createMany({
+        data: roleIds.map(roleId => ({
+          userId,
+          roleId,
+        })),
+      }),
+    ]);
 
     // 清除用户的 RBAC 缓存，确保下次请求获取最新的角色和权限
     await this.rbacCacheService.deleteUserCache(userId);
@@ -697,7 +762,11 @@ export class UsersService {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              select: {
+                code: true,
+              },
+            },
           },
         },
       },
@@ -721,38 +790,26 @@ export class UsersService {
       throw new NotFoundException('用户不存在');
     }
 
-    // 检查角色是否存在
-    const role = await this.prisma.role.findUnique({
-      where: { id: roleId },
+    // 检查角色是否存在且激活
+    const roleCount = await this.prisma.role.count({
+      where: { id: roleId, isActive: true },
     });
 
-    if (!role || !role.isActive) {
+    if (roleCount === 0) {
       throw new NotFoundException('角色不存在');
     }
 
-    // 检查用户是否拥有该角色
-    const userRole = await this.prisma.userRole.findUnique({
+    // 直接尝试删除角色关联，通过 count 判断是否存在
+    const { count } = await this.prisma.userRole.deleteMany({
       where: {
-        userId_roleId: {
-          userId,
-          roleId,
-        },
+        userId,
+        roleId,
       },
     });
 
-    if (!userRole) {
+    if (count === 0) {
       throw new NotFoundException('用户没有该角色');
     }
-
-    // 删除角色关联
-    await this.prisma.userRole.delete({
-      where: {
-        userId_roleId: {
-          userId,
-          roleId,
-        },
-      },
-    });
 
     // 清除用户的 RBAC 缓存，确保下次请求获取最新的角色和权限
     await this.rbacCacheService.deleteUserCache(userId);
@@ -766,10 +823,19 @@ export class UsersService {
   async getUserRoles(userId: string): Promise<any[]> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        deletedAt: true,
         userRoles: {
-          include: {
-            role: true,
+          select: {
+            role: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                description: true,
+                createdAt: true,
+              },
+            },
           },
         },
       },
@@ -779,13 +845,7 @@ export class UsersService {
       throw new NotFoundException('用户不存在');
     }
 
-    return user.userRoles.map(ur => ({
-      id: ur.role.id,
-      code: ur.role.code,
-      name: ur.role.name,
-      description: ur.role.description,
-      createdAt: ur.role.createdAt,
-    }));
+    return user.userRoles.map(ur => ur.role);
   }
 
   /**
@@ -796,14 +856,29 @@ export class UsersService {
   async getUserPermissions(userId: string): Promise<string[]> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
+      select: {
+        deletedAt: true,
         userRoles: {
-          include: {
+          where: {
             role: {
-              include: {
+              isActive: true,
+            },
+          },
+          select: {
+            role: {
+              select: {
                 rolePermissions: {
-                  include: {
-                    permission: true,
+                  where: {
+                    permission: {
+                      isActive: true,
+                    },
+                  },
+                  select: {
+                    permission: {
+                      select: {
+                        code: true,
+                      },
+                    },
                   },
                 },
               },
@@ -817,18 +892,16 @@ export class UsersService {
       throw new NotFoundException('用户不存在');
     }
 
-    // 提取所有权限代码（基于角色聚合，去重，只包含激活的角色和权限）
-    const permissions = Array.from(
-      new Set(
-        user.userRoles
-          .filter(ur => ur.role.isActive) // 只包含激活的角色
-          .flatMap(ur => ur.role.rolePermissions || [])
-          .filter(rp => rp.permission.isActive) // 只包含激活的权限
-          .map(rp => rp.permission.code),
-      ),
-    );
+    // 提取所有权限代码（去重）
+    const permissions = new Set<string>();
 
-    return permissions;
+    for (const ur of user.userRoles) {
+      for (const rp of ur.role.rolePermissions) {
+        permissions.add(rp.permission.code);
+      }
+    }
+
+    return Array.from(permissions);
   }
 
   /**
@@ -844,6 +917,7 @@ export class UsersService {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: { deletedAt: true },
     });
 
     if (!user || user.deletedAt) {
@@ -854,9 +928,9 @@ export class UsersService {
     const sessions = await this.prisma.userSession.findMany({
       where: {
         userId,
-        isActive: true, // 只查询活跃会话
+        isActive: true,
         expiresAt: {
-          gt: new Date(), // 只查询未过期的会话
+          gt: new Date(),
         },
       },
       orderBy: {
@@ -889,6 +963,7 @@ export class UsersService {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: { deletedAt: true },
     });
 
     if (!user || user.deletedAt) {
@@ -902,6 +977,7 @@ export class UsersService {
         accessToken: currentAccessToken,
         isActive: true,
       },
+      select: { id: true },
     });
 
     if (!currentSession) {
@@ -923,68 +999,36 @@ export class UsersService {
     const monthAgo = new Date(today);
     monthAgo.setMonth(monthAgo.getMonth() - 1);
 
-    const [
-      total,
-      active,
-      inactive,
-      verified,
-      unverified,
-      newToday,
-      newThisWeek,
-      newThisMonth,
-    ] = await Promise.all([
-      // 用户总数
-      this.prisma.user.count({
-        where: { deletedAt: null },
-      }),
-      // 活跃用户数
-      this.prisma.user.count({
-        where: { isActive: true, deletedAt: null },
-      }),
-      // 禁用用户数
-      this.prisma.user.count({
-        where: { isActive: false, deletedAt: null },
-      }),
-      // 已验证用户数
-      this.prisma.user.count({
-        where: { isVerified: true, deletedAt: null },
-      }),
-      // 未验证用户数
-      this.prisma.user.count({
-        where: { isVerified: false, deletedAt: null },
-      }),
-      // 今日新增
-      this.prisma.user.count({
-        where: {
-          createdAt: { gte: today },
-          deletedAt: null,
-        },
-      }),
-      // 本周新增
-      this.prisma.user.count({
-        where: {
-          createdAt: { gte: weekAgo },
-          deletedAt: null,
-        },
-      }),
-      // 本月新增
-      this.prisma.user.count({
-        where: {
-          createdAt: { gte: monthAgo },
-          deletedAt: null,
-        },
-      }),
-    ]);
+    // 使用原生 SQL 聚合查询，将 8 次数据库查询合并为 1 次
+    // 性能提升：减少 7 次数据库往返 (Round-trip)，降低数据库连接压力
+    const result = await this.prisma.$queryRaw<any[]>`
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN isActive = 1 THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN isActive = 0 THEN 1 ELSE 0 END) as inactive,
+        SUM(CASE WHEN isVerified = 1 THEN 1 ELSE 0 END) as verified,
+        SUM(CASE WHEN isVerified = 0 THEN 1 ELSE 0 END) as unverified,
+        SUM(CASE WHEN createdAt >= ${today} THEN 1 ELSE 0 END) as newToday,
+        SUM(CASE WHEN createdAt >= ${weekAgo} THEN 1 ELSE 0 END) as newThisWeek,
+        SUM(CASE WHEN createdAt >= ${monthAgo} THEN 1 ELSE 0 END) as newThisMonth
+      FROM users
+      WHERE deletedAt IS NULL
+    `;
+
+    const stats = result[0];
+
+    // 处理 BigInt 转换 (Prisma raw query 返回的 COUNT/SUM 可能是 BigInt，SUM 可能是 null)
+    const toNumber = (val: any) => (val ? Number(val) : 0);
 
     return {
-      total,
-      active,
-      inactive,
-      verified,
-      unverified,
-      newToday,
-      newThisWeek,
-      newThisMonth,
+      total: toNumber(stats.total),
+      active: toNumber(stats.active),
+      inactive: toNumber(stats.inactive),
+      verified: toNumber(stats.verified),
+      unverified: toNumber(stats.unverified),
+      newToday: toNumber(stats.newToday),
+      newThisWeek: toNumber(stats.newThisWeek),
+      newThisMonth: toNumber(stats.newThisMonth),
     };
   }
 
@@ -994,19 +1038,6 @@ export class UsersService {
    * @returns 删除的用户数量
    */
   async batchDelete(ids: string[]): Promise<number> {
-    // 检查用户是否存在
-    const users = await this.prisma.user.findMany({
-      where: {
-        id: { in: ids },
-        deletedAt: null,
-      },
-    });
-
-    if (users.length === 0) {
-      throw new NotFoundException('没有找到可删除的用户');
-    }
-
-    // 批量软删除
     const result = await this.prisma.user.updateMany({
       where: {
         id: { in: ids },
@@ -1017,18 +1048,25 @@ export class UsersService {
       },
     });
 
+    if (result.count === 0) {
+      throw new NotFoundException('没有找到可删除的用户');
+    }
+
     return result.count;
   }
 
   /**
-   * 将用户实体转换为响应 DTO（移除密码、ID等敏感信息）
+   * 将用户实体转换为响应 DTO（移除敏感信息）
    * @param user 用户实体
    * @returns 用户响应 DTO
    */
-  private toUserResponse(user: any): UserResponseDto {
-    const roles = user.userRoles?.map((ur: any) => ur.role.code) || [];
+  private toUserResponse(
+    user: UserModel & { userRoles?: { role: { code: string } }[] },
+  ): UserResponseDto {
+    const roles = user.userRoles?.map(ur => ur.role.code) || [];
 
     return {
+      id: user.id,
       email: user.email,
       username: user.username,
       firstName: user.firstName,

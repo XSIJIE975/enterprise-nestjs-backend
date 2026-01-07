@@ -18,7 +18,6 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
 } from '@nestjs/swagger';
 import { UsersService } from './users.service';
 import { RequestContextService } from '../../shared/request-context/request-context.service';
@@ -28,6 +27,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { DisableDatabaseLog } from '../../common/decorators/database-log.decorator';
 import { JwtUser } from '../auth/interfaces/jwt-payload.interface';
+import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUsersDto } from './dto/query-users.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -53,6 +53,20 @@ export class UsersController {
 
   /* ==================== 管理员接口 ==================== */
 
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: '创建新用户（管理员）' })
+  @ApiResponse({
+    status: 201,
+    description: '成功创建新用户',
+    type: UserResponseDto,
+  })
+  @ApiResponse({ status: 409, description: '邮箱/用户名/手机号已被使用' })
+  async create(@Body() createUserDto: CreateUserDto): Promise<UserResponseDto> {
+    return this.usersService.create(createUserDto);
+  }
+
   /**
    * 获取用户列表（分页、搜索、过滤）
    */
@@ -64,43 +78,6 @@ export class UsersController {
     status: 200,
     description: '成功获取用户列表',
     type: PaginatedUsersDto,
-  })
-  @ApiQuery({ name: 'page', required: false, description: '页码', example: 1 })
-  @ApiQuery({
-    name: 'pageSize',
-    required: false,
-    description: '每页数量',
-    example: 10,
-  })
-  @ApiQuery({
-    name: 'keyword',
-    required: false,
-    description: '搜索关键词（用户名、邮箱、姓名）',
-  })
-  @ApiQuery({
-    name: 'isActive',
-    required: false,
-    description: '是否激活',
-    type: Boolean,
-  })
-  @ApiQuery({
-    name: 'isVerified',
-    required: false,
-    description: '是否验证',
-    type: Boolean,
-  })
-  @ApiQuery({ name: 'role', required: false, description: '角色代码' })
-  @ApiQuery({
-    name: 'sortBy',
-    required: false,
-    description: '排序字段',
-    example: 'createdAt',
-  })
-  @ApiQuery({
-    name: 'order',
-    required: false,
-    description: '排序方向',
-    enum: ['asc', 'desc'],
   })
   async findAll(@Query() query: QueryUsersDto): Promise<PaginatedUsersDto> {
     return this.usersService.findAllPaginated(query);

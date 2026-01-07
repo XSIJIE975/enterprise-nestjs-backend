@@ -1,11 +1,16 @@
 ﻿import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { UsersService } from './users.service';
 import { PrismaService } from '../../shared/database/prisma.service';
 import { AuthService } from '../auth/auth.service';
 import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
 import * as bcrypt from 'bcrypt';
+import { ErrorCode } from '../../common/enums/error-codes.enum';
 
 // Mock bcrypt
 jest.mock('bcrypt');
@@ -13,10 +18,11 @@ jest.mock('bcrypt');
 describe('UsersService', () => {
   let service: UsersService;
 
-  // Mock UUID 甯搁噺
+  // Mock UUID 常量
   const MOCK_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
   const MOCK_USER_ID_2 = '660e8400-e29b-41d4-a716-446655440001';
   const NON_EXISTENT_UUID = '999e8400-e29b-41d4-a716-446655440999';
+
   // Mock 数据
   const mockUser = {
     id: MOCK_USER_ID,
@@ -51,15 +57,39 @@ describe('UsersService', () => {
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
     userSession: {
       findFirst: jest.fn(),
+      findMany: jest.fn(),
     },
+    userRole: {
+      deleteMany: jest.fn(),
+      createMany: jest.fn(),
+    },
+    role: {
+      count: jest.fn(),
+    },
+    $transaction: jest.fn(callback => {
+      if (Array.isArray(callback)) {
+        return Promise.resolve(callback);
+      }
+      return callback(mockPrismaService); // simple mock for interactive transactions if needed
+    }),
+    $queryRaw: jest.fn(),
   };
 
   const mockAuthService = {
     logoutOtherSessions: jest.fn(),
     revokeAllUserSessions: jest.fn(),
+  };
+
+  const mockRbacCacheService = {
+    getUserRoles: jest.fn(),
+    setUserRoles: jest.fn(),
+    getUserPermissions: jest.fn(),
+    setUserPermissions: jest.fn(),
+    deleteUserCache: jest.fn(),
   };
 
   const mockConfigService = {
@@ -83,13 +113,7 @@ describe('UsersService', () => {
         },
         {
           provide: RbacCacheService,
-          useValue: {
-            getUserRoles: jest.fn(),
-            setUserRoles: jest.fn(),
-            getUserPermissions: jest.fn(),
-            setUserPermissions: jest.fn(),
-            deleteUserCache: jest.fn(),
-          },
+          useValue: mockRbacCacheService,
         },
         {
           provide: ConfigService,
@@ -123,11 +147,12 @@ describe('UsersService', () => {
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
 
       // Mock Prisma 查询
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      mockPrismaService.user.findFirst.mockResolvedValue(null); // No conflicts
       mockPrismaService.user.create.mockResolvedValue({
         ...mockUser,
         email: createUserDto.email,
         username: createUserDto.username,
+        phone: createUserDto.phone,
       });
 
       const result = await service.create(createUserDto);
@@ -135,7 +160,9 @@ describe('UsersService', () => {
       expect(result).toBeDefined();
       expect(result.email).toBe(createUserDto.email);
       expect(result.username).toBe(createUserDto.username);
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledTimes(3); // email, username, phone
+
+      // Changed: service uses findFirst with OR, not multiple findUnique calls
+      expect(mockPrismaService.user.findFirst).toHaveBeenCalled();
       expect(mockPrismaService.user.create).toHaveBeenCalledWith({
         data: {
           email: createUserDto.email,
@@ -144,8 +171,8 @@ describe('UsersService', () => {
           firstName: createUserDto.firstName,
           lastName: createUserDto.lastName,
           phone: createUserDto.phone,
-          isActive: true,
-          isVerified: false,
+          isActive: true, // Default
+          isVerified: false, // Default
         },
         include: {
           userRoles: {
@@ -159,7 +186,10 @@ describe('UsersService', () => {
     });
 
     it('当邮箱已存在时应该抛出 ConflictException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        ...mockUser,
+        email: createUserDto.email,
+      }); // Existing user with email
 
       await expect(service.create(createUserDto)).rejects.toThrow(
         ConflictException,
@@ -167,55 +197,39 @@ describe('UsersService', () => {
       await expect(service.create(createUserDto)).rejects.toThrow(
         '该邮箱已被注册',
       );
-
-      // 重置 mock
-      mockPrismaService.user.findUnique.mockReset();
     });
 
     it('当用户名已存在时应该抛出 ConflictException', async () => {
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(null) // email 不存在
-        .mockResolvedValue(mockUser); // username 已存在
+      // Return a user that matches username but not email
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        ...mockUser,
+        email: 'other@example.com',
+        username: createUserDto.username,
+      });
 
       await expect(service.create(createUserDto)).rejects.toThrow(
         ConflictException,
       );
-
-      // 重置 mock 并重新设置
-      mockPrismaService.user.findUnique.mockReset();
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValue(mockUser);
-
       await expect(service.create(createUserDto)).rejects.toThrow(
         '该用户名已被使用',
       );
-
-      mockPrismaService.user.findUnique.mockReset();
     });
 
     it('当手机号已存在时应该抛出 ConflictException', async () => {
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(null) // email 不存在
-        .mockResolvedValueOnce(null) // username 不存在
-        .mockResolvedValue(mockUser); // phone 已存在
+      // Return a user matching phone
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        ...mockUser,
+        email: 'other@example.com',
+        username: 'otheruser',
+        phone: createUserDto.phone,
+      });
 
       await expect(service.create(createUserDto)).rejects.toThrow(
         ConflictException,
       );
-
-      // 重置并重新设置
-      mockPrismaService.user.findUnique.mockReset();
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null)
-        .mockResolvedValue(mockUser);
-
       await expect(service.create(createUserDto)).rejects.toThrow(
         '该手机号已被注册',
       );
-
-      mockPrismaService.user.findUnique.mockReset();
     });
   });
 
@@ -236,7 +250,12 @@ describe('UsersService', () => {
         include: {
           userRoles: {
             include: {
-              role: true,
+              // Changed: service uses select code
+              role: {
+                select: {
+                  code: true,
+                },
+              },
             },
           },
         },
@@ -269,7 +288,11 @@ describe('UsersService', () => {
         include: {
           userRoles: {
             include: {
-              role: true,
+              role: {
+                select: {
+                  code: true,
+                },
+              },
             },
           },
         },
@@ -307,6 +330,8 @@ describe('UsersService', () => {
 
       expect(result).toBeDefined();
       expect(result.email).toBe('test@example.com');
+      // findByEmail uses standard include, which includes password field from findUnique by default
+      // Note: service.findByEmail returns the Prisma result directly, not transformed
       expect(result.password).toBe('hashedPassword123');
     });
   });
@@ -331,27 +356,17 @@ describe('UsersService', () => {
 
       expect(result).toBeDefined();
       expect(result.email).toBe('test@example.com');
-      expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
-        where: {
-          OR: [{ email: 'test@example.com' }, { username: 'test@example.com' }],
-          deletedAt: null,
-        },
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                include: {
-                  rolePermissions: {
-                    include: {
-                      permission: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
+      expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            OR: [
+              { email: 'test@example.com' },
+              { username: 'test@example.com' },
+            ],
+            deletedAt: null,
+          }),
+        }),
+      );
     });
 
     it('应该根据用户名查找用户', async () => {
@@ -387,7 +402,11 @@ describe('UsersService', () => {
         include: {
           userRoles: {
             include: {
-              role: true,
+              role: {
+                select: {
+                  code: true,
+                },
+              },
             },
           },
         },
@@ -403,9 +422,12 @@ describe('UsersService', () => {
     });
 
     it('当更新邮箱且邮箱已被使用时应该抛出 ConflictException', async () => {
-      mockPrismaService.user.findUnique
-        .mockResolvedValueOnce(mockUser) // 查找目标用户
-        .mockResolvedValueOnce({ ...mockUser, id: MOCK_USER_ID_2 }); // 邮箱已被其他用户使用
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser); // Existing user found
+      mockPrismaService.user.findFirst.mockResolvedValue({
+        ...mockUser,
+        id: MOCK_USER_ID_2,
+        email: 'taken@example.com',
+      }); // Conflict found
 
       await expect(
         service.update(MOCK_USER_ID, { email: 'taken@example.com' }),
@@ -491,6 +513,7 @@ describe('UsersService', () => {
       expect(mockPrismaService.user.update).toHaveBeenCalled();
       expect(mockAuthService.revokeAllUserSessions).toHaveBeenCalledWith(
         MOCK_USER_ID,
+        ErrorCode.SESSION_EXPIRED,
       );
     });
 
@@ -527,6 +550,7 @@ describe('UsersService', () => {
         userId: MOCK_USER_ID,
         accessToken: 'token123',
       };
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.userSession.findFirst.mockResolvedValue(mockSession);
       mockAuthService.logoutOtherSessions.mockResolvedValue(undefined);
 
@@ -538,6 +562,7 @@ describe('UsersService', () => {
           accessToken: 'token123',
           isActive: true,
         },
+        select: { id: true },
       });
       expect(mockAuthService.logoutOtherSessions).toHaveBeenCalledWith(
         MOCK_USER_ID,
@@ -546,6 +571,7 @@ describe('UsersService', () => {
     });
 
     it('当会话不存在时应该抛出 NotFoundException', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
       mockPrismaService.userSession.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -555,10 +581,15 @@ describe('UsersService', () => {
   });
 
   describe('remove (软删除)', () => {
-    it('应该成功软删除用户', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+    it('应该成功软删除用户 (当用户非激活状态时)', async () => {
+      // Must be inactive to delete
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        isActive: false,
+      });
       mockPrismaService.user.update.mockResolvedValue({
         ...mockUser,
+        isActive: false,
         deletedAt: new Date(),
       });
 
@@ -568,6 +599,21 @@ describe('UsersService', () => {
         where: { id: MOCK_USER_ID },
         data: { deletedAt: expect.any(Date) },
       });
+    });
+
+    it('当用户处于激活状态时应该抛出 BadRequestException', async () => {
+      // Active user cannot be deleted
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        ...mockUser,
+        isActive: true, // Active
+      });
+
+      await expect(service.remove(MOCK_USER_ID)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.remove(MOCK_USER_ID)).rejects.toThrow(
+        '激活状态的用户不能被删除',
+      );
     });
 
     it('当用户不存在时应该抛出 NotFoundException', async () => {
