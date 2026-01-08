@@ -141,6 +141,8 @@ export const ApiSuccessResponseDecorator = <TModel extends Type<any>>(
 export interface ApiErrorResponseOptions {
   /** 响应描述（默认：'请求失败'） */
   description?: string;
+  /** 多场景示例 */
+  examples?: Record<string, { summary: string; value?: any }>;
 }
 
 /**
@@ -169,6 +171,32 @@ export interface ApiErrorResponseOptions {
  * @ApiErrorResponseDecorator(500, { description: '服务器错误' })
  * @Post()
  * create() { ... }
+ *
+ * @example
+ * // 自定义多场景示例（examples）
+ * @ApiErrorResponseDecorator(400, {
+ *   description: '请求参数错误',
+ *   examples: {
+ *     'MISSING_USERNAME': {
+ *       summary: '缺少用户名',
+ *       value: {
+ *         statusCode: 400,
+ *         message: '用户名不能为空',
+ *         error: 'Bad Request',
+ *       },
+ *     },
+ *     'INVALID_EMAIL': {
+ *       summary: '邮箱格式错误',
+ *       value: {
+ *         statusCode: 400,
+ *         message: '邮箱格式不正确',
+ *         error: 'Bad Request',
+ *       },
+ *     },
+ *   },
+ * })
+ * @Post()
+ * create() { ... }
  */
 export const ApiErrorResponseDecorator = (
   status: number,
@@ -180,10 +208,13 @@ export const ApiErrorResponseDecorator = (
     ApiExtraModels(ApiErrorResponse),
     ApiResponse({
       status,
-      schema: {
-        allOf: [{ $ref: getSchemaPath(ApiErrorResponse) }],
-      },
       description,
+      content: {
+        'application/json': {
+          schema: { $ref: getSchemaPath(ApiErrorResponse) },
+          examples: options?.examples,
+        },
+      },
     }),
   );
 };
@@ -263,11 +294,11 @@ export interface ApiBodyOneOfOptions {
  *
  * @example
  * // 支持单条或批量上传
- * @ApiBodyOneOfDecorator(UploadLoggerDto, {
+ * @ApiBodyOneOfDecorator(UploadCsDevLoggerDto, {
  *   description: '单条日志对象或日志对象数组',
  * })
  * @Post('/logger/add')
- * reportLog(@Body() data: UploadLoggerDto | UploadLoggerDto[]) { ... }
+ * reportLog(@Body() data: UploadCsDevLoggerDto | UploadCsDevLoggerDto[]) { ... }
  */
 export const ApiBodyOneOfDecorator = <TModel extends Type<any>>(
   model: TModel,
