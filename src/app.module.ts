@@ -20,7 +20,7 @@ import {
 // 共享模块
 import { DatabaseModule } from './shared/database/database.module';
 import { LoggerModule } from './shared/logger/logger.module';
-import { CacheModule } from './shared/cache/cache.module';
+import { CacheModule } from '@/shared/cache';
 import { RequestContextModule } from './shared/request-context/request-context.module';
 
 // 通用模块

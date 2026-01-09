@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { MemoryCacheService } from './memory-cache.service';
 import { LoggerService } from '@/shared/logger/logger.service';
+import { MemoryCacheService } from './memory-cache.service';
 
 describe('内存缓存服务', () => {
   let service: MemoryCacheService;

@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
-import type { AuthUser } from '../types/user.types';
 import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
+import type { AuthUser } from '../types/user.types';
 
 /**
  * 本地认证守卫

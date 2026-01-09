@@ -1,5 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../shared/database/prisma.service';
+import { BusinessException } from '@/common/exceptions/business.exception';
+import { ErrorCode } from '@/common/enums/error-codes.enum';
+import { ErrorMessages } from '@/common/enums/error-codes.enum';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { RbacCacheService } from '@/shared/cache';
 import {
   CreatePermissionDto,
   UpdatePermissionDto,
@@ -7,10 +11,6 @@ import {
   QueryPermissionsDto,
   PaginatedPermissionsDto,
 } from './dto';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
-import { BusinessException } from '../../common/exceptions/business.exception';
-import { ErrorCode } from '../../common/enums/error-codes.enum';
-import { ErrorMessages } from '../../common/enums/error-codes.enum';
 
 /**
  * 权限服务

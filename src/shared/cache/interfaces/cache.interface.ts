@@ -10,6 +10,8 @@ export interface ICacheService {
 
   /**
    * 设置缓存值
+   * @param key 缓存键
+   * @param value 缓存值
    * @param ttl 过期时间（秒）
    */
   set(key: string, value: any, ttl?: number): Promise<'OK' | null>;

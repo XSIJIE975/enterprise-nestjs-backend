@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import type { IMockEndpoint } from '@/modules/mock/interfaces';
 import type { TemplateEngineType } from '../engines/base.engine';
-import type { IMockEndpoint } from '../interfaces/mock-endpoint.interface';
 
 export class MockEndpointVo {
   @ApiProperty({

@@ -1,6 +1,6 @@
 ﻿import { Test, TestingModule } from '@nestjs/testing';
-import { RbacCacheService } from './rbac-cache.service';
-import { ICacheService } from '../interfaces/cache.interface';
+import { RbacCacheService } from '@/shared/cache';
+import { ICacheService } from '@/shared/cache';
 import { LoggerService } from '@/shared/logger/logger.service';
 
 describe('RBAC 缓存服务', () => {

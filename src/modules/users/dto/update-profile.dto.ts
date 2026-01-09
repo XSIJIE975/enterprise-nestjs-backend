@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsString,
   IsOptional,
@@ -5,7 +6,6 @@ import {
   Matches,
   IsEmail,
 } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * 更新个人资料 DTO

@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { Observable } from 'rxjs';
-import type { JwtUser } from '../interfaces/jwt-payload.interface';
 import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
+import type { JwtUser } from '../interfaces/jwt-payload.interface';
 
 /**
  * JWT 认证守卫

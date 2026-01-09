@@ -11,18 +11,18 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { RequestContextService } from '@/shared/request-context/request-context.service';
-import { AuthService } from './auth.service';
-import { LocalAuthGuard } from './guards/local-auth.guard';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
 import {
   ApiSuccessResponseDecorator,
   ApiErrorResponseDecorator,
 } from '@/common/decorators/swagger-response.decorator';
+import { AuthService } from './auth.service';
+import { LocalAuthGuard } from './guards/local-auth.guard';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { JwtUser } from './interfaces/jwt-payload.interface';
 import { AuthUser } from './types/user.types';
 import { RegisterDto, LoginDto, RefreshTokenDto } from './dto';
 import { AuthResponseVo, RegisterResponseVo, AuthMeResponseVo } from './vo';
-import { JwtUser } from '@/modules/auth/interfaces/jwt-payload.interface';
 
 /**
  * 认证控制器

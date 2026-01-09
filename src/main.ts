@@ -1,12 +1,12 @@
+import { join } from 'path';
 import { NestFactory } from '@nestjs/core';
+import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ConfigService } from '@nestjs/config';
 import * as compression from 'compression';
 import * as express from 'express';
 import helmet from 'helmet';
-import { join } from 'path';
 import * as basicAuth from 'express-basic-auth';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';

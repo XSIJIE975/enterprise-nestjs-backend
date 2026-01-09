@@ -15,14 +15,8 @@ export class PublicApiController {
   getApiInfo() {
     return {
       name: 'Enterprise NestJS API',
-      version: '1.0.0',
       description: '企业级NestJS后端API系统',
       docs: '/api/docs',
-      endpoints: {
-        health: '/api/v1/health',
-        auth: '/api/v1/auth',
-        users: '/api/v1/users',
-      },
       timestamp: new Date().toISOString(),
     };
   }

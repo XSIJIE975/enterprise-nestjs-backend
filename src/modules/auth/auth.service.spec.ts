@@ -2,13 +2,13 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service';
-import { UsersService } from '../users/users.service';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { CacheService } from '@/shared/cache';
 import { RbacCacheService } from '@/shared/cache';
 import { LoggerService } from '@/shared/logger/logger.service';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
+import { UsersService } from '../users/users.service';
+import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
   let service: AuthService;

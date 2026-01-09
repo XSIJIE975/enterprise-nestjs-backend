@@ -1,5 +1,5 @@
-import { IsArray, IsString, ArrayNotEmpty, ArrayUnique } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsArray, IsString, ArrayNotEmpty, ArrayUnique } from 'class-validator';
 
 /**
  * 批量操作 DTO

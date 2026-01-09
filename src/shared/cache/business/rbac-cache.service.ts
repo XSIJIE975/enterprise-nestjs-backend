@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { ICacheService } from '../interfaces/cache.interface';
+import { ICacheService } from '@/shared/cache';
 import { LoggerService } from '@/shared/logger/logger.service';
 
 /**

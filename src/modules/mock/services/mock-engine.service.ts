@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { MockJSEngine } from '../engines/mockjs.engine';
+import { MockJSEngine } from '@/modules/mock/engines';
+import { IMockContext } from '@/modules/mock/interfaces';
 import { JsonEngine } from '../engines/json.engine';
 import { TemplateEngineType } from '../engines/base.engine';
-import { IMockContext } from '../interfaces/mock-context.interface';
 
 @Injectable()
 export class MockEngineService {

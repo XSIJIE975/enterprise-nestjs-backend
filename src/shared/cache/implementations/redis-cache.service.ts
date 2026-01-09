@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import Redis from 'ioredis';
-import { ICacheService } from '../interfaces/cache.interface';
+import { ICacheService } from '@/shared/cache';
 
 /**
  * Redis 缓存服务实现

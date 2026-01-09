@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { LRUCache } from 'lru-cache';
-import { ICacheService } from '../interfaces/cache.interface';
+import { ICacheService } from '@/shared/cache';
 import { LoggerService } from '@/shared/logger/logger.service';
 
 /**

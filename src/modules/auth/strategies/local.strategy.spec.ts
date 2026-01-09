@@ -1,8 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 import { LocalStrategy } from './local.strategy';
 import { AuthService } from '../auth.service';
-import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 
 describe('LocalStrategy', () => {
   let strategy: LocalStrategy;

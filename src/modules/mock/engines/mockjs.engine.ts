@@ -2,8 +2,8 @@ import * as Mock from 'mockjs';
 import { createHash } from 'crypto';
 import { VM } from 'vm2';
 import { cloneDeep } from 'lodash-es';
+import { IMockContext } from '@/modules/mock/interfaces';
 import { BaseEngine, TemplateEngineType } from './base.engine';
-import { IMockContext } from '../interfaces/mock-context.interface';
 
 /**
  * MockJS 模板引擎实现

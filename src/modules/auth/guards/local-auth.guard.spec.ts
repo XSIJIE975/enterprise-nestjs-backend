@@ -1,7 +1,7 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { LocalAuthGuard } from './local-auth.guard';
 import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
+import { LocalAuthGuard } from './local-auth.guard';
 
 describe('LocalAuthGuard', () => {
   let guard: LocalAuthGuard;

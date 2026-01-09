@@ -1,5 +1,5 @@
+import { IMockContext } from '@/modules/mock/interfaces';
 import { BaseEngine, TemplateEngineType } from './base.engine';
-import { IMockContext } from '../interfaces/mock-context.interface';
 
 /**
  * JSON 模板引擎实现

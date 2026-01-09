@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEnum,
@@ -10,7 +11,6 @@ import {
   ValidateBy,
   ValidationOptions,
 } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
  * 自定义验证器: 验证字段是否为字符串或对象

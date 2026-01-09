@@ -1,10 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { BusinessException } from '@/common/exceptions/business.exception';
+import { ErrorCode } from '@/common/enums/error-codes.enum';
+import { ErrorMessages } from '@/common/enums/error-codes.enum';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { RbacCacheService } from '@/shared/cache';
 import { RolesService } from './roles.service';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
-import { BusinessException } from '../../common/exceptions/business.exception';
-import { ErrorCode } from '../../common/enums/error-codes.enum';
-import { ErrorMessages } from '../../common/enums/error-codes.enum';
 
 describe('角色服务', () => {
   let service: RolesService;

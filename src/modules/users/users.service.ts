@@ -7,13 +7,13 @@ import {
   Inject,
   BadRequestException,
 } from '@nestjs/common';
-import type * as Prisma from '@/prisma/prisma/internal/prismaNamespace';
-import { UserModel } from '@/prisma/prisma/models/User';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
+import type * as Prisma from '@/prisma/prisma/internal/prismaNamespace';
+import { UserModel } from '@/prisma/prisma/models/User';
+import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
-import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { AuthService } from '../auth/auth.service';
 import { CreateUserDto, UpdateUserDto, UpdateProfileDto } from './dto';
 import { UserRoleVo, UserResponseVo } from './vo';

@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PermissionsService } from './permissions.service';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
-import { CreatePermissionDto } from './dto/create-permission.dto';
-import { UpdatePermissionDto } from './dto/update-permission.dto';
-import { BusinessException } from '../../common/exceptions/business.exception';
-import { ErrorCode } from '../../common/enums/error-codes.enum';
-import { ErrorMessages } from '../../common/enums/error-codes.enum';
+import { BusinessException } from '@/common/exceptions/business.exception';
+import { ErrorCode } from '@/common/enums/error-codes.enum';
+import { ErrorMessages } from '@/common/enums/error-codes.enum';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { RbacCacheService } from '@/shared/cache';
+import {
+  CreatePermissionDto,
+  UpdatePermissionDto,
+} from '@/modules/permissions/dto';
 
 describe('PermissionsService', () => {
   let service: PermissionsService;

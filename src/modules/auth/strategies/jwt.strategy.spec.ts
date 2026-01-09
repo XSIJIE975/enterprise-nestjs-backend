@@ -1,11 +1,11 @@
 ﻿import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Request } from 'express';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 import { JwtStrategy } from './jwt.strategy';
 import { AuthService } from '../auth.service';
-import { RequestContextService } from '../../../shared/request-context/request-context.service';
-import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
-import { Request } from 'express';
 
 describe('JwtStrategy', () => {
   let strategy: JwtStrategy;

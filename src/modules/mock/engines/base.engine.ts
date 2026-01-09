@@ -1,9 +1,9 @@
+import { IMockContext } from '@/modules/mock/interfaces';
+
 /**
  * 模板引擎类型枚举
  */
 export type TemplateEngineType = 'MOCKJS' | 'JSON';
-
-import { IMockContext } from '../interfaces/mock-context.interface';
 
 /**
  * 模板引擎抽象基类

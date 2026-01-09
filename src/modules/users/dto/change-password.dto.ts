@@ -1,5 +1,5 @@
-import { IsString, MinLength, Matches } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsString, MinLength, Matches } from 'class-validator';
 
 /**
  * 修改密码 DTO

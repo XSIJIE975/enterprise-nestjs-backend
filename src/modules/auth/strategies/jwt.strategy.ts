@@ -3,10 +3,10 @@ import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 import { AuthService } from '../auth.service';
 import { AuthJwtPayload, JwtUser } from '../interfaces/jwt-payload.interface';
-import { RequestContextService } from '../../../shared/request-context/request-context.service';
-import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 
 /**
  * JWT 认证策略

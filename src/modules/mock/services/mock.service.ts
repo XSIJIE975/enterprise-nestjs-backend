@@ -2,6 +2,8 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { LoggerService } from '@/shared/logger/logger.service';
 import { JsonUtil } from '@/common/utils/json.util';
+import type { IMockEndpoint } from '@/modules/mock/interfaces';
+import type { MockLogCreateDto } from '@/modules/mock/dto';
 import { MockCacheService } from './mock-cache.service';
 import { MockLoggerService } from './mock-logger.service';
 import { PathMatcher } from '../utils/path-matcher.util';
@@ -10,9 +12,7 @@ import type {
   UpdateMockEndpointDto,
   QueryMockEndpointsDto,
 } from '../dto';
-import type { MockLogCreateDto } from '../dto/log-mock.dto';
 import type { BatchOperationResultVo, ImportConfigResultVo } from '../vo';
-import type { IMockEndpoint } from '../interfaces/mock-endpoint.interface';
 
 @Injectable()
 export class MockService implements OnModuleInit {

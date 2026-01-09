@@ -12,6 +12,7 @@ import {
   ApiSuccessResponseDecorator,
   ApiErrorResponseDecorator,
 } from '@/common/decorators/swagger-response.decorator';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { LogsService } from './logs.service';
 import { QueryApiLogsDto, QueryErrorLogsDto, QueryAuditLogsDto } from './dto';
 import {
@@ -21,7 +22,6 @@ import {
   AuditLogPageVo,
   LogStatisticsVo,
 } from './vo';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 /**
  * 日志控制器

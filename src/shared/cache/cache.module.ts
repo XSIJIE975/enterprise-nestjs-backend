@@ -1,12 +1,12 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
+import { LoggerService } from '@/shared/logger/logger.service';
 import { RedisCacheService } from './implementations/redis-cache.service';
 import { MemoryCacheService } from './implementations/memory-cache.service';
 import { RbacCacheService } from './business/rbac-cache.service';
 import { CacheService } from './cache.service';
 import { ICacheService } from './interfaces/cache.interface';
-import { LoggerService } from '@/shared/logger/logger.service';
 
 /**
  * 缓存模块

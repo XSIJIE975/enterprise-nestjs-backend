@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { PrismaService } from '@/shared/database/prisma.service';
 import { LogsService } from './logs.service';
-import { PrismaService } from '../../shared/database/prisma.service';
 
 describe('日志服务 - JSON 序列化与数据操作', () => {
   let service: LogsService;

@@ -1,5 +1,5 @@
-import { IsArray, IsInt, ArrayMinSize } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsArray, IsInt, ArrayMinSize } from 'class-validator';
 
 /**
  * 分配权限给角色 DTO

@@ -1,5 +1,5 @@
-import { IsOptional, IsString, Length, Matches } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, Length, Matches } from 'class-validator';
 
 /**
  * 更新角色 DTO

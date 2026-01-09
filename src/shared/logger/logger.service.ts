@@ -1,6 +1,6 @@
 import { Injectable, LoggerService as NestLoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Inject } from '@nestjs/common';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 import { Logger } from 'winston';
 import { RequestContextService } from '../request-context/request-context.service';
 

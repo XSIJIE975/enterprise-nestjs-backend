@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { IMockLogEntry } from '../interfaces/mock-log.interface';
-import { PrismaService } from '@/shared/database/prisma.service';
 import { JsonUtil } from '@/common/utils/json.util';
 import { MockLogCreateInput } from '@/generated/prisma/models';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { IMockLogEntry } from '@/modules/mock/interfaces';
 
 @Injectable()
 export class MockLoggerService {

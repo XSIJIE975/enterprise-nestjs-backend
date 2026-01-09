@@ -20,12 +20,12 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { RolesService } from './roles.service';
+import { RolesGuard } from '@/common/guards/roles.guard';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
+import { Roles } from '@/common/decorators/roles.decorator';
+import { Permissions } from '@/common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../common/guards/roles.guard';
-import { PermissionsGuard } from '../../common/guards/permissions.guard';
-import { Roles } from '../../common/decorators/roles.decorator';
-import { Permissions } from '../../common/decorators/permissions.decorator';
+import { RolesService } from './roles.service';
 import {
   CreateRoleDto,
   UpdateRoleDto,

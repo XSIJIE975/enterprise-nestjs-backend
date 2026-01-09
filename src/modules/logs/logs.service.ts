@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../shared/database/prisma.service';
+import { PrismaService } from '@/shared/database/prisma.service';
 import type { Prisma } from '@/prisma/prisma/client';
+import { JsonUtil } from '@/common/utils/json.util';
 import {
   CreateAuditLogDto,
   QueryApiLogsDto,
   QueryAuditLogsDto,
   QueryErrorLogsDto,
-} from './dto/query-logs.dto';
-import { JsonUtil } from '@/common/utils/json.util';
+} from '@/modules/logs/dto';
 
 /**
  * 日志服务

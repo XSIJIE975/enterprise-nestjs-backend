@@ -1,5 +1,5 @@
-import { RedisCacheService } from './redis-cache.service';
 import Redis from 'ioredis';
+import { RedisCacheService } from './redis-cache.service';
 
 describe('Redis 缓存服务', () => {
   let service: RedisCacheService;

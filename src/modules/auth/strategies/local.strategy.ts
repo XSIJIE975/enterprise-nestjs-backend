@@ -1,9 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy } from 'passport-local';
+import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 import { AuthService } from '../auth.service';
 import type { AuthUser } from '../types/user.types';
-import { ErrorCode, ErrorMessages } from '@/common/enums/error-codes.enum';
 
 /**
  * 本地认证策略
