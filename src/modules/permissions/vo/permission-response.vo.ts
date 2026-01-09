@@ -1,9 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
- * 权限响应 DTO
+ * 权限响应 VO
  */
-export class PermissionResponseDto {
+export class PermissionResponseVo {
   @ApiProperty({
     description: '权限ID',
     example: 1,

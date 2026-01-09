@@ -39,8 +39,10 @@ describe('PermissionsService', () => {
   };
 
   const mockPrismaService = {
+    $transaction: jest.fn(callback => callback(mockPrismaService)),
     permission: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
@@ -91,7 +93,7 @@ describe('PermissionsService', () => {
 
     it('应该成功创建新权限', async () => {
       // Mock Prisma 查询
-      mockPrismaService.permission.findUnique.mockResolvedValue(null);
+      mockPrismaService.permission.findFirst.mockResolvedValue(null);
       mockPrismaService.permission.create.mockResolvedValue({
         ...mockPermission,
         name: createPermissionDto.name,
@@ -106,7 +108,7 @@ describe('PermissionsService', () => {
       expect(result).toBeDefined();
       expect(result.name).toBe(createPermissionDto.name);
       expect(result.code).toBe(createPermissionDto.code);
-      expect(mockPrismaService.permission.findUnique).toHaveBeenCalledTimes(2); // name, code
+      expect(mockPrismaService.permission.findFirst).toHaveBeenCalledTimes(1);
       expect(mockPrismaService.permission.create).toHaveBeenCalledWith({
         data: {
           name: createPermissionDto.name,
@@ -120,7 +122,10 @@ describe('PermissionsService', () => {
     });
 
     it('当权限名称已存在时应该抛出 BusinessException', async () => {
-      mockPrismaService.permission.findUnique.mockResolvedValue(mockPermission);
+      mockPrismaService.permission.findFirst.mockResolvedValue({
+        ...mockPermission,
+        name: createPermissionDto.name,
+      });
 
       await expect(service.create(createPermissionDto)).rejects.toThrow(
         new BusinessException(
@@ -129,14 +134,15 @@ describe('PermissionsService', () => {
         ),
       );
 
-      // 重置 mock
-      mockPrismaService.permission.findUnique.mockReset();
+      mockPrismaService.permission.findFirst.mockReset();
     });
 
     it('当权限代码已存在时应该抛出 BusinessException', async () => {
-      mockPrismaService.permission.findUnique
-        .mockResolvedValueOnce(null) // name 不存在
-        .mockResolvedValue(mockPermission); // code 已存在
+      mockPrismaService.permission.findFirst.mockResolvedValue({
+        ...mockPermission,
+        name: 'other_name',
+        code: createPermissionDto.code,
+      });
 
       await expect(service.create(createPermissionDto)).rejects.toThrow(
         new BusinessException(
@@ -145,7 +151,7 @@ describe('PermissionsService', () => {
         ),
       );
 
-      mockPrismaService.permission.findUnique.mockReset();
+      mockPrismaService.permission.findFirst.mockReset();
     });
   });
 
@@ -260,9 +266,14 @@ describe('PermissionsService', () => {
     });
 
     it('当更新权限名称已存在时应该抛出 BusinessException', async () => {
-      mockPrismaService.permission.findUnique
-        .mockResolvedValueOnce(mockPermission) // 原权限存在
-        .mockResolvedValue(mockPermission2); // 新名称已存在
+      mockPrismaService.permission.findUnique.mockResolvedValueOnce(
+        mockPermission,
+      ); // 原权限存在
+
+      mockPrismaService.permission.findFirst.mockResolvedValue({
+        ...mockPermission2,
+        name: '已存在的名称',
+      }); // 新名称已存在
 
       await expect(service.update(1, { name: '已存在的名称' })).rejects.toThrow(
         new BusinessException(
@@ -272,12 +283,18 @@ describe('PermissionsService', () => {
       );
 
       mockPrismaService.permission.findUnique.mockReset();
+      mockPrismaService.permission.findFirst.mockReset();
     });
 
     it('当更新权限代码已存在时应该抛出 BusinessException', async () => {
-      mockPrismaService.permission.findUnique
-        .mockResolvedValueOnce(mockPermission) // 原权限存在
-        .mockResolvedValue(mockPermission2); // 新代码已存在
+      mockPrismaService.permission.findUnique.mockResolvedValueOnce(
+        mockPermission,
+      ); // 原权限存在
+
+      mockPrismaService.permission.findFirst.mockResolvedValue({
+        ...mockPermission2,
+        code: '已存在的代码',
+      }); // 新代码已存在
 
       await expect(service.update(1, { code: '已存在的代码' })).rejects.toThrow(
         new BusinessException(
@@ -287,11 +304,13 @@ describe('PermissionsService', () => {
       );
 
       mockPrismaService.permission.findUnique.mockReset();
+      mockPrismaService.permission.findFirst.mockReset();
     });
 
     it('应该在更新权限代码与当前代码相同时不进行冲突检查', async () => {
       // Reset mocks
       mockPrismaService.permission.findUnique.mockClear();
+      mockPrismaService.permission.findFirst.mockClear();
       mockPrismaService.permission.update.mockClear();
       mockRbacCacheService.flushAllRbacCache.mockClear();
 
@@ -308,18 +327,22 @@ describe('PermissionsService', () => {
       expect(result).toBeDefined();
       expect(result.code).toBe(mockPermission.code);
       expect(mockPrismaService.permission.findUnique).toHaveBeenCalledTimes(1); // 只检查原权限
+      expect(mockPrismaService.permission.findFirst).not.toHaveBeenCalled(); // 不需要检查冲突
       expect(mockPrismaService.permission.update).toHaveBeenCalled();
     });
 
     it('应该在更新权限代码为不存在的代码时成功更新', async () => {
       // Reset mocks
       mockPrismaService.permission.findUnique.mockClear();
+      mockPrismaService.permission.findFirst.mockClear();
       mockPrismaService.permission.update.mockClear();
       mockRbacCacheService.flushAllRbacCache.mockClear();
 
-      mockPrismaService.permission.findUnique
-        .mockResolvedValueOnce(mockPermission) // 原权限存在
-        .mockResolvedValueOnce(null); // 新代码不存在
+      mockPrismaService.permission.findUnique.mockResolvedValueOnce(
+        mockPermission,
+      ); // 原权限存在
+
+      mockPrismaService.permission.findFirst.mockResolvedValue(null); // 新代码不存在
 
       mockPrismaService.permission.update.mockResolvedValue({
         ...mockPermission,
@@ -331,21 +354,19 @@ describe('PermissionsService', () => {
 
       expect(result).toBeDefined();
       expect(result.code).toBe('new_unique_code');
-      expect(mockPrismaService.permission.findUnique).toHaveBeenCalledTimes(2); // 检查原权限和新代码
+      expect(mockPrismaService.permission.findUnique).toHaveBeenCalledTimes(1); // 检查原权限
+      expect(mockPrismaService.permission.findFirst).toHaveBeenCalledTimes(1); // 检查冲突
       expect(mockPrismaService.permission.update).toHaveBeenCalled();
     });
   });
 
   describe('删除', () => {
     it('应该成功删除权限', async () => {
-      mockPrismaService.permission.findUnique.mockResolvedValue(mockPermission);
       mockPrismaService.permission.delete.mockResolvedValue(mockPermission);
 
       await service.remove(1);
 
-      expect(mockPrismaService.permission.findUnique).toHaveBeenCalledWith({
-        where: { id: 1 },
-      });
+      expect(mockPrismaService.permission.findUnique).not.toHaveBeenCalled();
       expect(mockPrismaService.permission.delete).toHaveBeenCalledWith({
         where: { id: 1 },
       });
@@ -353,7 +374,11 @@ describe('PermissionsService', () => {
     });
 
     it('当权限不存在时应该抛出 BusinessException', async () => {
-      mockPrismaService.permission.findUnique.mockResolvedValue(null);
+      // 模拟 Prisma P2025 错误
+      const p2025Error: any = new Error('Records to delete does not exist');
+      p2025Error.code = 'P2025';
+
+      mockPrismaService.permission.delete.mockRejectedValue(p2025Error);
 
       await expect(service.remove(999)).rejects.toThrow(
         new BusinessException(
@@ -450,7 +475,6 @@ describe('PermissionsService', () => {
 
   describe('更新权限状态', () => {
     it('应该成功更新权限状态', async () => {
-      mockPrismaService.permission.findUnique.mockResolvedValue(mockPermission);
       mockPrismaService.permission.update.mockResolvedValue({
         ...mockPermission,
         isActive: false,
@@ -459,6 +483,7 @@ describe('PermissionsService', () => {
       const result = await service.updatePermissionStatus(1, false);
 
       expect(result.isActive).toBe(false);
+      expect(mockPrismaService.permission.findUnique).not.toHaveBeenCalled();
       expect(mockPrismaService.permission.update).toHaveBeenCalledWith({
         where: { id: 1 },
         data: { isActive: false },
@@ -467,25 +492,32 @@ describe('PermissionsService', () => {
     });
 
     it('当权限不存在时应该抛出 BusinessException', async () => {
-      mockPrismaService.permission.findUnique.mockResolvedValue(null);
+      // 模拟 Prisma P2025 错误
+      const p2025Error: any = new Error('Record to update not found');
+      p2025Error.code = 'P2025';
+
+      mockPrismaService.permission.update.mockRejectedValue(p2025Error);
 
       await expect(service.updatePermissionStatus(999, true)).rejects.toThrow(
-        BusinessException,
-      );
-      await expect(service.updatePermissionStatus(999, true)).rejects.toThrow(
-        '权限不存在',
+        new BusinessException(
+          ErrorCode.PERMISSION_NOT_FOUND,
+          ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+        ),
       );
     });
   });
 
   describe('获取权限统计', () => {
     it('应该返回权限统计信息', async () => {
-      mockPrismaService.permission.count
-        .mockResolvedValueOnce(10) // total
-        .mockResolvedValueOnce(8) // active
-        .mockResolvedValueOnce(2); // inactive
+      // Mock groupBy calls
+      // Call 1: Status counts
+      mockPrismaService.permission.groupBy.mockResolvedValueOnce([
+        { isActive: true, _count: { id: 8 } },
+        { isActive: false, _count: { id: 2 } },
+      ]);
 
-      mockPrismaService.permission.groupBy.mockResolvedValue([
+      // Call 2: Resource counts
+      mockPrismaService.permission.groupBy.mockResolvedValueOnce([
         { resource: 'user', _count: { id: 5 } },
         { resource: 'role', _count: { id: 3 } },
       ]);
@@ -502,18 +534,12 @@ describe('PermissionsService', () => {
 
   describe('批量删除', () => {
     it('应该成功批量删除权限', async () => {
-      const mockPermissions = [mockPermission, mockPermission2];
-      mockPrismaService.permission.findMany.mockResolvedValue(mockPermissions);
       mockPrismaService.permission.deleteMany.mockResolvedValue({ count: 2 });
 
       const result = await service.batchDelete([1, 2]);
 
       expect(result).toBe(2);
-      expect(mockPrismaService.permission.findMany).toHaveBeenCalledWith({
-        where: {
-          id: { in: [1, 2] },
-        },
-      });
+      expect(mockPrismaService.permission.findMany).not.toHaveBeenCalled();
       expect(mockPrismaService.permission.deleteMany).toHaveBeenCalledWith({
         where: {
           id: { in: [1, 2] },
@@ -523,7 +549,7 @@ describe('PermissionsService', () => {
     });
 
     it('当没有找到可删除的权限时应该抛出 BusinessException', async () => {
-      mockPrismaService.permission.findMany.mockResolvedValue([]);
+      mockPrismaService.permission.deleteMany.mockResolvedValue({ count: 0 });
 
       await expect(service.batchDelete([999])).rejects.toThrow(
         new BusinessException(

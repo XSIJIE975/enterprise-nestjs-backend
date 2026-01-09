@@ -15,11 +15,15 @@ import {
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
+import {
+  ApiSuccessResponseDecorator,
+  ApiErrorResponseDecorator,
+  ApiSuccessResponseArrayDecorator,
+} from '@/common/decorators/swagger-response.decorator';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -31,9 +35,12 @@ import {
   UpdatePermissionDto,
   UpdatePermissionStatusDto,
   QueryPermissionsDto,
-  PermissionResponseDto,
-  PaginatedPermissionsDto,
 } from './dto';
+import {
+  PermissionResponseVo,
+  PermissionPageVo,
+  PermissionStatisticsVo,
+} from './vo';
 
 /**
  * 权限管理控制器
@@ -50,45 +57,40 @@ export class PermissionsController {
   @Roles('admin')
   @Permissions('permission:create')
   @ApiOperation({ summary: '创建权限' })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(PermissionResponseVo, {
     status: HttpStatus.CREATED,
     description: '权限创建成功',
-    type: PermissionResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
+  @ApiErrorResponseDecorator(HttpStatus.CONFLICT, {
     description: '权限名称或代码已存在',
   })
   async create(
     @Body() createPermissionDto: CreatePermissionDto,
-  ): Promise<PermissionResponseDto> {
+  ): Promise<PermissionResponseVo> {
     return this.permissionsService.create(createPermissionDto);
   }
 
   @Get()
   @Permissions('permission:read')
   @ApiOperation({ summary: '获取所有权限' })
-  @ApiResponse({
+  @ApiSuccessResponseArrayDecorator(PermissionResponseVo, {
     status: HttpStatus.OK,
     description: '获取成功',
-    type: [PermissionResponseDto],
   })
-  async findAll(): Promise<PermissionResponseDto[]> {
+  async findAll(): Promise<PermissionResponseVo[]> {
     return this.permissionsService.findAll();
   }
 
   @Get('paginated')
   @Permissions('permission:read')
   @ApiOperation({ summary: '分页查询权限列表' })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(PermissionPageVo, {
     status: HttpStatus.OK,
     description: '查询成功',
-    type: PaginatedPermissionsDto,
   })
-  @ApiQuery({ type: QueryPermissionsDto })
   async findAllPaginated(
     @Query() query: QueryPermissionsDto,
-  ): Promise<PaginatedPermissionsDto> {
+  ): Promise<PermissionPageVo> {
     return this.permissionsService.findAllPaginated(query);
   }
 
@@ -100,18 +102,16 @@ export class PermissionsController {
     description: '权限ID',
     type: Number,
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(PermissionResponseVo, {
     status: HttpStatus.OK,
     description: '获取成功',
-    type: PermissionResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '权限不存在',
   })
   async findOne(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<PermissionResponseDto> {
+  ): Promise<PermissionResponseVo> {
     return this.permissionsService.findOne(id);
   }
 
@@ -124,23 +124,20 @@ export class PermissionsController {
     description: '权限ID',
     type: Number,
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(PermissionResponseVo, {
     status: HttpStatus.OK,
     description: '更新成功',
-    type: PermissionResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '权限不存在',
   })
-  @ApiResponse({
-    status: HttpStatus.CONFLICT,
+  @ApiErrorResponseDecorator(HttpStatus.CONFLICT, {
     description: '权限名称或代码已存在',
   })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePermissionDto: UpdatePermissionDto,
-  ): Promise<PermissionResponseDto> {
+  ): Promise<PermissionResponseVo> {
     return this.permissionsService.update(id, updatePermissionDto);
   }
 
@@ -153,19 +150,17 @@ export class PermissionsController {
     description: '权限ID',
     type: Number,
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(PermissionResponseVo, {
     status: HttpStatus.OK,
     description: '状态更新成功',
-    type: PermissionResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '权限不存在',
   })
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateStatusDto: UpdatePermissionStatusDto,
-  ): Promise<PermissionResponseDto> {
+  ): Promise<PermissionResponseVo> {
     return this.permissionsService.updatePermissionStatus(
       id,
       updateStatusDto.isActive,
@@ -182,12 +177,11 @@ export class PermissionsController {
     type: Number,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.NO_CONTENT,
     description: '删除成功',
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '权限不存在',
   })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
@@ -197,11 +191,11 @@ export class PermissionsController {
   @Get('stats/overview')
   @Permissions('permission:read')
   @ApiOperation({ summary: '获取权限统计数据' })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(PermissionStatisticsVo, {
     status: HttpStatus.OK,
     description: '获取成功',
   })
-  async getStatistics(): Promise<any> {
+  async getStatistics(): Promise<PermissionStatisticsVo> {
     return this.permissionsService.getPermissionStatistics();
   }
 
@@ -215,18 +209,9 @@ export class PermissionsController {
     example: '1,2,3',
   })
   @HttpCode(HttpStatus.OK)
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.OK,
     description: '批量删除成功',
-    schema: {
-      type: 'object',
-      properties: {
-        deletedCount: {
-          type: 'number',
-          description: '删除的权限数量',
-        },
-      },
-    },
   })
   async batchDelete(
     @Query('ids') ids: string,
