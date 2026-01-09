@@ -10,3 +10,4 @@ export { securityConfig } from './security.config';
 export { throttleConfig } from './throttle.config';
 export { uploadConfig } from './upload.config';
 export { mailConfig } from './mail.config';
+export { healthConfig } from './health.config';

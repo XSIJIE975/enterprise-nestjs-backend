@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { statfs } from 'fs/promises';
 import {
   HealthIndicatorResult,
   HealthIndicatorService,
@@ -90,6 +91,46 @@ export class HealthService {
       return indicator.down({
         message: 'Cache service failed',
         error: error.message,
+      });
+    }
+  }
+
+  /**
+   * 检查磁盘存储健康状态 (检查剩余空间)
+   * @param key 健康检查的键名
+   * @param options 配置选项
+   * @returns 健康检查结果
+   */
+  async checkDiskStorage(
+    key: string,
+    options: { path: string; threshold: number },
+  ): Promise<HealthIndicatorResult> {
+    const indicator = this.healthIndicatorService.check(key);
+
+    try {
+      const stats = await statfs(options.path);
+      const freeSpace = Number(stats.bavail) * Number(stats.bsize);
+
+      if (freeSpace < options.threshold) {
+        return indicator.down({
+          message: 'Disk storage threshold exceeded (not enough free space)',
+          free: freeSpace,
+          threshold: options.threshold,
+          path: options.path,
+        });
+      }
+
+      return indicator.up({
+        message: 'Disk storage is healthy',
+        free: freeSpace,
+        threshold: options.threshold,
+        path: options.path,
+      });
+    } catch (error: any) {
+      return indicator.down({
+        message: 'Disk storage check failed',
+        error: error.message,
+        path: options.path,
       });
     }
   }

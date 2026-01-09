@@ -1,14 +1,18 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ConfigService } from '@nestjs/config';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
+import * as path from 'path';
 import {
   HealthCheckService,
   HealthCheck,
   MemoryHealthIndicator,
-  DiskHealthIndicator,
 } from '@nestjs/terminus';
+import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
+import { ApiSuccessResponseDecorator } from '@/common/decorators/swagger-response.decorator';
 import { HealthService } from './health.service';
-import { DisableDatabaseLog } from '../../common/decorators/database-log.decorator';
+import { HealthCheckVo } from './vo/health-check.vo';
+import { LivenessVo } from './vo/liveness.vo';
 
 @ApiTags('Health')
 @Controller('health')
@@ -18,39 +22,43 @@ export class HealthController {
   constructor(
     private health: HealthCheckService,
     private memory: MemoryHealthIndicator,
-    private disk: DiskHealthIndicator,
     private healthService: HealthService,
+    private configService: ConfigService,
   ) {}
 
   @Get()
   @ApiOperation({ summary: '系统健康检查' })
-  @ApiResponse({
-    status: 200,
-    description: '健康检查结果',
+  @ApiSuccessResponseDecorator(HealthCheckVo, {
+    description: '系统健康检查详细结果',
   })
   @HealthCheck()
-  check() {
+  async check(): Promise<HealthCheckVo> {
+    const memoryHeap = this.configService.get<number>('health.memory.heap');
+    const memoryRss = this.configService.get<number>('health.memory.rss');
+    const diskThreshold = this.configService.get<number>(
+      'health.disk.threshold',
+    );
+
     return this.health.check([
       () => this.healthService.checkDatabase('database'),
       () => this.healthService.checkRedis('redis'),
-      () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024), // 300MB
-      () => this.memory.checkRSS('memory_rss', 300 * 1024 * 1024), // 300MB
-      // 使用百分比模式：当磁盘使用超过90%时才报告不健康
+      () => this.memory.checkHeap('memory_heap', memoryHeap),
+      () => this.memory.checkRSS('memory_rss', memoryRss),
+      // 检查应用当前所在磁盘/分区的剩余空间状态
       () =>
-        this.disk.checkStorage('storage', {
-          path: process.platform === 'win32' ? 'C:\\' : '/',
-          thresholdPercent: 0.9, // 90%使用率阈值，更合理
+        this.healthService.checkDiskStorage('storage', {
+          path: path.parse(process.cwd()).root,
+          threshold: diskThreshold,
         }),
     ]);
   }
 
   @Get('liveness')
   @ApiOperation({ summary: '存活性检查' })
-  @ApiResponse({
-    status: 200,
+  @ApiSuccessResponseDecorator(LivenessVo, {
     description: '应用存活状态',
   })
-  liveness() {
+  liveness(): LivenessVo {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -60,12 +68,11 @@ export class HealthController {
 
   @Get('readiness')
   @ApiOperation({ summary: '就绪性检查' })
-  @ApiResponse({
-    status: 200,
-    description: '应用就绪状态',
+  @ApiSuccessResponseDecorator(HealthCheckVo, {
+    description: '应用就绪状态（检查关键依赖）',
   })
   @HealthCheck()
-  readiness() {
+  async readiness(): Promise<HealthCheckVo> {
     return this.health.check([
       () => this.healthService.checkDatabase('database'),
       () => this.healthService.checkRedis('redis'),

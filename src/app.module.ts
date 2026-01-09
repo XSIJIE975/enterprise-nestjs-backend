@@ -14,6 +14,7 @@ import {
   throttleConfig,
   uploadConfig,
   mailConfig,
+  healthConfig,
 } from './config';
 
 // 共享模块
@@ -61,6 +62,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
         throttleConfig,
         uploadConfig,
         mailConfig,
+        healthConfig,
       ],
       envFilePath: [
         '.env.local',
