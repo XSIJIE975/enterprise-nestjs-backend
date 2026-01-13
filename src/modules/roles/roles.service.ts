@@ -7,11 +7,11 @@ import { RbacCacheService } from '@/shared/cache';
 import {
   CreateRoleDto,
   UpdateRoleDto,
-  RoleResponseDto,
   QueryRolesDto,
-  PaginatedRolesDto,
   AssignPermissionsDto,
 } from './dto';
+import { RoleResponseVo, RolePageVo, RoleStatisticsVo } from './vo';
+import { PermissionResponseVo } from '../permissions/vo/permission-response.vo';
 
 /**
  * 角色服务
@@ -28,7 +28,7 @@ export class RolesService {
    * @param createRoleDto 创建角色 DTO
    * @returns 角色信息
    */
-  async create(createRoleDto: CreateRoleDto): Promise<RoleResponseDto> {
+  async create(createRoleDto: CreateRoleDto): Promise<RoleResponseVo> {
     // 检查角色名称是否已存在
     const existingRoleByName = await this.prisma.role.findUnique({
       where: { name: createRoleDto.name },
@@ -73,7 +73,7 @@ export class RolesService {
    * 查询所有角色（基础列表）
    * @returns 角色列表
    */
-  async findAll(): Promise<RoleResponseDto[]> {
+  async findAll(): Promise<RoleResponseVo[]> {
     const roles = await this.prisma.role.findMany({
       orderBy: {
         createdAt: 'desc',
@@ -92,7 +92,7 @@ export class RolesService {
   async findOne(
     id: number,
     includePermissions: boolean = false,
-  ): Promise<RoleResponseDto> {
+  ): Promise<RoleResponseVo> {
     const role = await this.prisma.role.findUnique({
       where: { id },
       include: includePermissions
@@ -121,7 +121,7 @@ export class RolesService {
    * @param code 角色代码
    * @returns 角色信息
    */
-  async findByCode(code: string): Promise<RoleResponseDto> {
+  async findByCode(code: string): Promise<RoleResponseVo> {
     const role = await this.prisma.role.findUnique({
       where: { code },
     });
@@ -141,7 +141,7 @@ export class RolesService {
    * @param query 查询参数
    * @returns 分页角色列表
    */
-  async findAllPaginated(query: QueryRolesDto): Promise<PaginatedRolesDto> {
+  async findAllPaginated(query: QueryRolesDto): Promise<RolePageVo> {
     const {
       page = 1,
       pageSize = 10,
@@ -192,8 +192,8 @@ export class RolesService {
         pageSize,
         total,
         totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
+        hasPreviousPage: page > 1,
+        hasNextPage: page < totalPages,
       },
     };
   }
@@ -207,7 +207,7 @@ export class RolesService {
   async update(
     id: number,
     updateRoleDto: UpdateRoleDto,
-  ): Promise<RoleResponseDto> {
+  ): Promise<RoleResponseVo> {
     // 检查角色是否存在
     const role = await this.prisma.role.findUnique({
       where: { id },
@@ -307,7 +307,7 @@ export class RolesService {
   async updateRoleStatus(
     id: number,
     isActive: boolean,
-  ): Promise<RoleResponseDto> {
+  ): Promise<RoleResponseVo> {
     // 检查角色是否存在
     const role = await this.prisma.role.findUnique({
       where: { id },
@@ -341,7 +341,7 @@ export class RolesService {
   async assignPermissions(
     roleId: number,
     assignPermissionsDto: AssignPermissionsDto,
-  ): Promise<RoleResponseDto> {
+  ): Promise<RoleResponseVo> {
     // 检查角色是否存在
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
@@ -398,7 +398,7 @@ export class RolesService {
    * @param roleId 角色ID
    * @returns 权限列表
    */
-  async getRolePermissions(roleId: number): Promise<any[]> {
+  async getRolePermissions(roleId: number): Promise<PermissionResponseVo[]> {
     // 检查角色是否存在
     const role = await this.prisma.role.findUnique({
       where: { id: roleId },
@@ -418,18 +418,16 @@ export class RolesService {
       },
     });
 
-    return rolePermissions.map(rp => rp.permission);
+    return rolePermissions.map(
+      rp => rp.permission as unknown as PermissionResponseVo,
+    );
   }
 
   /**
    * 获取角色统计信息
    * @returns 角色统计信息
    */
-  async getRoleStatistics(): Promise<{
-    total: number;
-    active: number;
-    inactive: number;
-  }> {
+  async getRoleStatistics(): Promise<RoleStatisticsVo> {
     const [total, active, inactive] = await Promise.all([
       this.prisma.role.count(),
       this.prisma.role.count({ where: { isActive: true } }),
@@ -506,8 +504,8 @@ export class RolesService {
   private mapToResponseDto(
     role: any,
     includePermissions: boolean = false,
-  ): RoleResponseDto {
-    const response: RoleResponseDto = {
+  ): RoleResponseVo {
+    const response: RoleResponseVo = {
       id: role.id,
       name: role.name,
       code: role.code,

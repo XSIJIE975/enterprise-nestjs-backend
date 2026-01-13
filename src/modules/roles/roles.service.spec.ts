@@ -409,8 +409,8 @@ describe('角色服务', () => {
       expect(result.meta.pageSize).toBe(10);
       expect(result.meta.total).toBe(1);
       expect(result.meta.totalPages).toBe(1);
-      expect(result.meta.hasNext).toBe(false);
-      expect(result.meta.hasPrev).toBe(false);
+      expect(result.meta.hasPreviousPage).toBe(false);
+      expect(result.meta.hasNextPage).toBe(false);
     });
   });
 

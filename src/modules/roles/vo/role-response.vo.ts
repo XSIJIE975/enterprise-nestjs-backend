@@ -1,9 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
- * 角色响应 DTO
+ * 角色响应 VO
  */
-export class RoleResponseDto {
+export class RoleResponseVo {
   @ApiProperty({
     description: '角色ID',
     example: 1,
