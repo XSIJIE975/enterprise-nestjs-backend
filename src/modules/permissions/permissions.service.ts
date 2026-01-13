@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PermissionModel } from '@/prisma/prisma/models/Permission';
+import { PermissionModel } from '@/prisma/prisma/models';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { ErrorMessages } from '@/common/enums/error-codes.enum';
