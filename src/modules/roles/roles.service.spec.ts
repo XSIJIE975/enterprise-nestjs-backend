@@ -6,6 +6,8 @@ import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { RolesService } from './roles.service';
 
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+
 describe('角色服务', () => {
   let service: RolesService;
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -23,6 +25,7 @@ describe('角色服务', () => {
       delete: jest.fn(),
       deleteMany: jest.fn(),
       count: jest.fn(),
+      groupBy: jest.fn(),
     },
     userRole: {
       count: jest.fn(),
@@ -34,7 +37,9 @@ describe('角色服务', () => {
     },
     permission: {
       findMany: jest.fn(),
+      count: jest.fn(),
     },
+    $transaction: jest.fn(callback => callback(mockPrismaService)),
   };
 
   const mockRbacCacheService = {
@@ -108,7 +113,16 @@ describe('角色服务', () => {
         description: 'Test description',
       };
 
-      mockPrismaService.role.findUnique.mockResolvedValue({ id: 1 });
+      const error = new PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '5.x.x',
+          meta: { target: ['name'] },
+        },
+      );
+
+      mockPrismaService.role.create.mockRejectedValue(error);
 
       await expect(service.create(createRoleDto)).rejects.toThrow(
         new BusinessException(
@@ -125,9 +139,16 @@ describe('角色服务', () => {
         description: 'Test description',
       };
 
-      mockPrismaService.role.findUnique
-        .mockResolvedValueOnce(null) // name check passes
-        .mockResolvedValueOnce({ id: 1 }); // code check fails
+      const error = new PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '5.x.x',
+          meta: { target: ['code'] },
+        },
+      );
+
+      mockPrismaService.role.create.mockRejectedValue(error);
 
       await expect(service.create(createRoleDto)).rejects.toThrow(
         new BusinessException(
@@ -409,8 +430,8 @@ describe('角色服务', () => {
       expect(result.meta.pageSize).toBe(10);
       expect(result.meta.total).toBe(1);
       expect(result.meta.totalPages).toBe(1);
-      expect(result.meta.hasNext).toBe(false);
-      expect(result.meta.hasPrev).toBe(false);
+      expect(result.meta.hasPreviousPage).toBe(false);
+      expect(result.meta.hasNextPage).toBe(false);
     });
   });
 
@@ -501,6 +522,10 @@ describe('角色服务', () => {
     });
 
     it('应该在更新角色名称时名称已存在抛出错误', async () => {
+      // Reset mocks to ensure no leftover state
+      mockPrismaService.role.findUnique.mockReset();
+      mockPrismaService.role.update.mockReset();
+
       const updateRoleDto = {
         name: 'Existing Name',
       };
@@ -515,15 +540,17 @@ describe('角色服务', () => {
         updatedAt: new Date(),
       };
 
-      const conflictingRole = {
-        id: 2,
-        name: 'Existing Name',
-        code: 'existing_code',
-      };
+      mockPrismaService.role.findUnique.mockResolvedValue(existingRole);
 
-      mockPrismaService.role.findUnique
-        .mockResolvedValueOnce(existingRole) // First call: find existing role
-        .mockResolvedValueOnce(conflictingRole); // Second call: check name conflict
+      const error = new PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '5.x.x',
+          meta: { target: ['name'] },
+        },
+      );
+      mockPrismaService.role.update.mockRejectedValue(error);
 
       await expect(service.update(1, updateRoleDto)).rejects.toThrow(
         new BusinessException(
@@ -553,15 +580,17 @@ describe('角色服务', () => {
         updatedAt: new Date(),
       };
 
-      const conflictingRole = {
-        id: 2,
-        name: 'Existing Name',
-        code: 'existing_code',
-      };
+      mockPrismaService.role.findUnique.mockResolvedValue(existingRole);
 
-      mockPrismaService.role.findUnique
-        .mockResolvedValueOnce(existingRole) // First call: find existing role
-        .mockResolvedValueOnce(conflictingRole); // Second call: check code conflict
+      const error = new PrismaClientKnownRequestError(
+        'Unique constraint failed',
+        {
+          code: 'P2002',
+          clientVersion: '5.x.x',
+          meta: { target: ['code'] },
+        },
+      );
+      mockPrismaService.role.update.mockRejectedValue(error);
 
       await expect(service.update(1, updateRoleDto)).rejects.toThrow(
         new BusinessException(
@@ -599,17 +628,16 @@ describe('角色服务', () => {
         updatedAt: new Date(),
       };
 
-      mockPrismaService.role.findUnique
-        .mockResolvedValueOnce(existingRole) // First call: find existing role
-        .mockResolvedValueOnce(null); // Second call: check name conflict (name changed but no conflict)
+      mockPrismaService.role.findUnique.mockResolvedValue(existingRole);
+      // No extra findUnique call because check is implicit in update
       mockPrismaService.role.update.mockResolvedValue(updatedRole);
 
       const result = await service.update(1, updateRoleDto);
 
       expect(result).toEqual(updatedRole);
       expect(mockRbacCacheService.flushAllRbacCache).toHaveBeenCalled();
-      // Should only call findUnique twice (not three times for code check)
-      expect(mockPrismaService.role.findUnique).toHaveBeenCalledTimes(2);
+      // Should only call findUnique once to check existence, conflict check is now implicit in update
+      expect(mockPrismaService.role.findUnique).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -737,6 +765,7 @@ describe('角色服务', () => {
       ];
 
       mockPrismaService.role.findUnique.mockResolvedValue(role);
+      mockPrismaService.permission.count.mockResolvedValue(3); // Mock count to match permissionIds length
       mockPrismaService.permission.findMany.mockResolvedValue(permissions);
       mockPrismaService.rolePermission.deleteMany.mockResolvedValue({
         count: 0,
@@ -792,6 +821,7 @@ describe('角色服务', () => {
       };
 
       mockPrismaService.role.findUnique.mockResolvedValue(role);
+      mockPrismaService.permission.count.mockResolvedValue(2); // Only 2 exist
       mockPrismaService.permission.findMany.mockResolvedValue([
         { id: 1, code: 'perm1', name: 'Permission 1' },
         { id: 2, code: 'perm2', name: 'Permission 2' },
@@ -869,13 +899,19 @@ describe('角色服务', () => {
 
   describe('获取角色统计', () => {
     it('应该返回角色统计信息', async () => {
-      mockPrismaService.role.count
-        .mockResolvedValueOnce(10) // total
-        .mockResolvedValueOnce(7) // active
-        .mockResolvedValueOnce(3); // inactive
+      const statusCounts = [
+        { isActive: true, _count: 7 },
+        { isActive: false, _count: 3 },
+      ];
+
+      mockPrismaService.role.groupBy.mockResolvedValue(statusCounts);
 
       const result = await service.getRoleStatistics();
 
+      expect(mockPrismaService.role.groupBy).toHaveBeenCalledWith({
+        by: ['isActive'],
+        _count: true,
+      });
       expect(result).toEqual({
         total: 10,
         active: 7,

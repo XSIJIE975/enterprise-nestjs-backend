@@ -24,6 +24,11 @@ import { RolesGuard } from '@/common/guards/roles.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Permissions } from '@/common/decorators/permissions.decorator';
+import {
+  ApiSuccessResponseDecorator,
+  ApiSuccessResponseArrayDecorator,
+  ApiErrorResponseDecorator,
+} from '@/common/decorators/swagger-response.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesService } from './roles.service';
 import {
@@ -32,9 +37,10 @@ import {
   UpdateRoleStatusDto,
   AssignPermissionsDto,
   QueryRolesDto,
-  RoleResponseDto,
-  PaginatedRolesDto,
+  BatchDeleteRoleDto,
 } from './dto';
+import { RoleResponseVo, RolePageVo, RoleStatisticsVo } from './vo';
+import { PermissionResponseVo } from '../permissions/vo/permission-response.vo';
 
 /**
  * 角色管理控制器
@@ -54,20 +60,17 @@ export class RolesController {
     summary: '创建角色',
     description: '创建新的角色，需要管理员权限和角色创建权限',
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RoleResponseVo, {
     status: HttpStatus.CREATED,
     description: '角色创建成功',
-    type: RoleResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
+  @ApiErrorResponseDecorator(HttpStatus.BAD_REQUEST, {
     description: '参数验证失败或角色已存在',
   })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
+  @ApiErrorResponseDecorator(HttpStatus.FORBIDDEN, {
     description: '权限不足',
   })
-  async create(@Body() createRoleDto: CreateRoleDto): Promise<RoleResponseDto> {
+  async create(@Body() createRoleDto: CreateRoleDto): Promise<RoleResponseVo> {
     return this.rolesService.create(createRoleDto);
   }
 
@@ -78,16 +81,14 @@ export class RolesController {
     summary: '获取角色列表',
     description: '获取所有角色的基础列表，需要管理员权限和角色读取权限',
   })
-  @ApiResponse({
+  @ApiSuccessResponseArrayDecorator(RoleResponseVo, {
     status: HttpStatus.OK,
     description: '获取成功',
-    type: [RoleResponseDto],
   })
-  @ApiResponse({
-    status: HttpStatus.FORBIDDEN,
+  @ApiErrorResponseDecorator(HttpStatus.FORBIDDEN, {
     description: '权限不足',
   })
-  async findAll(): Promise<RoleResponseDto[]> {
+  async findAll(): Promise<RoleResponseVo[]> {
     return this.rolesService.findAll();
   }
 
@@ -98,50 +99,11 @@ export class RolesController {
     summary: '分页查询角色',
     description: '支持关键词搜索、状态筛选和排序的分页查询',
   })
-  @ApiQuery({
-    name: 'page',
-    required: false,
-    type: Number,
-    description: '页码（从1开始）',
-  })
-  @ApiQuery({
-    name: 'pageSize',
-    required: false,
-    type: Number,
-    description: '每页数量',
-  })
-  @ApiQuery({
-    name: 'keyword',
-    required: false,
-    type: String,
-    description: '搜索关键词（角色名称、代码或描述）',
-  })
-  @ApiQuery({
-    name: 'isActive',
-    required: false,
-    type: Boolean,
-    description: '角色状态筛选',
-  })
-  @ApiQuery({
-    name: 'sortBy',
-    required: false,
-    enum: ['createdAt', 'updatedAt', 'name', 'code'],
-    description: '排序字段',
-  })
-  @ApiQuery({
-    name: 'order',
-    required: false,
-    enum: ['asc', 'desc'],
-    description: '排序方向',
-  })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RolePageVo, {
     status: HttpStatus.OK,
     description: '查询成功',
-    type: PaginatedRolesDto,
   })
-  async findAllPaginated(
-    @Query() query: QueryRolesDto,
-  ): Promise<PaginatedRolesDto> {
+  async findAllPaginated(@Query() query: QueryRolesDto): Promise<RolePageVo> {
     return this.rolesService.findAllPaginated(query);
   }
 
@@ -163,19 +125,17 @@ export class RolesController {
     type: Boolean,
     description: '是否包含权限信息',
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RoleResponseVo, {
     status: HttpStatus.OK,
     description: '获取成功',
-    type: RoleResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '角色不存在',
   })
   async findOne(
     @Param('id', ParseIntPipe) id: number,
     @Query('includePermissions') includePermissions?: string,
-  ): Promise<RoleResponseDto> {
+  ): Promise<RoleResponseVo> {
     const includePerms = includePermissions === 'true';
     return this.rolesService.findOne(id, includePerms);
   }
@@ -192,16 +152,14 @@ export class RolesController {
     type: String,
     description: '角色代码',
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RoleResponseVo, {
     status: HttpStatus.OK,
     description: '获取成功',
-    type: RoleResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '角色不存在',
   })
-  async findByCode(@Param('code') code: string): Promise<RoleResponseDto> {
+  async findByCode(@Param('code') code: string): Promise<RoleResponseVo> {
     return this.rolesService.findByCode(code);
   }
 
@@ -217,23 +175,20 @@ export class RolesController {
     type: Number,
     description: '角色ID',
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RoleResponseVo, {
     status: HttpStatus.OK,
     description: '更新成功',
-    type: RoleResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: '角色不存在',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
+  @ApiErrorResponseDecorator(HttpStatus.BAD_REQUEST, {
     description: '参数验证失败或角色名称/代码已存在',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '角色不存在',
   })
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateRoleDto: UpdateRoleDto,
-  ): Promise<RoleResponseDto> {
+  ): Promise<RoleResponseVo> {
     return this.rolesService.update(id, updateRoleDto);
   }
 
@@ -249,19 +204,17 @@ export class RolesController {
     type: Number,
     description: '角色ID',
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RoleResponseVo, {
     status: HttpStatus.OK,
-    description: '更新成功',
-    type: RoleResponseDto,
+    description: '状态更新成功',
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '角色不存在',
   })
   async updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateRoleStatusDto: UpdateRoleStatusDto,
-  ): Promise<RoleResponseDto> {
+  ): Promise<RoleResponseVo> {
     return this.rolesService.updateRoleStatus(id, updateRoleStatusDto.isActive);
   }
 
@@ -277,19 +230,17 @@ export class RolesController {
     type: Number,
     description: '角色ID',
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RoleResponseVo, {
     status: HttpStatus.OK,
     description: '分配成功',
-    type: RoleResponseDto,
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '角色或权限不存在',
   })
   async assignPermissions(
     @Param('id', ParseIntPipe) id: number,
     @Body() assignPermissionsDto: AssignPermissionsDto,
-  ): Promise<RoleResponseDto> {
+  ): Promise<RoleResponseVo> {
     return this.rolesService.assignPermissions(id, assignPermissionsDto);
   }
 
@@ -305,18 +256,16 @@ export class RolesController {
     type: Number,
     description: '角色ID',
   })
-  @ApiResponse({
+  @ApiSuccessResponseArrayDecorator(PermissionResponseVo, {
     status: HttpStatus.OK,
     description: '获取成功',
-    type: [Object],
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '角色不存在',
   })
   async getRolePermissions(
     @Param('id', ParseIntPipe) id: number,
-  ): Promise<any[]> {
+  ): Promise<PermissionResponseVo[]> {
     return this.rolesService.getRolePermissions(id);
   }
 
@@ -327,39 +276,17 @@ export class RolesController {
     summary: '获取角色统计信息',
     description: '获取角色总数、激活/禁用状态统计等信息',
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(RoleStatisticsVo, {
     status: HttpStatus.OK,
     description: '获取成功',
-    schema: {
-      type: 'object',
-      properties: {
-        total: {
-          type: 'number',
-          description: '角色总数',
-        },
-        active: {
-          type: 'number',
-          description: '激活角色数',
-        },
-        inactive: {
-          type: 'number',
-          description: '禁用角色数',
-        },
-      },
-    },
   })
-  async getStatistics(): Promise<{
-    total: number;
-    active: number;
-    inactive: number;
-  }> {
+  async getStatistics(): Promise<RoleStatisticsVo> {
     return this.rolesService.getRoleStatistics();
   }
 
   @Delete(':id')
   @Roles('admin')
   @Permissions('role:delete')
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: '删除角色',
     description: '删除指定的角色，如果角色正在被用户使用则无法删除',
@@ -369,23 +296,21 @@ export class RolesController {
     type: Number,
     description: '角色ID',
   })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.NO_CONTENT,
     description: '删除成功',
   })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '角色不存在',
   })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
+  @ApiErrorResponseDecorator(HttpStatus.BAD_REQUEST, {
     description: '角色正在被用户使用，无法删除',
   })
   async remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
     return this.rolesService.remove(id);
   }
 
-  @Delete('batch')
+  @Post('batch-delete')
   @Roles('admin')
   @Permissions('role:delete')
   @HttpCode(HttpStatus.OK)
@@ -393,33 +318,17 @@ export class RolesController {
     summary: '批量删除角色',
     description: '批量删除多个角色，如果有角色正在被用户使用则全部无法删除',
   })
-  @ApiQuery({
-    name: 'ids',
-    type: [Number],
-    description: '角色ID列表',
-  })
-  @ApiResponse({
+  @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.OK,
     description: '批量删除成功',
-    schema: {
-      type: 'object',
-      properties: {
-        deletedCount: {
-          type: 'number',
-          description: '删除的角色数量',
-        },
-      },
-    },
   })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
+  @ApiErrorResponseDecorator(HttpStatus.BAD_REQUEST, {
     description: '部分角色不存在或正在被用户使用',
   })
   async batchDelete(
-    @Query('ids') ids: string,
+    @Body() dto: BatchDeleteRoleDto,
   ): Promise<{ deletedCount: number }> {
-    const idArray = ids.split(',').map(id => parseInt(id.trim(), 10));
-    const deletedCount = await this.rolesService.batchDelete(idArray);
+    const deletedCount = await this.rolesService.batchDelete(dto.ids);
     return { deletedCount };
   }
 
