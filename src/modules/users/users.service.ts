@@ -16,7 +16,7 @@ import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { AuthService } from '../auth/auth.service';
 import { CreateUserDto, UpdateUserDto, UpdateProfileDto } from './dto';
-import { UserRoleVo, UserResponseVo } from './vo';
+import { UserRoleVo, UserResponseVo, UserSessionVo } from './vo';
 
 /**
  * 用户服务
@@ -910,7 +910,7 @@ export class UsersService {
   async getUserSessions(
     userId: string,
     currentAccessToken?: string,
-  ): Promise<any[]> {
+  ): Promise<UserSessionVo[]> {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -982,6 +982,45 @@ export class UsersService {
     }
 
     await this.authService.logoutOtherSessions(userId, currentSession.id);
+  }
+
+  /**
+   * 管理员：注销指定用户的指定会话
+   *
+   * @param userId 用户 ID
+   * @param sessionId 会话 ID
+   */
+  async revokeUserSessionByAdmin(
+    userId: string,
+    sessionId: string,
+  ): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { deletedAt: true },
+    });
+
+    if (!user || user.deletedAt) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    const sessionExists = await this.prisma.userSession.findFirst({
+      where: {
+        id: sessionId,
+        userId,
+        isActive: true,
+      },
+      select: { id: true },
+    });
+
+    if (!sessionExists) {
+      throw new NotFoundException('会话不存在');
+    }
+
+    await this.authService.revokeUserSession(
+      userId,
+      sessionId,
+      ErrorCode.SESSION_REVOKED,
+    );
   }
 
   /**

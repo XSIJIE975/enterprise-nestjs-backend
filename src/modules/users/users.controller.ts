@@ -25,7 +25,9 @@ import {
   ApiSuccessResponseArrayDecorator,
 } from '@/common/decorators/swagger-response.decorator';
 import { RolesGuard } from '@/common/guards/roles.guard';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
+import { Permissions } from '@/common/decorators/permissions.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
 import { JwtUser } from '../auth/interfaces/jwt-payload.interface';
@@ -110,6 +112,24 @@ export class UsersController {
   /**
    * 获取指定用户详情
    */
+  @Get(':id/sessions')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles('admin')
+  @Permissions('user:session:list')
+  @ApiOperation({ summary: '获取指定用户的会话列表（管理员）' })
+  @ApiParam({ name: 'id', description: '用户 ID' })
+  @ApiSuccessResponseArrayDecorator(UserSessionVo, {
+    description: '成功获取会话列表',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在',
+  })
+  async getUserSessionsByAdmin(
+    @Param('id') id: string,
+  ): Promise<UserSessionVo[]> {
+    return this.usersService.getUserSessions(id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
@@ -129,6 +149,28 @@ export class UsersController {
   /**
    * 更新用户信息
    */
+  @Delete(':id/sessions/:sessionId')
+  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+  @Roles('admin')
+  @Permissions('user:session:revoke')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: '注销指定用户的指定会话（管理员）' })
+  @ApiParam({ name: 'id', description: '用户 ID' })
+  @ApiParam({ name: 'sessionId', description: '会话 ID' })
+  @ApiSuccessResponseDecorator(undefined, {
+    status: HttpStatus.NO_CONTENT,
+    description: '成功注销会话',
+  })
+  @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
+    description: '用户不存在或会话不存在',
+  })
+  async revokeUserSessionByAdmin(
+    @Param('id') id: string,
+    @Param('sessionId') sessionId: string,
+  ): Promise<void> {
+    await this.usersService.revokeUserSessionByAdmin(id, sessionId);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')

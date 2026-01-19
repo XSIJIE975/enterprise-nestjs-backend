@@ -537,6 +537,78 @@ describe('AuthService', () => {
     });
   });
 
+  describe('revokeUserSession', () => {
+    const userId = MOCK_USER_ID;
+    const sessionId = 'session-uuid-123';
+
+    it('应该成功撤销指定会话（并加入黑名单、更新会话状态）', async () => {
+      mockPrismaService.userSession.findFirst.mockResolvedValue({
+        id: sessionId,
+        accessToken: 'mock-access-token',
+        refreshToken: 'mock-refresh-token',
+      });
+      mockCacheService.set.mockResolvedValue(undefined);
+      mockPrismaService.userSession.update.mockResolvedValue({
+        ...mockSession,
+        id: sessionId,
+        isActive: false,
+      });
+
+      await service.revokeUserSession(
+        userId,
+        sessionId,
+        ErrorCode.SESSION_REVOKED,
+      );
+
+      expect(mockPrismaService.userSession.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: sessionId,
+          userId,
+          isActive: true,
+        },
+        select: {
+          id: true,
+          accessToken: true,
+          refreshToken: true,
+        },
+      });
+
+      expect(mockCacheService.set).toHaveBeenNthCalledWith(
+        1,
+        `token:blacklist:mock-access-token`,
+        ErrorCode.SESSION_REVOKED,
+        15 * 60,
+      );
+      expect(mockCacheService.set).toHaveBeenNthCalledWith(
+        2,
+        `token:blacklist:mock-refresh-token`,
+        ErrorCode.SESSION_REVOKED,
+        7 * 24 * 60 * 60,
+      );
+
+      expect(mockPrismaService.userSession.update).toHaveBeenCalledWith({
+        where: { id: sessionId },
+        data: {
+          isActive: false,
+          revokedAt: expect.any(Date),
+        },
+      });
+    });
+
+    it('当会话不存在时应该不执行任何操作', async () => {
+      mockPrismaService.userSession.findFirst.mockResolvedValue(null);
+
+      await service.revokeUserSession(
+        userId,
+        sessionId,
+        ErrorCode.SESSION_REVOKED,
+      );
+
+      expect(mockCacheService.set).not.toHaveBeenCalled();
+      expect(mockPrismaService.userSession.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('getTokenBlacklistReason', () => {
     it('应该返回黑名单原因', async () => {
       const token = 'test-token';
