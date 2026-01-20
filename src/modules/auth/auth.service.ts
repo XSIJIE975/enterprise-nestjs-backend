@@ -584,6 +584,51 @@ export class AuthService {
   }
 
   /**
+   * 撤销指定会话（管理员踢下线/安全操作）
+   *
+   * @param userId 用户 ID
+   * @param sessionId 会话 ID
+   * @param reason 撤销原因
+   */
+  async revokeUserSession(
+    userId: string,
+    sessionId: string,
+    reason: ErrorCode = ErrorCode.SESSION_REVOKED,
+  ): Promise<void> {
+    const session = await this.prisma.userSession.findFirst({
+      where: {
+        id: sessionId,
+        userId,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        accessToken: true,
+        refreshToken: true,
+      },
+    });
+
+    if (!session) {
+      return;
+    }
+
+    await this.addTokenToBlacklist(session.accessToken, 15 * 60, reason);
+    await this.addTokenToBlacklist(
+      session.refreshToken,
+      7 * 24 * 60 * 60,
+      reason,
+    );
+
+    await this.prisma.userSession.update({
+      where: { id: session.id },
+      data: {
+        isActive: false,
+        revokedAt: new Date(),
+      },
+    });
+  }
+
+  /**
    * 检查 Token 是否在黑名单中
    * @param token Token
    * @returns 黑名单原因（错误码），如果不在黑名单中则返回 null

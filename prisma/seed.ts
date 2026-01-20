@@ -186,6 +186,28 @@ async function main() {
         description: '删除用户的权限',
       },
     }),
+    prisma.permission.upsert({
+      where: { code: 'user:session:list' },
+      update: {},
+      create: {
+        name: '查看用户会话',
+        code: 'user:session:list',
+        resource: 'user_session',
+        action: 'list',
+        description: '查看指定用户会话列表的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'user:session:revoke' },
+      update: {},
+      create: {
+        name: '注销用户会话',
+        code: 'user:session:revoke',
+        resource: 'user_session',
+        action: 'revoke',
+        description: '注销指定用户指定会话的权限',
+      },
+    }),
     // 角色管理权限
     prisma.permission.upsert({
       where: { code: 'role:read' },
