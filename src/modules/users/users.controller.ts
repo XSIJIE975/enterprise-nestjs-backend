@@ -109,9 +109,6 @@ export class UsersController {
     return this.usersService.getUserStatistics();
   }
 
-  /**
-   * 获取指定用户详情
-   */
   @Get(':id/sessions')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('admin')
@@ -127,9 +124,13 @@ export class UsersController {
   async getUserSessionsByAdmin(
     @Param('id') id: string,
   ): Promise<UserSessionVo[]> {
-    return this.usersService.getUserSessions(id);
+    const accessToken = RequestContextService.get<string>('accessToken');
+    return this.usersService.getUserSessions(id, accessToken);
   }
 
+  /**
+   * 获取指定用户详情
+   */
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
@@ -146,9 +147,6 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  /**
-   * 更新用户信息
-   */
   @Delete(':id/sessions/:sessionId')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('admin')
@@ -171,6 +169,9 @@ export class UsersController {
     await this.usersService.revokeUserSessionByAdmin(id, sessionId);
   }
 
+  /**
+   * 更新用户信息
+   */
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
