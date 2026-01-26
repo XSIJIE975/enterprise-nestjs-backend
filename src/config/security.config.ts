@@ -18,6 +18,7 @@ export const securityEnvSchema = z.object({
   CSRF_COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).optional(),
   CSRF_COOKIE_MAXAGE: z.coerce.number().int().min(0).optional(),
   CSRF_EXEMPT_PATHS: z.string().optional(),
+  CSRF_SESSION_COOKIE_NAME: z.string().optional(),
 });
 
 export type SecurityEnvConfig = z.infer<typeof securityEnvSchema>;
@@ -60,6 +61,9 @@ export const securityConfig = registerAs('security', () => {
       // CSRF cookie / header 名称
       cookieName: process.env.CSRF_COOKIE_NAME || 'XSRF-TOKEN',
       headerName: process.env.CSRF_HEADER_NAME || 'X-XSRF-TOKEN',
+      // 用于绑定 CSRF token 的会话标识（Double Submit Cookie Pattern 的 identifier）
+      // 由中间件自动创建（httpOnly），前端无需读取
+      sessionCookieName: process.env.CSRF_SESSION_COOKIE_NAME || 'csrf.sid',
       // CSRF cookie 选项（生产请启用 secure）
       cookieOptions: {
         httpOnly: false, // 必须为 false 以允许前端读取（double-submit）
@@ -69,10 +73,19 @@ export const securityConfig = registerAs('security', () => {
           parseInt(process.env.CSRF_COOKIE_MAXAGE || '0', 10) || undefined,
       },
       // 白名单路径（用逗号分隔）
-      exemptPaths: (process.env.CSRF_EXEMPT_PATHS || '')
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean),
+      exemptPaths: Array.from(
+        new Set([
+          // 默认豁免
+          '/health',
+          '/mock',
+          // 环境变量追加
+          ...(process.env.CSRF_EXEMPT_PATHS || '')
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(p => (p.startsWith('/') ? p : `/${p}`)),
+        ]),
+      ),
     },
   };
 });
