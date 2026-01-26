@@ -42,6 +42,7 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 // 拦截器和守卫
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { CsrfGuard } from './common/guards/csrf.guard';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
@@ -135,6 +136,12 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     {
       provide: APP_GUARD,
       useClass: CustomThrottlerGuard,
+    },
+
+    // 全局守卫：CSRF 保护（仅对 POST/PUT/DELETE）
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
 
     // 全局拦截器：统一响应格式和时区转换
