@@ -1,4 +1,24 @@
 import { registerAs } from '@nestjs/config';
+import { z } from 'zod';
+
+/**
+ * Database 配置环境变量 Schema
+ */
+export const databaseEnvSchema = z.object({
+  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+  DB_HOST: z.string().optional(),
+  DB_PORT: z.coerce.number().int().positive().optional(),
+  DB_USERNAME: z.string().optional(),
+  DB_PASSWORD: z.string().optional(),
+  DB_DATABASE: z.string().optional(),
+  DB_LOGGING: z.string().optional(),
+  DB_SYNCHRONIZE: z.string().optional(),
+  DB_MAX_CONNECTIONS: z.coerce.number().int().positive().optional(),
+  DB_ACQUIRE_TIMEOUT: z.coerce.number().int().positive().optional(),
+  DB_TIMEOUT: z.coerce.number().int().positive().optional(),
+});
+
+export type DatabaseEnvConfig = z.infer<typeof databaseEnvSchema>;
 
 export const databaseConfig = registerAs('database', () => ({
   url:

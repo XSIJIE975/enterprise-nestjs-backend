@@ -1,4 +1,21 @@
 import { registerAs } from '@nestjs/config';
+import { z } from 'zod';
+
+/**
+ * Mail 配置环境变量 Schema
+ */
+export const mailEnvSchema = z.object({
+  MAIL_HOST: z.string().optional(),
+  MAIL_PORT: z.coerce.number().int().positive().optional(),
+  MAIL_SECURE: z.string().optional(),
+  MAIL_USER: z.string().optional(),
+  MAIL_PASS: z.string().optional(),
+  MAIL_FROM_NAME: z.string().optional(),
+  MAIL_FROM: z.string().email().optional().or(z.literal('')),
+  MAIL_PREVIEW: z.string().optional(),
+});
+
+export type MailEnvConfig = z.infer<typeof mailEnvSchema>;
 
 /**
  * 邮件配置

@@ -11,6 +11,10 @@ import * as basicAuth from 'express-basic-auth';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './shared/logger/logger.service';
+import { validateConfigOnStartup } from './shared/config/config-validator';
+
+// 在应用启动前验证配置
+validateConfigOnStartup();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {

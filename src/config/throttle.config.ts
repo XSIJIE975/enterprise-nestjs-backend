@@ -1,4 +1,22 @@
 import { registerAs } from '@nestjs/config';
+import { z } from 'zod';
+
+/**
+ * Throttle 配置环境变量 Schema
+ */
+export const throttleEnvSchema = z.object({
+  // Short
+  THROTTLE_SHORT_TTL: z.coerce.number().int().positive().optional(),
+  THROTTLE_SHORT_LIMIT: z.coerce.number().int().positive().optional(),
+  // Medium
+  THROTTLE_MEDIUM_TTL: z.coerce.number().int().positive().optional(),
+  THROTTLE_MEDIUM_LIMIT: z.coerce.number().int().positive().optional(),
+  // Long
+  THROTTLE_LONG_TTL: z.coerce.number().int().positive().optional(),
+  THROTTLE_LONG_LIMIT: z.coerce.number().int().positive().optional(),
+});
+
+export type ThrottleEnvConfig = z.infer<typeof throttleEnvSchema>;
 
 /**
  * 限流配置

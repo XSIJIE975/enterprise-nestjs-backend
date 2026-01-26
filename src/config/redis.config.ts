@@ -1,4 +1,23 @@
 import { registerAs } from '@nestjs/config';
+import { z } from 'zod';
+
+/**
+ * Redis 配置环境变量 Schema
+ */
+export const redisEnvSchema = z.object({
+  CACHE_TYPE: z.enum(['redis', 'memory', 'auto']).optional(),
+  REDIS_HOST: z.string().optional(),
+  REDIS_PORT: z.coerce.number().int().positive().optional(),
+  REDIS_PASSWORD: z.string().optional(),
+  REDIS_DB: z.coerce.number().int().min(0).optional(),
+  REDIS_KEY_PREFIX: z.string().optional(),
+  REDIS_TTL: z.coerce.number().int().positive().optional(),
+  REDIS_MAX_RETRIES: z.coerce.number().int().min(0).optional(),
+  REDIS_RETRY_DELAY: z.coerce.number().int().positive().optional(),
+  REDIS_MAX_MEMORY_POLICY: z.string().optional(),
+});
+
+export type RedisEnvConfig = z.infer<typeof redisEnvSchema>;
 
 /**
  * Redis 缓存配置

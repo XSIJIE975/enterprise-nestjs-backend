@@ -1,4 +1,26 @@
 import { registerAs } from '@nestjs/config';
+import { z } from 'zod';
+
+/**
+ * Security 配置环境变量 Schema
+ */
+export const securityEnvSchema = z.object({
+  // Bcrypt
+  BCRYPT_ROUNDS: z.coerce.number().int().min(4).max(31).optional(),
+  // Session
+  SESSION_SECRET: z.string().optional(),
+  MAX_CONCURRENT_SESSIONS: z.coerce.number().int().min(1).max(10).optional(),
+  // CSRF
+  CSRF_ENABLED: z.string().optional(),
+  CSRF_SECRET: z.string().optional(),
+  CSRF_COOKIE_NAME: z.string().optional(),
+  CSRF_HEADER_NAME: z.string().optional(),
+  CSRF_COOKIE_SAMESITE: z.enum(['strict', 'lax', 'none']).optional(),
+  CSRF_COOKIE_MAXAGE: z.coerce.number().int().min(0).optional(),
+  CSRF_EXEMPT_PATHS: z.string().optional(),
+});
+
+export type SecurityEnvConfig = z.infer<typeof securityEnvSchema>;
 
 /**
  * 安全配置
