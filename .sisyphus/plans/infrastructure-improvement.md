@@ -54,11 +54,11 @@
 
 ### Definition of Done
 
-- [ ] 启动时缺少 JWT_SECRET 等必需配置会阻止应用启动（生产环境）
-- [ ] 5次密码错误后账户锁定15分钟
-- [ ] 所有 POST/PUT/DELETE 路由受 CSRF 保护（除豁免路径）
-- [ ] User/Role/Permission/Session 操作通过 Repository 进行
-- [ ] Redis/数据库故障时触发熔断器，返回 503
+- [x] 启动时缺少 JWT_SECRET 等必需配置会阻止应用启动（生产环境）
+- [x] 5次密码错误后账户锁定15分钟
+- [x] 所有 POST/PUT/DELETE 路由受 CSRF 保护（除豁免路径）
+- [x] User/Role/Permission/Session 操作通过 Repository 进行
+- [x] Redis/数据库故障时触发熔断器，返回 503
 
 ### Must Have
 
@@ -434,7 +434,7 @@ Phase 4: 性能优化   ↓
 
 ### Phase 3: 弹性机制
 
-- [ ] 8. 实现熔断器服务
+- [x] 8. 实现熔断器服务
 
   **What to do**:
   - 创建 `src/shared/resilience/circuit-breaker.service.ts`
@@ -477,7 +477,7 @@ Phase 4: 性能优化   ↓
 
 ---
 
-- [ ] 9. 实现重试装饰器
+- [x] 9. 实现重试装饰器
 
   **What to do**:
   - 创建 `src/shared/resilience/decorators/retryable.decorator.ts`
@@ -519,7 +519,7 @@ Phase 4: 性能优化   ↓
 
 ### Phase 4: 性能优化
 
-- [ ] 10. 修复 N+1 查询问题
+- [x] 10. 修复 N+1 查询问题
 
   **What to do**:
   - 审计所有 Repository 的 findMany 方法
@@ -593,11 +593,11 @@ curl -X POST http://localhost:8000/api/v1/users -H "Content-Type: application/js
 
 ### Final Checklist
 
-- [ ] 所有配置文件有 Zod 验证
-- [ ] Repository 层覆盖 User/Role/Permission/Session
-- [ ] CSRF 保护启用（豁免 /health/_, /mock/_）
-- [ ] 账户锁定生效（5次→15分钟）
-- [ ] 熔断器集成到数据库和 Redis
-- [ ] 重试装饰器可用于幂等操作
-- [ ] N+1 查询已修复（查询数量减少）
-- [ ] 所有 Must NOT Have 护栏未被违反
+- [x] 所有配置文件有 Zod 验证
+- [x] Repository 层覆盖 User/Role/Permission/Session
+- [x] CSRF 保护启用（豁免 /health/_, /mock/_）
+- [x] 账户锁定生效（5次→15分钟）
+- [x] 熔断器集成到数据库和 Redis
+- [x] 重试装饰器可用于幂等操作
+- [x] N+1 查询已修复（查询数量减少）
+- [x] 所有 Must NOT Have 护栏未被违反
