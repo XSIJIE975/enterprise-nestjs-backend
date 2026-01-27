@@ -26,8 +26,8 @@ export class CreateRoleDto {
   })
   @IsString({ message: '角色代码必须是字符串' })
   @Length(1, 50, { message: '角色代码长度必须在1-50个字符之间' })
-  @Matches(/^[A-Z0-9_]+$/, {
-    message: '角色代码只能包含大写字母、数字和下划线',
+  @Matches(/^[A-Za-z0-9_]+$/, {
+    message: '角色代码只能包含字母、数字和下划线',
   })
   @IsNotEmpty({ message: '角色代码不能为空' })
   code: string;

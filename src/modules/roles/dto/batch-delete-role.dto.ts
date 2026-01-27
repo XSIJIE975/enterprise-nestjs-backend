@@ -5,6 +5,7 @@ export class BatchDeleteRoleDto {
   @ApiProperty({
     description: '角色ID数组',
     example: [1, 2, 3],
+    type: [Number],
   })
   @IsArray({ message: '角色ID必须是数组' })
   @ArrayNotEmpty({ message: '角色ID数组不能为空' })
