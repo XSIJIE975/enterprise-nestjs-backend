@@ -112,7 +112,7 @@ export class UsersController {
   @Get(':id/sessions')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('admin')
-  @Permissions('user:session:list')
+  @Permissions('user_session:list')
   @ApiOperation({ summary: '获取指定用户的会话列表（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseArrayDecorator(UserSessionVo, {
@@ -150,7 +150,7 @@ export class UsersController {
   @Delete(':id/sessions/:sessionId')
   @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
   @Roles('admin')
-  @Permissions('user:session:revoke')
+  @Permissions('user_session:revoke')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: '注销指定用户的指定会话（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
