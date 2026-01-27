@@ -16,6 +16,7 @@ import { RegisterDto } from './dto';
 import { RegisterResponseVo, AuthResponseVo } from './vo';
 import { AuthJwtPayload } from './interfaces/jwt-payload.interface';
 import type { AuthUser } from './types/user.types';
+import { AccountLockoutService } from './services/account-lockout.service';
 
 /**
  * 认证服务
@@ -37,6 +38,7 @@ export class AuthService {
     private readonly rbacCacheService: RbacCacheService,
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
+    private readonly accountLockoutService: AccountLockoutService,
   ) {
     this.accessTokenExpires = this.configService.get(
       'jwt.accessTokenExpiresIn',
@@ -74,6 +76,23 @@ export class AuthService {
       return null;
     }
 
+    // 检查账户锁定状态
+    const lockStatus = await this.accountLockoutService.checkLockStatus(
+      user.id,
+    );
+    if (lockStatus.locked) {
+      const minutes = lockStatus.remainingTime
+        ? Math.ceil(lockStatus.remainingTime / 60)
+        : 0;
+      this.logger.warn(
+        `登录失败: 账户已锁定 - ${usernameOrEmail}, 剩余 ${minutes} 分钟`,
+      );
+      throw new UnauthorizedException({
+        code: ErrorCode.ACCOUNT_LOCKED,
+        message: `账户已锁定，请 ${minutes} 分钟后重试`,
+      });
+    }
+
     // 检查账户是否被禁用
     if (!user.isActive) {
       this.logger.warn(`登录失败: 账户已被禁用 - ${usernameOrEmail}`);
@@ -90,9 +109,18 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      this.logger.warn(`登录失败: 密码错误 - ${usernameOrEmail}`);
+      // 记录失败并检查是否需要锁定
+      const failureCount = await this.accountLockoutService.recordFailedAttempt(
+        user.id,
+      );
+      this.logger.warn(
+        `登录失败: 密码错误 - ${usernameOrEmail}, 失败次数: ${failureCount}`,
+      );
       return null;
     }
+
+    // 密码验证成功，重置失败计数
+    await this.accountLockoutService.resetFailureCount(user.id);
 
     // 移除密码字段
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

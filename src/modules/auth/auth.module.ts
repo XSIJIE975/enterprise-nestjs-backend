@@ -7,6 +7,7 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { LocalStrategy } from './strategies/local.strategy';
 import { UsersModule } from '../users/users.module';
+import { AccountLockoutService } from './services/account-lockout.service';
 
 /**
  * 认证模块
@@ -41,7 +42,7 @@ import { UsersModule } from '../users/users.module';
 
   controllers: [AuthController],
 
-  providers: [AuthService, JwtStrategy, LocalStrategy],
+  providers: [AuthService, JwtStrategy, LocalStrategy, AccountLockoutService],
 
   exports: [AuthService, JwtStrategy],
 })

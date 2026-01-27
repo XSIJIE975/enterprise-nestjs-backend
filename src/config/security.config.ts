@@ -19,6 +19,10 @@ export const securityEnvSchema = z.object({
   CSRF_COOKIE_MAXAGE: z.coerce.number().int().min(0).optional(),
   CSRF_EXEMPT_PATHS: z.string().optional(),
   CSRF_SESSION_COOKIE_NAME: z.string().optional(),
+  // Account Lockout
+  ACCOUNT_LOCKOUT_ENABLED: z.string().optional(),
+  ACCOUNT_LOCKOUT_MAX_ATTEMPTS: z.string().optional(),
+  ACCOUNT_LOCKOUT_DURATIONS: z.string().optional(),
 });
 
 export type SecurityEnvConfig = z.infer<typeof securityEnvSchema>;
@@ -86,6 +90,21 @@ export const securityConfig = registerAs('security', () => {
             .map(p => (p.startsWith('/') ? p : `/${p}`)),
         ]),
       ),
+    },
+
+    // 账户锁定配置
+    accountLockout: {
+      enabled: process.env.ACCOUNT_LOCKOUT_ENABLED !== 'false', // 默认启用
+      // 失败次数阈值（逗号分隔，例如 "5,10"）
+      maxAttempts: (process.env.ACCOUNT_LOCKOUT_MAX_ATTEMPTS || '5,10')
+        .split(',')
+        .map(n => parseInt(n.trim(), 10))
+        .filter(n => !isNaN(n) && n > 0),
+      // 锁定时长（秒，逗号分隔，例如 "900,3600" 表示 15分钟,1小时）
+      lockDurations: (process.env.ACCOUNT_LOCKOUT_DURATIONS || '900,3600')
+        .split(',')
+        .map(n => parseInt(n.trim(), 10))
+        .filter(n => !isNaN(n) && n > 0),
     },
   };
 });
