@@ -22,6 +22,7 @@ import { DatabaseModule } from './shared/database/database.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { CacheModule } from '@/shared/cache';
 import { RequestContextModule } from './shared/request-context/request-context.module';
+import { ResilienceModule } from './shared/resilience/resilience.module';
 
 // 通用模块
 import { CommonModule } from './common/common.module';
@@ -109,6 +110,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     LoggerModule,
     CacheModule,
     RequestContextModule,
+    ResilienceModule,
     CommonModule,
 
     // 业务模块
