@@ -103,6 +103,59 @@ export class UserRepository implements UserRepositoryInterface {
     }
   }
 
+  /**
+   * 查询所有用户（含角色关联）
+   * 使用 include 预加载 userRoles.role，避免 N+1 查询
+   */
+  async findAll(tx?: Prisma.TransactionClient): Promise<UserModel[]> {
+    return this.client(tx).user.findMany({
+      where: {
+        deletedAt: null,
+      },
+      include: {
+        userRoles: {
+          include: {
+            role: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  /**
+   * 根据用户名或邮箱查询用户（含角色和权限关联）
+   * 深层 include: user → userRoles → role → rolePermissions → permission
+   */
+  async findByUsernameOrEmail(
+    usernameOrEmail: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<UserModel | null> {
+    return this.client(tx).user.findFirst({
+      where: {
+        OR: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
+        deletedAt: null,
+      },
+      include: {
+        userRoles: {
+          include: {
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
   private handleKnownError(error: unknown): never {
     if (error instanceof PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {

@@ -31,8 +31,21 @@ export class RoleRepository implements RoleRepositoryInterface {
     return this.client(tx).role.findUnique({ where: { code } });
   }
 
+  /**
+   * 查询所有角色（含权限关联）
+   * 使用 include 预加载 rolePermissions.permission，避免 N+1 查询
+   */
   async findAll(tx?: Prisma.TransactionClient): Promise<RoleModel[]> {
-    return this.client(tx).role.findMany({ orderBy: { createdAt: 'desc' } });
+    return this.client(tx).role.findMany({
+      include: {
+        rolePermissions: {
+          include: {
+            permission: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async create(
