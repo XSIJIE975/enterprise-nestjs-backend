@@ -1,4 +1,89 @@
 import { registerAs } from '@nestjs/config';
+import { z } from 'zod';
+
+/**
+ * Upload 配置环境变量 Schema
+ */
+export const uploadEnvSchema = z.object({
+  // Basic
+  UPLOAD_DEST: z.string().optional(),
+  UPLOAD_TEMP_DIR: z.string().optional(),
+  UPLOAD_PRESERVE_ORIGINAL_NAME: z.string().optional(),
+  // General limits
+  UPLOAD_MAX_FILE_SIZE: z.coerce.number().int().positive().optional(),
+  UPLOAD_MAX_FILES: z.coerce.number().int().positive().optional(),
+  UPLOAD_MAX_TOTAL_SIZE: z.coerce.number().int().positive().optional(),
+  UPLOAD_ALLOWED_MIMETYPES: z.string().optional(),
+  // Image
+  UPLOAD_IMAGE_MAX_SIZE: z.coerce.number().int().positive().optional(),
+  UPLOAD_IMAGE_ALLOWED_TYPES: z.string().optional(),
+  UPLOAD_IMAGE_SUB_DIR: z.string().optional(),
+  UPLOAD_IMAGE_ENABLE_COMPRESSION: z.string().optional(),
+  UPLOAD_IMAGE_COMPRESSION_QUALITY: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(100)
+    .optional(),
+  UPLOAD_IMAGE_MAX_WIDTH: z.coerce.number().int().positive().optional(),
+  UPLOAD_IMAGE_MAX_HEIGHT: z.coerce.number().int().positive().optional(),
+  // Document
+  UPLOAD_DOCUMENT_MAX_SIZE: z.coerce.number().int().positive().optional(),
+  UPLOAD_DOCUMENT_ALLOWED_TYPES: z.string().optional(),
+  UPLOAD_DOCUMENT_SUB_DIR: z.string().optional(),
+  // Video
+  UPLOAD_VIDEO_MAX_SIZE: z.coerce.number().int().positive().optional(),
+  UPLOAD_VIDEO_ALLOWED_TYPES: z.string().optional(),
+  UPLOAD_VIDEO_SUB_DIR: z.string().optional(),
+  // Audio
+  UPLOAD_AUDIO_MAX_SIZE: z.coerce.number().int().positive().optional(),
+  UPLOAD_AUDIO_ALLOWED_TYPES: z.string().optional(),
+  UPLOAD_AUDIO_SUB_DIR: z.string().optional(),
+  // Avatar
+  UPLOAD_AVATAR_MAX_SIZE: z.coerce.number().int().positive().optional(),
+  UPLOAD_AVATAR_ALLOWED_TYPES: z.string().optional(),
+  UPLOAD_AVATAR_SUB_DIR: z.string().optional(),
+  UPLOAD_AVATAR_ENABLE_COMPRESSION: z.string().optional(),
+  UPLOAD_AVATAR_COMPRESSION_QUALITY: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(100)
+    .optional(),
+  UPLOAD_AVATAR_WIDTH: z.coerce.number().int().positive().optional(),
+  UPLOAD_AVATAR_HEIGHT: z.coerce.number().int().positive().optional(),
+  // Security
+  UPLOAD_ENABLE_VIRUS_SCAN: z.string().optional(),
+  UPLOAD_VERIFY_FILE_TYPE: z.string().optional(),
+  UPLOAD_DENIED_EXTENSIONS: z.string().optional(),
+  // Storage type
+  UPLOAD_STORAGE_TYPE: z.enum(['local', 's3', 'oss', 'cos']).optional(),
+  // Local storage
+  UPLOAD_LOCAL_PATH: z.string().optional(),
+  UPLOAD_LOCAL_URL_PREFIX: z.string().optional(),
+  // S3
+  UPLOAD_S3_ENDPOINT: z.string().optional(),
+  UPLOAD_S3_BUCKET: z.string().optional(),
+  UPLOAD_S3_REGION: z.string().optional(),
+  UPLOAD_S3_ACCESS_KEY_ID: z.string().optional(),
+  UPLOAD_S3_SECRET_ACCESS_KEY: z.string().optional(),
+  UPLOAD_S3_URL_PREFIX: z.string().optional(),
+  // OSS
+  UPLOAD_OSS_ENDPOINT: z.string().optional(),
+  UPLOAD_OSS_BUCKET: z.string().optional(),
+  UPLOAD_OSS_REGION: z.string().optional(),
+  UPLOAD_OSS_ACCESS_KEY_ID: z.string().optional(),
+  UPLOAD_OSS_ACCESS_KEY_SECRET: z.string().optional(),
+  UPLOAD_OSS_URL_PREFIX: z.string().optional(),
+  // COS
+  UPLOAD_COS_SECRET_ID: z.string().optional(),
+  UPLOAD_COS_SECRET_KEY: z.string().optional(),
+  UPLOAD_COS_BUCKET: z.string().optional(),
+  UPLOAD_COS_REGION: z.string().optional(),
+  UPLOAD_COS_URL_PREFIX: z.string().optional(),
+});
+
+export type UploadEnvConfig = z.infer<typeof uploadEnvSchema>;
 
 /**
  * 文件上传配置

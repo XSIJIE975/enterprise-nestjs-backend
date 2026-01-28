@@ -1,9 +1,13 @@
 import Redis from 'ioredis';
 import { RedisCacheService } from './redis-cache.service';
+import { CircuitBreakerService } from '@/shared/resilience/circuit-breaker.service';
+import { LoggerService } from '@/shared/logger/logger.service';
 
 describe('Redis 缓存服务', () => {
   let service: RedisCacheService;
   let mockRedisClient: jest.Mocked<Redis>;
+  let mockCircuitBreaker: jest.Mocked<CircuitBreakerService>;
+  let mockLogger: jest.Mocked<LoggerService>;
 
   beforeEach(() => {
     // Mock Redis client
@@ -27,7 +31,23 @@ describe('Redis 缓存服务', () => {
       srem: jest.fn(),
     } as any;
 
-    service = new RedisCacheService(mockRedisClient);
+    // Mock CircuitBreakerService
+    mockCircuitBreaker = {
+      execute: jest.fn((name, operation) => operation()),
+    } as any;
+
+    // Mock LoggerService
+    mockLogger = {
+      warn: jest.fn(),
+      log: jest.fn(),
+      error: jest.fn(),
+    } as any;
+
+    service = new RedisCacheService(
+      mockRedisClient,
+      mockCircuitBreaker,
+      mockLogger,
+    );
   });
 
   afterEach(() => {

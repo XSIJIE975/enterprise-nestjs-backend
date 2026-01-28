@@ -1,4 +1,44 @@
 import { registerAs } from '@nestjs/config';
+import { z } from 'zod';
+
+/**
+ * App 配置环境变量 Schema
+ */
+export const appEnvSchema = z.object({
+  APP_NAME: z.string().optional(),
+  NODE_ENV: z
+    .enum(['development', 'test', 'production'])
+    .optional()
+    .default('development'),
+  PORT: z.coerce.number().int().positive().optional(),
+  HOST: z.string().optional(),
+  ALLOWED_ORIGINS: z.string().optional(),
+  API_PREFIX: z.string().optional(),
+  TZ: z.string().optional(),
+  APP_TIMEZONE: z.string().optional(),
+  // Body limit
+  BODY_LIMIT_JSON: z.string().optional(),
+  BODY_LIMIT_URLENCODED: z.string().optional(),
+  BODY_LIMIT_RAW: z.string().optional(),
+  BODY_LIMIT_TEXT: z.string().optional(),
+  // Swagger
+  SWAGGER_ENABLED: z.string().optional(),
+  SWAGGER_AUTH_ENABLED: z.string().optional(),
+  SWAGGER_USERNAME: z.string().optional(),
+  SWAGGER_PASSWORD: z.string().optional(),
+  // Log
+  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug', 'verbose']).optional(),
+  LOG_DIR: z.string().optional(),
+  LOG_MAX_FILES: z.string().optional(),
+  LOG_MAX_SIZE: z.string().optional(),
+  LOG_DATE_PATTERN: z.string().optional(),
+  LOG_ZIPPED_ARCHIVE: z.string().optional(),
+  LOG_ENABLE_DATABASE: z.string().optional(),
+  LOG_ENABLE_CONSOLE: z.string().optional(),
+  LOG_DB_RETENTION_DAYS: z.coerce.number().int().positive().optional(),
+});
+
+export type AppEnvConfig = z.infer<typeof appEnvSchema>;
 
 export const appConfig = registerAs('app', () => ({
   name: process.env.APP_NAME || 'Enterprise NestJS Backend',

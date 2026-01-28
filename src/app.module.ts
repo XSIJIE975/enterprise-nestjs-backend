@@ -22,6 +22,7 @@ import { DatabaseModule } from './shared/database/database.module';
 import { LoggerModule } from './shared/logger/logger.module';
 import { CacheModule } from '@/shared/cache';
 import { RequestContextModule } from './shared/request-context/request-context.module';
+import { ResilienceModule } from './shared/resilience/resilience.module';
 
 // 通用模块
 import { CommonModule } from './common/common.module';
@@ -42,6 +43,7 @@ import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 // 拦截器和守卫
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
+import { CsrfGuard } from './common/guards/csrf.guard';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 
@@ -108,6 +110,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     LoggerModule,
     CacheModule,
     RequestContextModule,
+    ResilienceModule,
     CommonModule,
 
     // 业务模块
@@ -135,6 +138,12 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
     {
       provide: APP_GUARD,
       useClass: CustomThrottlerGuard,
+    },
+
+    // 全局守卫：CSRF 保护（仅对 POST/PUT/DELETE）
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard,
     },
 
     // 全局拦截器：统一响应格式和时区转换

@@ -1,4 +1,16 @@
 import { registerAs } from '@nestjs/config';
+import { z } from 'zod';
+
+/**
+ * Health 配置环境变量 Schema
+ */
+export const healthEnvSchema = z.object({
+  HEALTH_DISK_THRESHOLD: z.coerce.number().int().positive().optional(),
+  HEALTH_MEMORY_HEAP: z.coerce.number().int().positive().optional(),
+  HEALTH_MEMORY_RSS: z.coerce.number().int().positive().optional(),
+});
+
+export type HealthEnvConfig = z.infer<typeof healthEnvSchema>;
 
 export const healthConfig = registerAs('health', () => ({
   disk: {

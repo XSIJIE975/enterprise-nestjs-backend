@@ -2,6 +2,8 @@ import { Global, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import Redis from 'ioredis';
 import { LoggerService } from '@/shared/logger/logger.service';
+import { ResilienceModule } from '@/shared/resilience/resilience.module';
+import { CircuitBreakerService } from '@/shared/resilience/circuit-breaker.service';
 import { RedisCacheService } from './implementations/redis-cache.service';
 import { MemoryCacheService } from './implementations/memory-cache.service';
 import { RbacCacheService } from './business/rbac-cache.service';
@@ -35,6 +37,7 @@ import { ICacheService } from './interfaces/cache.interface';
  */
 @Global()
 @Module({
+  imports: [ResilienceModule],
   providers: [
     // Redis 客户端
     {
@@ -115,13 +118,14 @@ import { ICacheService } from './interfaces/cache.interface';
         redisClient: Redis | null,
         configService: ConfigService,
         logger: LoggerService,
+        circuitBreaker: CircuitBreakerService,
       ): ICacheService => {
         const cacheType = configService.get<string>('redis.cacheType', 'auto');
         const nodeEnv = configService.get('app.env', 'development');
 
         if (redisClient) {
           logger.log('🚀 使用 Redis 缓存服务', 'CacheModule');
-          return new RedisCacheService(redisClient);
+          return new RedisCacheService(redisClient, circuitBreaker, logger);
         }
 
         // Redis 不可用，使用内存缓存
@@ -139,7 +143,12 @@ import { ICacheService } from './interfaces/cache.interface';
 
         return new MemoryCacheService(logger);
       },
-      inject: ['REDIS_CLIENT', ConfigService, LoggerService],
+      inject: [
+        'REDIS_CLIENT',
+        ConfigService,
+        LoggerService,
+        CircuitBreakerService,
+      ],
     },
 
     // 通用缓存服务（向后兼容）

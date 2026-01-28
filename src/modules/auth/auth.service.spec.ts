@@ -6,9 +6,11 @@ import { PrismaService } from '@/shared/database/prisma.service';
 import { CacheService } from '@/shared/cache';
 import { RbacCacheService } from '@/shared/cache';
 import { LoggerService } from '@/shared/logger/logger.service';
+import { SessionRepository } from '@/shared/repositories/session.repository';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
+import { AccountLockoutService } from './services/account-lockout.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -170,6 +172,24 @@ describe('AuthService', () => {
     error: jest.fn(),
   };
 
+  const mockAccountLockoutService = {
+    recordFailedAttempt: jest.fn().mockResolvedValue(0),
+    checkLockStatus: jest.fn().mockResolvedValue({ locked: false }),
+    resetFailureCount: jest.fn().mockResolvedValue(undefined),
+    unlockAccount: jest.fn().mockResolvedValue(undefined),
+  };
+
+  const mockSessionRepository = {
+    findById: jest.fn(),
+    findByTokenId: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    delete: jest.fn(),
+    findActiveByUserId: jest.fn(),
+    revokeAllByUserId: jest.fn(),
+    revokeByTokenId: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -207,6 +227,14 @@ describe('AuthService', () => {
         {
           provide: LoggerService,
           useValue: mockLoggerService,
+        },
+        {
+          provide: AccountLockoutService,
+          useValue: mockAccountLockoutService,
+        },
+        {
+          provide: SessionRepository,
+          useValue: mockSessionRepository,
         },
       ],
     }).compile();
@@ -316,8 +344,8 @@ describe('AuthService', () => {
       mockJwtService.sign
         .mockReturnValueOnce('mock-access-token')
         .mockReturnValueOnce('mock-refresh-token');
-      mockPrismaService.userSession.findMany.mockResolvedValue([]);
-      mockPrismaService.userSession.create.mockResolvedValue(mockSession);
+      mockSessionRepository.findActiveByUserId.mockResolvedValue([]);
+      mockSessionRepository.create.mockResolvedValue(mockSession);
       mockCacheService.set.mockResolvedValue(undefined);
       mockUsersService.updateLastLoginAt.mockResolvedValue(undefined);
 
@@ -329,7 +357,7 @@ describe('AuthService', () => {
       expect(result.tokenType).toBe('Bearer');
       expect(result.user.username).toBe('testuser');
       expect(mockJwtService.sign).toHaveBeenCalledTimes(2);
-      expect(mockPrismaService.userSession.create).toHaveBeenCalled();
+      expect(mockSessionRepository.create).toHaveBeenCalled();
       expect(mockUsersService.updateLastLoginAt).toHaveBeenCalledWith(
         MOCK_USER_ID,
       );
@@ -349,9 +377,9 @@ describe('AuthService', () => {
       mockJwtService.sign
         .mockReturnValueOnce('new-access-token')
         .mockReturnValueOnce('new-refresh-token');
-      mockPrismaService.userSession.findMany.mockResolvedValue(oldSessions);
-      mockPrismaService.userSession.update.mockResolvedValue(oldSessions[0]);
-      mockPrismaService.userSession.create.mockResolvedValue(mockSession);
+      mockSessionRepository.findActiveByUserId.mockResolvedValue(oldSessions);
+      mockSessionRepository.update.mockResolvedValue(oldSessions[0]);
+      mockSessionRepository.create.mockResolvedValue(mockSession);
       mockCacheService.set.mockResolvedValue(undefined);
       mockUsersService.updateLastLoginAt.mockResolvedValue(undefined);
 
@@ -362,7 +390,7 @@ describe('AuthService', () => {
         ErrorCode.MAX_SESSIONS_EXCEEDED,
         expect.any(Number),
       );
-      expect(mockPrismaService.userSession.update).toHaveBeenCalled();
+      expect(mockSessionRepository.update).toHaveBeenCalled();
       expect(mockLoggerService.warn).toHaveBeenCalledWith(
         expect.stringContaining('超出最大设备数限制'),
         'AuthService',
@@ -380,22 +408,20 @@ describe('AuthService', () => {
     };
 
     it('应该成功刷新 Token', async () => {
-      mockCacheService.get.mockResolvedValue(null); // 不在黑名单中
-      mockJwtService.verify.mockReturnValue(mockPayload);
+      mockCacheService.get.mockResolvedValue(null); // Token not blacklisted
+      mockJwtService.verify.mockReturnValue({ sub: MOCK_USER_ID });
       mockUsersService.findOneInternal.mockResolvedValue(mockAuthUser);
-      mockUsersService.getUserRoles.mockResolvedValue([
-        { code: 'USER', name: '普通用户' },
-      ]);
+      mockUsersService.getUserRoles.mockResolvedValue(['USER', 'ADMIN']);
       mockUsersService.getUserPermissions.mockResolvedValue([
         'user:read',
         'user:write',
       ]);
-      mockPrismaService.userSession.findFirst.mockResolvedValue(mockSession);
+      mockSessionRepository.findByTokenId.mockResolvedValue(mockSession);
       mockJwtService.sign
         .mockReturnValueOnce('new-access-token')
         .mockReturnValueOnce('new-refresh-token');
       mockCacheService.set.mockResolvedValue(undefined);
-      mockPrismaService.userSession.update.mockResolvedValue(mockSession);
+      mockSessionRepository.update.mockResolvedValue(mockSession);
 
       const result = await service.refreshToken(mockRefreshToken);
 
@@ -405,7 +431,7 @@ describe('AuthService', () => {
       expect(mockJwtService.verify).toHaveBeenCalledWith(mockRefreshToken, {
         secret: 'test-refresh-secret',
       });
-      expect(mockPrismaService.userSession.update).toHaveBeenCalled();
+      expect(mockSessionRepository.update).toHaveBeenCalled();
     });
 
     it('当 Token 在黑名单中时应该拒绝刷新', async () => {
@@ -436,7 +462,7 @@ describe('AuthService', () => {
         ...mockAuthUser,
         roles: ['USER'],
       });
-      mockPrismaService.userSession.findFirst.mockResolvedValue(null);
+      mockSessionRepository.findByTokenId.mockResolvedValue(null);
 
       await expect(service.refreshToken(mockRefreshToken)).rejects.toThrow(
         UnauthorizedException,
@@ -449,9 +475,9 @@ describe('AuthService', () => {
     const accessToken = 'test-access-token';
 
     it('应该成功退出登录', async () => {
-      mockPrismaService.userSession.findFirst.mockResolvedValue(mockSession);
+      mockSessionRepository.findByTokenId.mockResolvedValue(mockSession);
       mockCacheService.set.mockResolvedValue(undefined);
-      mockPrismaService.userSession.update.mockResolvedValue({
+      mockSessionRepository.update.mockResolvedValue({
         ...mockSession,
         isActive: false,
       });
@@ -460,25 +486,25 @@ describe('AuthService', () => {
       await service.logout(userId, accessToken);
 
       expect(mockCacheService.set).toHaveBeenCalledTimes(2); // accessToken + refreshToken 黑名单
-      expect(mockPrismaService.userSession.update).toHaveBeenCalledWith({
-        where: { id: mockSession.id },
-        data: {
+      expect(mockSessionRepository.update).toHaveBeenCalledWith(
+        mockSession.id,
+        {
           isActive: false,
           revokedAt: expect.any(Date),
         },
-      });
+      );
       expect(mockCacheService.del).toHaveBeenCalledWith(
         `user:session:${userId}`,
       );
     });
 
     it('当会话不存在时应该不执行任何操作', async () => {
-      mockPrismaService.userSession.findFirst.mockResolvedValue(null);
+      mockSessionRepository.findByTokenId.mockResolvedValue(null);
 
       await service.logout(userId, accessToken);
 
       expect(mockCacheService.set).not.toHaveBeenCalled();
-      expect(mockPrismaService.userSession.update).not.toHaveBeenCalled();
+      expect(mockSessionRepository.update).not.toHaveBeenCalled();
     });
   });
 
@@ -491,23 +517,20 @@ describe('AuthService', () => {
         { ...mockSession, id: 'other-session-1' },
         { ...mockSession, id: 'other-session-2' },
       ];
-      mockPrismaService.userSession.findMany.mockResolvedValue(otherSessions);
+      mockSessionRepository.findActiveByUserId.mockResolvedValue(otherSessions);
       mockCacheService.set.mockResolvedValue(undefined);
-      mockPrismaService.userSession.updateMany.mockResolvedValue({ count: 2 });
+      mockSessionRepository.update.mockResolvedValue({
+        ...mockSession,
+        isActive: false,
+      });
 
       await service.logoutOtherSessions(userId, currentSessionId);
 
-      expect(mockPrismaService.userSession.findMany).toHaveBeenCalledWith({
-        where: {
-          userId,
-          isActive: true,
-          NOT: {
-            id: currentSessionId,
-          },
-        },
-      });
+      expect(mockSessionRepository.findActiveByUserId).toHaveBeenCalledWith(
+        userId,
+      );
       expect(mockCacheService.set).toHaveBeenCalledTimes(4); // 2 sessions * 2 tokens
-      expect(mockPrismaService.userSession.updateMany).toHaveBeenCalled();
+      expect(mockSessionRepository.update).toHaveBeenCalledTimes(2); // 2 sessions
     });
   });
 
@@ -516,21 +539,18 @@ describe('AuthService', () => {
 
     it('应该成功撤销用户所有会话', async () => {
       const allSessions = [mockSession, { ...mockSession, id: 'session-2' }];
-      mockPrismaService.userSession.findMany.mockResolvedValue(allSessions);
+      mockSessionRepository.findActiveByUserId.mockResolvedValue(allSessions);
       mockCacheService.set.mockResolvedValue(undefined);
-      mockPrismaService.userSession.updateMany.mockResolvedValue({ count: 2 });
+      mockSessionRepository.revokeAllByUserId.mockResolvedValue({ count: 2 });
       mockCacheService.del.mockResolvedValue(undefined);
 
       await service.revokeAllUserSessions(userId);
 
-      expect(mockPrismaService.userSession.findMany).toHaveBeenCalledWith({
-        where: {
-          userId,
-          isActive: true,
-        },
-      });
+      expect(mockSessionRepository.findActiveByUserId).toHaveBeenCalledWith(
+        userId,
+      );
       expect(mockCacheService.set).toHaveBeenCalledTimes(4); // 2 sessions * 2 tokens
-      expect(mockPrismaService.userSession.updateMany).toHaveBeenCalled();
+      expect(mockSessionRepository.revokeAllByUserId).toHaveBeenCalled();
       expect(mockCacheService.del).toHaveBeenCalledWith(
         `user:session:${userId}`,
       );
@@ -542,13 +562,15 @@ describe('AuthService', () => {
     const sessionId = 'session-uuid-123';
 
     it('应该成功撤销指定会话（并加入黑名单、更新会话状态）', async () => {
-      mockPrismaService.userSession.findFirst.mockResolvedValue({
+      mockSessionRepository.findById.mockResolvedValue({
         id: sessionId,
+        userId: userId,
         accessToken: 'mock-access-token',
         refreshToken: 'mock-refresh-token',
+        isActive: true,
       });
       mockCacheService.set.mockResolvedValue(undefined);
-      mockPrismaService.userSession.update.mockResolvedValue({
+      mockSessionRepository.update.mockResolvedValue({
         ...mockSession,
         id: sessionId,
         isActive: false,
@@ -560,18 +582,7 @@ describe('AuthService', () => {
         ErrorCode.SESSION_REVOKED,
       );
 
-      expect(mockPrismaService.userSession.findFirst).toHaveBeenCalledWith({
-        where: {
-          id: sessionId,
-          userId,
-          isActive: true,
-        },
-        select: {
-          id: true,
-          accessToken: true,
-          refreshToken: true,
-        },
-      });
+      expect(mockSessionRepository.findById).toHaveBeenCalledWith(sessionId);
 
       expect(mockCacheService.set).toHaveBeenNthCalledWith(
         1,
@@ -586,17 +597,14 @@ describe('AuthService', () => {
         7 * 24 * 60 * 60,
       );
 
-      expect(mockPrismaService.userSession.update).toHaveBeenCalledWith({
-        where: { id: sessionId },
-        data: {
-          isActive: false,
-          revokedAt: expect.any(Date),
-        },
+      expect(mockSessionRepository.update).toHaveBeenCalledWith(sessionId, {
+        isActive: false,
+        revokedAt: expect.any(Date),
       });
     });
 
     it('当会话不存在时应该不执行任何操作', async () => {
-      mockPrismaService.userSession.findFirst.mockResolvedValue(null);
+      mockSessionRepository.findById.mockResolvedValue(null);
 
       await service.revokeUserSession(
         userId,
@@ -605,7 +613,7 @@ describe('AuthService', () => {
       );
 
       expect(mockCacheService.set).not.toHaveBeenCalled();
-      expect(mockPrismaService.userSession.update).not.toHaveBeenCalled();
+      expect(mockSessionRepository.update).not.toHaveBeenCalled();
     });
   });
 

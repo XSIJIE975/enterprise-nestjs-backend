@@ -193,3 +193,4 @@ storybook-static/
 
 # Prisma 客户端生成文件
 /src/generated/prisma
+.sisyphus/

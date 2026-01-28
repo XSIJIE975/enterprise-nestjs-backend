@@ -8,9 +8,16 @@ import * as compression from 'compression';
 import * as express from 'express';
 import helmet from 'helmet';
 import * as basicAuth from 'express-basic-auth';
+import * as cookieParser from 'cookie-parser';
+import { randomUUID } from 'crypto';
+import { doubleCsrf } from 'csrf-csrf';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { LoggerService } from './shared/logger/logger.service';
+import { validateConfigOnStartup } from './shared/config/config-validator';
+
+// 在应用启动前验证配置
+validateConfigOnStartup();
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -130,6 +137,102 @@ async function bootstrap() {
 
   // 响应压缩
   app.use(compression());
+
+  // Cookie 解析（CSRF 等安全能力依赖）
+  app.use(cookieParser());
+
+  // ==================== CSRF 保护（Double Submit Cookie） ====================
+  const csrfConfig = configService.get<Record<string, any>>('security.csrf');
+  if (csrfConfig?.enabled) {
+    const apiPrefix = `/${String(configService.get('app.apiPrefix') || '')}`
+      .replace(/\/+/g, '/')
+      .replace(/\/+$/, '');
+
+    const exemptPrefixes = Array.from(
+      new Set([
+        '/health',
+        '/mock',
+        ...(Array.isArray(csrfConfig.exemptPaths)
+          ? csrfConfig.exemptPaths
+          : []),
+      ]),
+    )
+      .map(p => String(p).trim())
+      .filter(Boolean)
+      .map(p => (p.startsWith('/') ? p : `/${p}`));
+    const exemptWithPrefix = exemptPrefixes
+      .filter(() => apiPrefix && apiPrefix !== '/')
+      .map(p => `${apiPrefix}${p}`.replace(/\/+/g, '/'));
+    const allExempt = Array.from(
+      new Set([...exemptPrefixes, ...exemptWithPrefix]),
+    );
+
+    const isExempt = (originalUrl: string) => {
+      const maybeUrl = originalUrl.startsWith('http')
+        ? originalUrl
+        : `http://localhost${originalUrl.startsWith('/') ? '' : '/'}${originalUrl}`;
+      const pathname = new URL(maybeUrl).pathname.replace(/\/+/g, '/');
+      return allExempt.some(prefix => pathname.startsWith(prefix));
+    };
+
+    const sessionCookieName = String(
+      csrfConfig.sessionCookieName || 'csrf.sid',
+    );
+    const sameSite = String(csrfConfig.cookieOptions?.sameSite || 'lax');
+    const secure = configService.get('app.env') === 'production';
+
+    // 1) 确保每个客户端都有稳定的 session identifier cookie（httpOnly）
+    app.use((req: any, res: any, next: any) => {
+      if (isExempt(String(req.originalUrl || req.url || ''))) {
+        return next();
+      }
+      if (!req.cookies?.[sessionCookieName]) {
+        res.cookie(sessionCookieName, randomUUID(), {
+          httpOnly: true,
+          secure,
+          sameSite,
+          path: '/',
+        });
+      }
+      return next();
+    });
+
+    const headerName = String(
+      csrfConfig.headerName || 'X-XSRF-TOKEN',
+    ).toLowerCase();
+    const { generateCsrfToken } = doubleCsrf({
+      getSecret: () => String(csrfConfig.secret || ''),
+      getSessionIdentifier: (req: any) =>
+        String(req.cookies?.[sessionCookieName] || ''),
+      cookieName: String(csrfConfig.cookieName || 'XSRF-TOKEN'),
+      cookieOptions: csrfConfig.cookieOptions,
+      getCsrfTokenFromRequest: (req: any) => {
+        const v = req.headers?.[headerName];
+        if (Array.isArray(v)) return v[0];
+        if (typeof v === 'string') return v;
+        return undefined;
+      },
+    });
+
+    // 2) 若没有 CSRF token cookie，则生成（便于首次请求直接拿到 cookie）
+    app.use((req: any, res: any, next: any) => {
+      if (isExempt(String(req.originalUrl || req.url || ''))) {
+        return next();
+      }
+      const tokenCookieName = String(csrfConfig.cookieName || 'XSRF-TOKEN');
+      if (!req.cookies?.[tokenCookieName]) {
+        try {
+          generateCsrfToken(req, res);
+        } catch (e) {
+          loggerService.warn(
+            `CSRF token generation failed: ${String(e)}`,
+            'CSRF',
+          );
+        }
+      }
+      return next();
+    });
+  }
 
   // ==================== 请求体大小限制 ====================
   // 注意：这些限制只针对 JSON、表单等非文件上传的请求

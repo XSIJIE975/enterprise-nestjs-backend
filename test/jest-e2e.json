@@ -2,8 +2,15 @@
   "moduleFileExtensions": ["js", "json", "ts"],
   "rootDir": ".",
   "testEnvironment": "node",
-  "testRegex": ".e2e-spec.ts$",
+  "testRegex": ".*\\.e2e-spec\\.ts$",
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
+  },
+  "transformIgnorePatterns": [],
+  "testPathIgnorePatterns": [],
+  "moduleNameMapper": {
+    "^lodash-es$": "lodash",
+    "^@/prisma/prisma/client$": "<rootDir>/../src/generated/prisma/client",
+    "^@/(.*)$": "<rootDir>/../src/$1"
   }
 }

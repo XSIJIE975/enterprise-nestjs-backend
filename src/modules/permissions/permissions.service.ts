@@ -1,10 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PermissionModel } from '@/prisma/prisma/models';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { ErrorMessages } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
+import { PermissionRepository } from '@/shared/repositories/permission.repository';
 import {
   CreatePermissionDto,
   UpdatePermissionDto,
@@ -24,6 +29,7 @@ export class PermissionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rbacCacheService: RbacCacheService,
+    private readonly permissionRepository: PermissionRepository,
   ) {}
 
   /**
@@ -34,46 +40,42 @@ export class PermissionsService {
   async create(
     createPermissionDto: CreatePermissionDto,
   ): Promise<PermissionResponseVo> {
-    const permission = await this.prisma.$transaction(async tx => {
-      // 检查权限名称或代码是否已存在
-      const existingPermission = await tx.permission.findFirst({
-        where: {
-          OR: [
-            { name: createPermissionDto.name },
-            { code: createPermissionDto.code },
-          ],
-        },
+    try {
+      // 使用 Repository 创建权限
+      const permission = await this.permissionRepository.create({
+        name: createPermissionDto.name,
+        code: createPermissionDto.code,
+        resource: createPermissionDto.resource,
+        action: createPermissionDto.action,
+        description: createPermissionDto.description,
+        isActive: true,
       });
 
-      if (existingPermission) {
-        if (existingPermission.name === createPermissionDto.name) {
-          throw new BusinessException(
-            ErrorCode.PERMISSION_NAME_ALREADY_EXISTS,
-            ErrorMessages[ErrorCode.PERMISSION_NAME_ALREADY_EXISTS],
-          );
-        }
-        if (existingPermission.code === createPermissionDto.code) {
+      return this.toPermissionResponse(permission);
+    } catch (error) {
+      // 捕获 Repository 抛出的 ConflictException 并转换为 BusinessException
+      if (error instanceof ConflictException) {
+        const message = (error.getResponse() as any)?.message || '';
+        if (message.includes('代码')) {
           throw new BusinessException(
             ErrorCode.PERMISSION_CODE_ALREADY_EXISTS,
             ErrorMessages[ErrorCode.PERMISSION_CODE_ALREADY_EXISTS],
           );
         }
+        if (message.includes('名称')) {
+          throw new BusinessException(
+            ErrorCode.PERMISSION_NAME_ALREADY_EXISTS,
+            ErrorMessages[ErrorCode.PERMISSION_NAME_ALREADY_EXISTS],
+          );
+        }
+        // 默认转换
+        throw new BusinessException(
+          ErrorCode.PERMISSION_CODE_ALREADY_EXISTS,
+          ErrorMessages[ErrorCode.PERMISSION_CODE_ALREADY_EXISTS],
+        );
       }
-
-      // 创建权限
-      return await tx.permission.create({
-        data: {
-          name: createPermissionDto.name,
-          code: createPermissionDto.code,
-          resource: createPermissionDto.resource,
-          action: createPermissionDto.action,
-          description: createPermissionDto.description,
-          isActive: true,
-        },
-      });
-    });
-
-    return this.toPermissionResponse(permission);
+      throw error;
+    }
   }
 
   /**
@@ -81,11 +83,7 @@ export class PermissionsService {
    * @returns 权限列表
    */
   async findAll(): Promise<PermissionResponseVo[]> {
-    const permissions = await this.prisma.permission.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const permissions = await this.permissionRepository.findAll();
 
     return permissions.map(permission => this.toPermissionResponse(permission));
   }
@@ -96,9 +94,7 @@ export class PermissionsService {
    * @returns 权限信息
    */
   async findOne(id: number): Promise<PermissionResponseVo> {
-    const permission = await this.prisma.permission.findUnique({
-      where: { id },
-    });
+    const permission = await this.permissionRepository.findById(id);
 
     if (!permission) {
       throw new BusinessException(
@@ -116,9 +112,7 @@ export class PermissionsService {
    * @returns 权限信息
    */
   async findByCode(code: string) {
-    return this.prisma.permission.findUnique({
-      where: { code },
-    });
+    return this.permissionRepository.findByCode(code);
   }
 
   /**
@@ -131,75 +125,42 @@ export class PermissionsService {
     id: number,
     updatePermissionDto: UpdatePermissionDto,
   ): Promise<PermissionResponseVo> {
-    const updatedPermission = await this.prisma.$transaction(async tx => {
-      // 检查权限是否存在
-      const permission = await tx.permission.findUnique({
-        where: { id },
-      });
+    try {
+      // 使用 Repository 更新权限
+      const updatedPermission = await this.permissionRepository.update(
+        id,
+        updatePermissionDto,
+      );
 
-      if (!permission) {
+      // 清除 RBAC 缓存，确保权限变化后缓存更新
+      await this.rbacCacheService.flushAllRbacCache();
+
+      return this.toPermissionResponse(updatedPermission);
+    } catch (error) {
+      // 捕获 Repository 抛出的异常并转换为 BusinessException
+      if (error instanceof ConflictException) {
+        const message = (error.getResponse() as any)?.message || '';
+        if (message.includes('代码')) {
+          throw new BusinessException(
+            ErrorCode.PERMISSION_CODE_ALREADY_EXISTS,
+            ErrorMessages[ErrorCode.PERMISSION_CODE_ALREADY_EXISTS],
+          );
+        }
+        if (message.includes('名称')) {
+          throw new BusinessException(
+            ErrorCode.PERMISSION_NAME_ALREADY_EXISTS,
+            ErrorMessages[ErrorCode.PERMISSION_NAME_ALREADY_EXISTS],
+          );
+        }
+      }
+      if (error instanceof NotFoundException) {
         throw new BusinessException(
           ErrorCode.PERMISSION_NOT_FOUND,
           ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
         );
       }
-
-      // 检查名称或代码冲突
-      if (
-        (updatePermissionDto.name &&
-          updatePermissionDto.name !== permission.name) ||
-        (updatePermissionDto.code &&
-          updatePermissionDto.code !== permission.code)
-      ) {
-        const existingPermission = await tx.permission.findFirst({
-          where: {
-            OR: [
-              updatePermissionDto.name
-                ? { name: updatePermissionDto.name }
-                : undefined,
-              updatePermissionDto.code
-                ? { code: updatePermissionDto.code }
-                : undefined,
-            ].filter(Boolean) as any,
-            NOT: {
-              id,
-            },
-          },
-        });
-
-        if (existingPermission) {
-          if (
-            updatePermissionDto.name &&
-            existingPermission.name === updatePermissionDto.name
-          ) {
-            throw new BusinessException(
-              ErrorCode.PERMISSION_NAME_ALREADY_EXISTS,
-              ErrorMessages[ErrorCode.PERMISSION_NAME_ALREADY_EXISTS],
-            );
-          }
-          if (
-            updatePermissionDto.code &&
-            existingPermission.code === updatePermissionDto.code
-          ) {
-            throw new BusinessException(
-              ErrorCode.PERMISSION_CODE_ALREADY_EXISTS,
-              ErrorMessages[ErrorCode.PERMISSION_CODE_ALREADY_EXISTS],
-            );
-          }
-        }
-      }
-
-      // 更新权限
-      return await tx.permission.update({
-        where: { id },
-        data: updatePermissionDto,
-      });
-    });
-
-    // 清除 RBAC 缓存，确保权限变化后缓存更新
-    await this.rbacCacheService.flushAllRbacCache();
-
-    return this.toPermissionResponse(updatedPermission);
+      throw error;
+    }
   }
 
   /**
@@ -207,25 +168,22 @@ export class PermissionsService {
    * @param id 权限 ID
    */
   async remove(id: number): Promise<void> {
-    await this.prisma.$transaction(async tx => {
-      try {
-        // 删除权限（硬删除，因为权限是系统核心数据）
-        await tx.permission.delete({
-          where: { id },
-        });
-      } catch (error: any) {
-        if (error.code === 'P2025') {
-          throw new BusinessException(
-            ErrorCode.PERMISSION_NOT_FOUND,
-            ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
-          );
-        }
-        throw error;
-      }
-    });
+    try {
+      // 使用 Repository 删除权限
+      await this.permissionRepository.delete(id);
 
-    // 清除 RBAC 缓存
-    await this.rbacCacheService.flushAllRbacCache();
+      // 清除 RBAC 缓存
+      await this.rbacCacheService.flushAllRbacCache();
+    } catch (error) {
+      // 捕获 Repository 抛出的 NotFoundException 并转换为 BusinessException
+      if (error instanceof NotFoundException) {
+        throw new BusinessException(
+          ErrorCode.PERMISSION_NOT_FOUND,
+          ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+        );
+      }
+      throw error;
+    }
   }
 
   /**
