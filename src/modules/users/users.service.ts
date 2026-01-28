@@ -14,6 +14,7 @@ import { UserModel } from '@/prisma/prisma/models/User';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
+import { UserRepository } from '@/shared/repositories/user.repository';
 import { AuthService } from '../auth/auth.service';
 import { CreateUserDto, UpdateUserDto, UpdateProfileDto } from './dto';
 import { UserRoleVo, UserResponseVo, UserSessionVo } from './vo';
@@ -31,6 +32,7 @@ export class UsersService {
     @Inject(forwardRef(() => AuthService))
     private readonly authService: AuthService,
     private readonly rbacCacheService: RbacCacheService,
+    private readonly userRepository: UserRepository,
   ) {
     this.bcryptRounds = this.configService.get<number>(
       'security.bcrypt.rounds',
@@ -112,26 +114,7 @@ export class UsersService {
    * @returns 用户列表
    */
   async findAll(): Promise<UserResponseVo[]> {
-    const users = await this.prisma.user.findMany({
-      where: {
-        deletedAt: null,
-      },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              select: {
-                code: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
+    const users = await this.userRepository.findAll();
     return users.map(user => this.toUserResponse(user));
   }
 
@@ -139,22 +122,9 @@ export class UsersService {
    * 根据 ID 查询单个用户
    */
   async findOne(id: string): Promise<UserResponseVo> {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              select: {
-                code: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const user = await this.userRepository.findByIdWithRoles(id);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 
@@ -166,18 +136,9 @@ export class UsersService {
    * @internal
    */
   async findOneInternal(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        userRoles: {
-          include: {
-            role: true,
-          },
-        },
-      },
-    });
+    const user = await this.userRepository.findByIdWithRoles(id);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 
@@ -190,16 +151,7 @@ export class UsersService {
    * @returns 用户信息（含密码）
    */
   async findByEmail(email: string) {
-    return this.prisma.user.findUnique({
-      where: { email },
-      include: {
-        userRoles: {
-          include: {
-            role: true,
-          },
-        },
-      },
-    });
+    return this.userRepository.findByEmail(email);
   }
 
   /**
@@ -208,16 +160,7 @@ export class UsersService {
    * @returns 用户信息（含密码）
    */
   async findByUsername(username: string) {
-    return this.prisma.user.findUnique({
-      where: { username },
-      include: {
-        userRoles: {
-          include: {
-            role: true,
-          },
-        },
-      },
-    });
+    return this.userRepository.findByUsername(username);
   }
 
   /**
@@ -226,27 +169,7 @@ export class UsersService {
    * @returns 用户信息（含密码、角色和权限）
    */
   async findByUsernameOrEmail(usernameOrEmail: string) {
-    return this.prisma.user.findFirst({
-      where: {
-        OR: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
-        deletedAt: null,
-      },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              include: {
-                rolePermissions: {
-                  include: {
-                    permission: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
+    return this.userRepository.findByUsernameOrEmail(usernameOrEmail);
   }
 
   /**

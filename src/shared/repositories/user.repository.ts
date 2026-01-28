@@ -7,6 +7,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import type { Prisma } from '@/prisma/prisma/client';
 import type { UserModel } from '@/generated/prisma/models';
 import { PrismaService } from '@/shared/database/prisma.service';
+import type { UserWithRoles } from '@/modules/auth/types/user.types';
 import type {
   UserRepository as UserRepositoryInterface,
   UserConflictFields,
@@ -137,7 +138,7 @@ export class UserRepository implements UserRepositoryInterface {
   async findByUsernameOrEmail(
     usernameOrEmail: string,
     tx?: Prisma.TransactionClient,
-  ): Promise<UserModel | null> {
+  ): Promise<UserWithRoles | null> {
     return this.client(tx).user.findFirst({
       where: {
         OR: [{ email: usernameOrEmail }, { username: usernameOrEmail }],
