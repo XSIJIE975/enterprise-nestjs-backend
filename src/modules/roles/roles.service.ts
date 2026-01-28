@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ConflictException } from '@nestjs/common';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import {
   RoleModel,
@@ -10,6 +10,7 @@ import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { ErrorMessages } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
+import { RoleRepository } from '@/shared/repositories/role.repository';
 import { PermissionResponseVo } from '../permissions/vo/permission-response.vo';
 import {
   CreateRoleDto,
@@ -27,6 +28,7 @@ export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rbacCacheService: RbacCacheService,
+    private readonly roleRepository: RoleRepository,
   ) {}
 
   /**
@@ -36,14 +38,12 @@ export class RolesService {
    */
   async create(createRoleDto: CreateRoleDto): Promise<RoleResponseVo> {
     try {
-      // 创建角色
-      const role = await this.prisma.role.create({
-        data: {
-          name: createRoleDto.name,
-          code: createRoleDto.code,
-          description: createRoleDto.description,
-          isActive: true,
-        },
+      // 使用 Repository 创建角色
+      const role = await this.roleRepository.create({
+        name: createRoleDto.name,
+        code: createRoleDto.code,
+        description: createRoleDto.description,
+        isActive: true,
       });
 
       // 清理 RBAC 缓存
@@ -51,6 +51,27 @@ export class RolesService {
 
       return this.mapToResponseDto(role);
     } catch (error) {
+      // 捕获 Repository 抛出的 ConflictException 并转换为 BusinessException
+      if (error instanceof ConflictException) {
+        const message = (error.getResponse() as any)?.message || '';
+        if (message.includes('代码')) {
+          throw new BusinessException(
+            ErrorCode.ROLE_CODE_ALREADY_EXISTS,
+            ErrorMessages[ErrorCode.ROLE_CODE_ALREADY_EXISTS],
+          );
+        }
+        if (message.includes('名称')) {
+          throw new BusinessException(
+            ErrorCode.ROLE_NAME_ALREADY_EXISTS,
+            ErrorMessages[ErrorCode.ROLE_NAME_ALREADY_EXISTS],
+          );
+        }
+        // 默认转换为 BusinessException
+        throw new BusinessException(
+          ErrorCode.ROLE_CODE_ALREADY_EXISTS,
+          ErrorMessages[ErrorCode.ROLE_CODE_ALREADY_EXISTS],
+        );
+      }
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           const target = error.meta?.target as string[];
@@ -77,11 +98,7 @@ export class RolesService {
    * @returns 角色列表
    */
   async findAll(): Promise<RoleResponseVo[]> {
-    const roles = await this.prisma.role.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const roles = await this.roleRepository.findAll();
 
     return roles.map(role => this.mapToResponseDto(role));
   }
@@ -96,18 +113,7 @@ export class RolesService {
     id: number,
     includePermissions: boolean = false,
   ): Promise<RoleResponseVo> {
-    const role = await this.prisma.role.findUnique({
-      where: { id },
-      include: includePermissions
-        ? {
-            rolePermissions: {
-              include: {
-                permission: true,
-              },
-            },
-          }
-        : undefined,
-    });
+    const role = await this.roleRepository.findById(id);
 
     if (!role) {
       throw new BusinessException(
@@ -125,9 +131,7 @@ export class RolesService {
    * @returns 角色信息
    */
   async findByCode(code: string): Promise<RoleResponseVo> {
-    const role = await this.prisma.role.findUnique({
-      where: { code },
-    });
+    const role = await this.roleRepository.findByCode(code);
 
     if (!role) {
       throw new BusinessException(
@@ -212,11 +216,9 @@ export class RolesService {
     updateRoleDto: UpdateRoleDto,
   ): Promise<RoleResponseVo> {
     // 检查角色是否存在
-    const role = await this.prisma.role.findUnique({
-      where: { id },
-    });
+    const existingRole = await this.roleRepository.findById(id);
 
-    if (!role) {
+    if (!existingRole) {
       throw new BusinessException(
         ErrorCode.ROLE_NOT_FOUND,
         ErrorMessages[ErrorCode.ROLE_NOT_FOUND],
@@ -224,17 +226,35 @@ export class RolesService {
     }
 
     try {
-      // 更新角色
-      const updatedRole = await this.prisma.role.update({
-        where: { id },
-        data: updateRoleDto,
-      });
+      // 使用 Repository 更新
+      const updatedRole = await this.roleRepository.update(id, updateRoleDto);
 
       // 清理 RBAC 缓存
       await this.rbacCacheService.flushAllRbacCache();
 
       return this.mapToResponseDto(updatedRole);
     } catch (error) {
+      // 捕获 Repository 抛出的 ConflictException 并转换为 BusinessException
+      if (error instanceof ConflictException) {
+        const message = (error.getResponse() as any)?.message || '';
+        if (message.includes('代码')) {
+          throw new BusinessException(
+            ErrorCode.ROLE_CODE_ALREADY_EXISTS,
+            ErrorMessages[ErrorCode.ROLE_CODE_ALREADY_EXISTS],
+          );
+        }
+        if (message.includes('名称')) {
+          throw new BusinessException(
+            ErrorCode.ROLE_NAME_ALREADY_EXISTS,
+            ErrorMessages[ErrorCode.ROLE_NAME_ALREADY_EXISTS],
+          );
+        }
+        // 默认转换为 BusinessException
+        throw new BusinessException(
+          ErrorCode.ROLE_CODE_ALREADY_EXISTS,
+          ErrorMessages[ErrorCode.ROLE_CODE_ALREADY_EXISTS],
+        );
+      }
       if (error instanceof PrismaClientKnownRequestError) {
         if (error.code === 'P2002') {
           const target = error.meta?.target as string[];
@@ -286,10 +306,8 @@ export class RolesService {
         );
       }
 
-      // 删除角色（级联删除角色权限关联）
-      await tx.role.delete({
-        where: { id },
-      });
+      // 使用 Repository 删除角色（级联删除角色权限关联）
+      await this.roleRepository.delete(id, tx);
     });
 
     // 清理 RBAC 缓存
@@ -307,9 +325,7 @@ export class RolesService {
     isActive: boolean,
   ): Promise<RoleResponseVo> {
     // 检查角色是否存在
-    const role = await this.prisma.role.findUnique({
-      where: { id },
-    });
+    const role = await this.roleRepository.findById(id);
 
     if (!role) {
       throw new BusinessException(
@@ -318,11 +334,8 @@ export class RolesService {
       );
     }
 
-    // 更新角色状态
-    const updatedRole = await this.prisma.role.update({
-      where: { id },
-      data: { isActive },
-    });
+    // 使用 Repository 更新角色状态
+    const updatedRole = await this.roleRepository.update(id, { isActive });
 
     // 清理 RBAC 缓存
     await this.rbacCacheService.flushAllRbacCache();
@@ -341,9 +354,7 @@ export class RolesService {
     assignPermissionsDto: AssignPermissionsDto,
   ): Promise<RoleResponseVo> {
     // 检查角色是否存在
-    const role = await this.prisma.role.findUnique({
-      where: { id: roleId },
-    });
+    const role = await this.roleRepository.findById(roleId);
 
     if (!role) {
       throw new BusinessException(
@@ -373,20 +384,19 @@ export class RolesService {
     // 使用事务确保原子性执行
     await this.prisma.$transaction(async tx => {
       // 1. 删除现有的角色权限关联
-      await tx.rolePermission.deleteMany({
-        where: { roleId },
-      });
+      await this.roleRepository.removePermissions(
+        roleId,
+        uniquePermissionIds,
+        tx,
+      );
 
       // 2. 创建新的角色权限关联
       if (uniquePermissionIds.length > 0) {
-        const rolePermissions = uniquePermissionIds.map(permissionId => ({
+        await this.roleRepository.assignPermissions(
           roleId,
-          permissionId,
-        }));
-
-        await tx.rolePermission.createMany({
-          data: rolePermissions,
-        });
+          uniquePermissionIds,
+          tx,
+        );
       }
     });
 
@@ -404,9 +414,7 @@ export class RolesService {
    */
   async getRolePermissions(roleId: number): Promise<PermissionResponseVo[]> {
     // 检查角色是否存在
-    const role = await this.prisma.role.findUnique({
-      where: { id: roleId },
-    });
+    const role = await this.roleRepository.findById(roleId);
 
     if (!role) {
       throw new BusinessException(
@@ -415,16 +423,16 @@ export class RolesService {
       );
     }
 
-    const rolePermissions = await this.prisma.rolePermission.findMany({
-      where: { roleId },
-      include: {
-        permission: true,
-      },
+    const rolePermissions =
+      await this.roleRepository.findRolePermissions(roleId);
+
+    // 获取权限详情
+    const permissionIds = rolePermissions.map(rp => rp.permissionId);
+    const permissions = await this.prisma.permission.findMany({
+      where: { id: { in: permissionIds } },
     });
 
-    return rolePermissions.map(
-      rp => rp.permission as unknown as PermissionResponseVo,
-    );
+    return permissions as unknown as PermissionResponseVo[];
   }
 
   /**
@@ -488,7 +496,7 @@ export class RolesService {
         );
       }
 
-      // 批量删除角色
+      // 使用 Repository 批量删除角色
       const result = await tx.role.deleteMany({
         where: { id: { in: uniqueIds } },
       });
