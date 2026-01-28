@@ -2,6 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigService } from '@nestjs/config';
+import { RepositoriesModule } from '@/shared/repositories/repositories.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -15,6 +16,7 @@ import { AccountLockoutService } from './services/account-lockout.service';
  */
 @Module({
   imports: [
+    RepositoriesModule,
     // Passport 认证模块
     PassportModule.register({
       defaultStrategy: 'jwt',

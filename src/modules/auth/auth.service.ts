@@ -11,6 +11,7 @@ import { PrismaService } from '@/shared/database/prisma.service';
 import { CacheService } from '@/shared/cache';
 import { RbacCacheService } from '@/shared/cache';
 import { LoggerService } from '@/shared/logger/logger.service';
+import { SessionRepository } from '@/shared/repositories/session.repository';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto';
 import { RegisterResponseVo, AuthResponseVo } from './vo';
@@ -39,6 +40,7 @@ export class AuthService {
     private readonly configService: ConfigService,
     private readonly logger: LoggerService,
     private readonly accountLockoutService: AccountLockoutService,
+    private readonly sessionRepository: SessionRepository,
   ) {
     this.accessTokenExpires = this.configService.get(
       'jwt.accessTokenExpiresIn',
@@ -201,18 +203,17 @@ export class AuthService {
     );
 
     // 查询用户当前活跃会话数
-    const activeSessions = await this.prisma.userSession.findMany({
-      where: {
-        userId: user.id,
-        isActive: true,
-        expiresAt: {
-          gt: new Date(),
-        },
-      },
-      orderBy: {
-        createdAt: 'asc', // 按创建时间升序，最早的在前
-      },
-    });
+    let activeSessions = await this.sessionRepository.findActiveByUserId(
+      user.id,
+    );
+    // 过滤未过期的会话
+    activeSessions = activeSessions.filter(
+      session => session.expiresAt > new Date(),
+    );
+    // 按创建时间升序排列（最早的在前）
+    activeSessions.sort(
+      (a, b) => a.createdAt.getTime() - b.createdAt.getTime(),
+    );
 
     // 如果活跃会话数已达到限制，踢出最早登录的会话
     if (activeSessions.length >= maxConcurrentSessions) {
@@ -235,12 +236,9 @@ export class AuthService {
         );
 
         // 撤销会话
-        await this.prisma.userSession.update({
-          where: { id: session.id },
-          data: {
-            isActive: false,
-            revokedAt: new Date(),
-          },
+        await this.sessionRepository.update(session.id, {
+          isActive: false,
+          revokedAt: new Date(),
         });
       }
 
@@ -251,17 +249,15 @@ export class AuthService {
     }
 
     // 保存新会话信息到数据库
-    await this.prisma.userSession.create({
-      data: {
-        userId: user.id,
-        accessToken,
-        refreshToken,
-        deviceInfo: deviceInfo?.userAgent || null,
-        ipAddress: deviceInfo?.ipAddress || null,
-        userAgent: deviceInfo?.userAgent || null,
-        isActive: true,
-        expiresAt,
-      },
+    await this.sessionRepository.create({
+      user: { connect: { id: user.id } },
+      accessToken,
+      refreshToken,
+      deviceInfo: deviceInfo?.userAgent || null,
+      ipAddress: deviceInfo?.ipAddress || null,
+      userAgent: deviceInfo?.userAgent || null,
+      isActive: true,
+      expiresAt,
     });
 
     // 缓存 Token 信息到缓存服务（用于快速验证）
@@ -333,21 +329,20 @@ export class AuthService {
       }
 
       // 验证会话是否存在且有效
-      const session = await this.prisma.userSession.findFirst({
-        where: {
-          userId: payload.sub,
-          refreshToken,
-          isActive: true,
-          expiresAt: {
-            gt: new Date(),
-          },
-        },
-      });
+      const session = await this.sessionRepository.findByTokenId(refreshToken);
 
-      if (!session) {
+      if (!session || !session.isActive || session.expiresAt <= new Date()) {
         throw new UnauthorizedException({
           code: ErrorCode.SESSION_EXPIRED,
           message: ErrorMessages[ErrorCode.SESSION_EXPIRED],
+        });
+      }
+
+      // 额外验证：确保会话属于当前用户
+      if (session.userId !== payload.sub) {
+        throw new UnauthorizedException({
+          code: ErrorCode.SESSION_INVALID,
+          message: ErrorMessages[ErrorCode.SESSION_INVALID],
         });
       }
 
@@ -393,13 +388,10 @@ export class AuthService {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
 
-      await this.prisma.userSession.update({
-        where: { id: session.id },
-        data: {
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-          expiresAt,
-        },
+      await this.sessionRepository.update(session.id, {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+        expiresAt,
       });
 
       // 更新缓存服务缓存
@@ -441,44 +433,38 @@ export class AuthService {
    */
   async logout(userId: string, accessToken: string): Promise<void> {
     // 查找当前会话
-    const session = await this.prisma.userSession.findFirst({
-      where: {
-        userId,
-        accessToken,
-        isActive: true,
-      },
+    const session = await this.sessionRepository.findByTokenId(accessToken);
+
+    if (!session || !session.isActive || session.userId !== userId) {
+      // 会话不存在、已撤销或不属于当前用户，直接返回
+      return;
+    }
+
+    // 将 Token 加入黑名单（原因：用户主动退出）
+    await this.addTokenToBlacklist(
+      accessToken,
+      15 * 60,
+      ErrorCode.SESSION_INVALID,
+    );
+    await this.addTokenToBlacklist(
+      session.refreshToken,
+      7 * 24 * 60 * 60,
+      ErrorCode.SESSION_INVALID,
+    );
+
+    // 撤销会话
+    await this.sessionRepository.update(session.id, {
+      isActive: false,
+      revokedAt: new Date(),
     });
 
-    if (session) {
-      // 将 Token 加入黑名单（原因：用户主动退出）
-      await this.addTokenToBlacklist(
-        accessToken,
-        15 * 60,
-        ErrorCode.SESSION_INVALID,
-      );
-      await this.addTokenToBlacklist(
-        session.refreshToken,
-        7 * 24 * 60 * 60,
-        ErrorCode.SESSION_INVALID,
-      );
+    // 从缓存服务中删除缓存
+    await this.removeTokenFromRedis(userId);
 
-      // 撤销会话
-      await this.prisma.userSession.update({
-        where: { id: session.id },
-        data: {
-          isActive: false,
-          revokedAt: new Date(),
-        },
-      });
+    // 清除用户的 RBAC 缓存
+    await this.rbacCacheService.deleteUserCache(userId);
 
-      // 从缓存服务中删除缓存
-      await this.removeTokenFromRedis(userId);
-
-      // 清除用户的 RBAC 缓存
-      await this.rbacCacheService.deleteUserCache(userId);
-
-      this.logger.log(`用户退出登录: User ID ${userId}`, 'AuthService');
-    }
+    this.logger.log(`用户退出登录: User ID ${userId}`, 'AuthService');
   }
 
   /**
@@ -494,15 +480,10 @@ export class AuthService {
     currentSessionId: string,
   ): Promise<void> {
     // 查找除当前会话外的所有活跃会话
-    const otherSessions = await this.prisma.userSession.findMany({
-      where: {
-        userId,
-        isActive: true,
-        NOT: {
-          id: currentSessionId,
-        },
-      },
-    });
+    const allSessions = await this.sessionRepository.findActiveByUserId(userId);
+    const otherSessions = allSessions.filter(
+      session => session.id !== currentSessionId,
+    );
 
     // 将其他会话的 Token 加入黑名单（原因：用户主动踢出其他设备）
     for (const session of otherSessions) {
@@ -519,19 +500,12 @@ export class AuthService {
     }
 
     // 撤销除当前会话外的所有会话
-    await this.prisma.userSession.updateMany({
-      where: {
-        userId,
-        isActive: true,
-        NOT: {
-          id: currentSessionId,
-        },
-      },
-      data: {
+    for (const session of otherSessions) {
+      await this.sessionRepository.update(session.id, {
         isActive: false,
         revokedAt: new Date(),
-      },
-    });
+      });
+    }
 
     this.logger.log(
       `注销其他设备会话: User ID ${userId}, 保留会话 ${currentSessionId}`,
@@ -557,12 +531,7 @@ export class AuthService {
     userId: string,
     reason: ErrorCode = ErrorCode.SESSION_REVOKED,
   ): Promise<void> {
-    const sessions = await this.prisma.userSession.findMany({
-      where: {
-        userId,
-        isActive: true,
-      },
-    });
+    const sessions = await this.sessionRepository.findActiveByUserId(userId);
 
     // 将所有 Token 加入黑名单（原因：安全操作，如修改密码）
     for (const session of sessions) {
@@ -575,16 +544,7 @@ export class AuthService {
     }
 
     // 撤销所有会话
-    await this.prisma.userSession.updateMany({
-      where: {
-        userId,
-        isActive: true,
-      },
-      data: {
-        isActive: false,
-        revokedAt: new Date(),
-      },
-    });
+    await this.sessionRepository.revokeAllByUserId(userId);
 
     // 从缓存服务中删除缓存
     await this.removeTokenFromRedis(userId);
@@ -623,20 +583,9 @@ export class AuthService {
     sessionId: string,
     reason: ErrorCode = ErrorCode.SESSION_REVOKED,
   ): Promise<void> {
-    const session = await this.prisma.userSession.findFirst({
-      where: {
-        id: sessionId,
-        userId,
-        isActive: true,
-      },
-      select: {
-        id: true,
-        accessToken: true,
-        refreshToken: true,
-      },
-    });
+    const session = await this.sessionRepository.findById(sessionId);
 
-    if (!session) {
+    if (!session || session.userId !== userId || !session.isActive) {
       return;
     }
 
@@ -647,12 +596,9 @@ export class AuthService {
       reason,
     );
 
-    await this.prisma.userSession.update({
-      where: { id: session.id },
-      data: {
-        isActive: false,
-        revokedAt: new Date(),
-      },
+    await this.sessionRepository.update(session.id, {
+      isActive: false,
+      revokedAt: new Date(),
     });
   }
 
