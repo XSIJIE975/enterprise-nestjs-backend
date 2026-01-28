@@ -17,7 +17,6 @@ import {
   ApiOperation,
   ApiBearerAuth,
   ApiParam,
-  ApiQuery,
 } from '@nestjs/swagger';
 import {
   ApiSuccessResponseDecorator,
@@ -35,6 +34,7 @@ import {
   UpdatePermissionDto,
   UpdatePermissionStatusDto,
   QueryPermissionsDto,
+  BatchDeletePermissionDto,
 } from './dto';
 import {
   PermissionResponseVo,
@@ -199,25 +199,18 @@ export class PermissionsController {
     return this.permissionsService.getPermissionStatistics();
   }
 
-  @Delete('batch')
+  @Post('batch-delete')
   @Roles('admin')
   @Permissions('permission:delete')
   @ApiOperation({ summary: '批量删除权限' })
-  @ApiQuery({
-    name: 'ids',
-    description: '权限ID数组，多个ID用逗号分隔',
-    example: '1,2,3',
-  })
-  @HttpCode(HttpStatus.OK)
   @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.OK,
     description: '批量删除成功',
   })
   async batchDelete(
-    @Query('ids') ids: string,
+    @Body() dto: BatchDeletePermissionDto,
   ): Promise<{ deletedCount: number }> {
-    const idArray = ids.split(',').map(id => parseInt(id.trim(), 10));
-    const deletedCount = await this.permissionsService.batchDelete(idArray);
+    const deletedCount = await this.permissionsService.batchDelete(dto.ids);
     return { deletedCount };
   }
 }

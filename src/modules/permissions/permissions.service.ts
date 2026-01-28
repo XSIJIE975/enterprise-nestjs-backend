@@ -394,10 +394,11 @@ export class PermissionsService {
    * @returns 删除的权限数量
    */
   async batchDelete(ids: number[]): Promise<number> {
+    const uniqueIds = [...new Set(ids)];
     // 批量删除
     const result = await this.prisma.permission.deleteMany({
       where: {
-        id: { in: ids },
+        id: { in: uniqueIds },
       },
     });
 
