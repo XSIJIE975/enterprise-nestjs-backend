@@ -307,22 +307,11 @@ export class UsersService {
 
     // 查询总数和数据
     const [total, users] = await Promise.all([
-      this.prisma.user.count({ where }),
-      this.prisma.user.findMany({
+      this.userRepository.count(where),
+      this.userRepository.findManyPaginated({
         where,
         skip,
         take: safePageSize,
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  code: true,
-                },
-              },
-            },
-          },
-        },
         orderBy: {
           [sortBy]: order,
         },
