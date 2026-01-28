@@ -29,6 +29,20 @@ export type UserWithRoles = Prisma.UserGetPayload<{
 export type AuthUser = Omit<UserWithRoles, 'password'>;
 
 /**
+ * 用户信息类型（包含角色关联，不含权限详情）
+ * 对应 findByIdWithRoles 方法的返回类型
+ */
+export type UserWithRolesSimple = Prisma.UserGetPayload<{
+  include: {
+    userRoles: {
+      include: {
+        role: true;
+      };
+    };
+  };
+}>;
+
+/**
  * JWT 令牌中的用户基本信息
  * 只包含必要的标识和权限信息
  */

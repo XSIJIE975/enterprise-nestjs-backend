@@ -617,27 +617,9 @@ export class UsersService {
    * @returns 角色列表
    */
   async getUserRoles(userId: string): Promise<UserRoleVo[]> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        deletedAt: true,
-        userRoles: {
-          select: {
-            role: {
-              select: {
-                id: true,
-                code: true,
-                name: true,
-                description: true,
-                createdAt: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    const user = await this.userRepository.findByIdWithRoles(userId);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 

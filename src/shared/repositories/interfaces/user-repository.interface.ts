@@ -1,5 +1,6 @@
 import type { Prisma } from '@/prisma/prisma/client';
 import type { UserModel } from '@/generated/prisma/models';
+import type { UserWithRolesSimple } from '@/modules/auth/types/user.types';
 
 /**
  * 唯一性冲突检查字段
@@ -54,7 +55,7 @@ export interface UserRepository {
   findByIdWithRoles(
     id: string,
     tx?: Prisma.TransactionClient,
-  ): Promise<UserModel | null>;
+  ): Promise<UserWithRolesSimple | null>;
 
   /**
    * 检查唯一性冲突（email/username/phone）
