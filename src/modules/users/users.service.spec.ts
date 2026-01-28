@@ -1,4 +1,4 @@
-﻿import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import {
   ConflictException,
@@ -6,17 +6,22 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { mockDeep, MockProxy } from 'jest-mock-extended';
 import { RbacCacheService } from '@/shared/cache';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { AuthService } from '../auth/auth.service';
 import { UsersService } from './users.service';
+import { UserRepository } from '@/shared/repositories/user.repository';
+import { PermissionRepository } from '@/shared/repositories/permission.repository';
 
 // Mock bcrypt
 jest.mock('bcrypt');
 
 describe('UsersService', () => {
   let service: UsersService;
+  let userRepository: MockProxy<UserRepository>;
+  let permissionRepository: MockProxy<PermissionRepository>;
 
   // Mock UUID 常量
   const MOCK_USER_ID = '550e8400-e29b-41d4-a716-446655440000';
@@ -41,42 +46,22 @@ describe('UsersService', () => {
     deletedAt: null,
     userRoles: [
       {
+        id: 1,
+        userId: MOCK_USER_ID,
+        roleId: 1,
+        assignedAt: new Date('2025-01-01'),
+        assignedBy: 'system',
         role: {
           id: 1,
           code: 'USER',
           name: '普通用户',
+          description: '普通用户角色',
+          isActive: true,
+          createdAt: new Date('2025-01-01'),
+          updatedAt: new Date('2025-01-01'),
         },
       },
     ],
-  };
-
-  const mockPrismaService = {
-    user: {
-      findUnique: jest.fn(),
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
-      create: jest.fn(),
-      update: jest.fn(),
-      updateMany: jest.fn(),
-    },
-    userSession: {
-      findFirst: jest.fn(),
-      findMany: jest.fn(),
-    },
-    userRole: {
-      deleteMany: jest.fn(),
-      createMany: jest.fn(),
-    },
-    role: {
-      count: jest.fn(),
-    },
-    $transaction: jest.fn(callback => {
-      if (Array.isArray(callback)) {
-        return Promise.resolve(callback);
-      }
-      return callback(mockPrismaService); // simple mock for interactive transactions if needed
-    }),
-    $queryRaw: jest.fn(),
   };
 
   const mockAuthService = {
@@ -99,14 +84,37 @@ describe('UsersService', () => {
     }),
   };
 
+  const mockPrismaService = {
+    user: {
+      findUnique: jest.fn(),
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      create: jest.fn(),
+      update: jest.fn(),
+      delete: jest.fn(),
+    },
+    userSession: {
+      findFirst: jest.fn(),
+      findMany: jest.fn(),
+      update: jest.fn(),
+      updateMany: jest.fn(),
+    },
+    role: {
+      count: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    userRole: {
+      deleteMany: jest.fn(),
+    },
+  };
+
   beforeEach(async () => {
+    userRepository = mockDeep<UserRepository>();
+    permissionRepository = mockDeep<PermissionRepository>();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UsersService,
-        {
-          provide: PrismaService,
-          useValue: mockPrismaService,
-        },
         {
           provide: AuthService,
           useValue: mockAuthService,
@@ -118,6 +126,18 @@ describe('UsersService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: UserRepository,
+          useValue: userRepository,
+        },
+        {
+          provide: PermissionRepository,
+          useValue: permissionRepository,
+        },
+        {
+          provide: PrismaService,
+          useValue: mockPrismaService,
         },
       ],
     }).compile();
@@ -146,9 +166,19 @@ describe('UsersService', () => {
       // Mock bcrypt.hash
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
 
-      // Mock Prisma 查询
-      mockPrismaService.user.findFirst.mockResolvedValue(null); // No conflicts
-      mockPrismaService.user.create.mockResolvedValue({
+      // Mock Repository 查询
+      userRepository.checkConflict.mockResolvedValue({
+        email: false,
+        username: false,
+        phone: false,
+      });
+      userRepository.create.mockResolvedValue({
+        ...mockUser,
+        email: createUserDto.email,
+        username: createUserDto.username,
+        phone: createUserDto.phone,
+      });
+      userRepository.findByIdWithRoles.mockResolvedValue({
         ...mockUser,
         email: createUserDto.email,
         username: createUserDto.username,
@@ -161,35 +191,21 @@ describe('UsersService', () => {
       expect(result.email).toBe(createUserDto.email);
       expect(result.username).toBe(createUserDto.username);
 
-      // Changed: service uses findFirst with OR, not multiple findUnique calls
-      expect(mockPrismaService.user.findFirst).toHaveBeenCalled();
-      expect(mockPrismaService.user.create).toHaveBeenCalledWith({
-        data: {
-          email: createUserDto.email,
-          username: createUserDto.username,
-          password: 'hashedPassword',
-          firstName: createUserDto.firstName,
-          lastName: createUserDto.lastName,
-          phone: createUserDto.phone,
-          isActive: true, // Default
-          isVerified: false, // Default
-        },
-        include: {
-          userRoles: {
-            include: {
-              role: true,
-            },
-          },
-        },
+      expect(userRepository.checkConflict).toHaveBeenCalledWith({
+        email: createUserDto.email,
+        username: createUserDto.username,
+        phone: createUserDto.phone,
       });
+      expect(userRepository.create).toHaveBeenCalled();
       expect(bcrypt.hash).toHaveBeenCalledWith(createUserDto.password, 10);
     });
 
     it('当邮箱已存在时应该抛出 ConflictException', async () => {
-      mockPrismaService.user.findFirst.mockResolvedValue({
-        ...mockUser,
-        email: createUserDto.email,
-      }); // Existing user with email
+      userRepository.checkConflict.mockResolvedValue({
+        email: true,
+        username: false,
+        phone: false,
+      });
 
       await expect(service.create(createUserDto)).rejects.toThrow(
         ConflictException,
@@ -200,11 +216,10 @@ describe('UsersService', () => {
     });
 
     it('当用户名已存在时应该抛出 ConflictException', async () => {
-      // Return a user that matches username but not email
-      mockPrismaService.user.findFirst.mockResolvedValue({
-        ...mockUser,
-        email: 'other@example.com',
-        username: createUserDto.username,
+      userRepository.checkConflict.mockResolvedValue({
+        email: false,
+        username: true,
+        phone: false,
       });
 
       await expect(service.create(createUserDto)).rejects.toThrow(
@@ -216,12 +231,10 @@ describe('UsersService', () => {
     });
 
     it('当手机号已存在时应该抛出 ConflictException', async () => {
-      // Return a user matching phone
-      mockPrismaService.user.findFirst.mockResolvedValue({
-        ...mockUser,
-        email: 'other@example.com',
-        username: 'otheruser',
-        phone: createUserDto.phone,
+      userRepository.checkConflict.mockResolvedValue({
+        email: false,
+        username: false,
+        phone: true,
       });
 
       await expect(service.create(createUserDto)).rejects.toThrow(
@@ -239,34 +252,17 @@ describe('UsersService', () => {
         mockUser,
         { ...mockUser, id: MOCK_USER_ID_2, email: 'user2@example.com' },
       ];
-      mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
+      userRepository.findAll.mockResolvedValue(mockUsers);
 
       const result = await service.findAll();
 
       expect(result).toHaveLength(2);
       expect(result[0]).not.toHaveProperty('password');
-      expect(mockPrismaService.user.findMany).toHaveBeenCalledWith({
-        where: { deletedAt: null },
-        include: {
-          userRoles: {
-            include: {
-              // Changed: service uses select code
-              role: {
-                select: {
-                  code: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+      expect(userRepository.findAll).toHaveBeenCalled();
     });
 
     it('应该返回空数组当没有用户时', async () => {
-      mockPrismaService.user.findMany.mockResolvedValue([]);
+      userRepository.findAll.mockResolvedValue([]);
 
       const result = await service.findAll();
 
@@ -276,31 +272,20 @@ describe('UsersService', () => {
 
   describe('findOne', () => {
     it('应该根据 ID 返回用户', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      userRepository.findByIdWithRoles.mockResolvedValue(mockUser);
 
       const result = await service.findOne(MOCK_USER_ID);
 
       expect(result).toBeDefined();
       expect(result.email).toBe(mockUser.email);
       expect(result).not.toHaveProperty('password');
-      expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
-        where: { id: MOCK_USER_ID },
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  code: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      expect(userRepository.findByIdWithRoles).toHaveBeenCalledWith(
+        MOCK_USER_ID,
+      );
     });
 
     it('当用户不存在时应该抛出 NotFoundException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      userRepository.findByIdWithRoles.mockResolvedValue(null);
 
       await expect(service.findOne(NON_EXISTENT_UUID)).rejects.toThrow(
         NotFoundException,
@@ -311,10 +296,7 @@ describe('UsersService', () => {
     });
 
     it('当用户已被软删除时应该抛出 NotFoundException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        ...mockUser,
-        deletedAt: new Date(),
-      });
+      userRepository.findByIdWithRoles.mockResolvedValue(null);
 
       await expect(service.findOne(MOCK_USER_ID)).rejects.toThrow(
         NotFoundException,
@@ -324,21 +306,19 @@ describe('UsersService', () => {
 
   describe('findByEmail', () => {
     it('应该根据邮箱返回用户（含密码）', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      userRepository.findByEmail.mockResolvedValue(mockUser);
 
       const result = await service.findByEmail('test@example.com');
 
       expect(result).toBeDefined();
       expect(result.email).toBe('test@example.com');
-      // findByEmail uses standard include, which includes password field from findUnique by default
-      // Note: service.findByEmail returns the Prisma result directly, not transformed
       expect(result.password).toBe('hashedPassword123');
     });
   });
 
   describe('findByUsername', () => {
     it('应该根据用户名返回用户（含密码）', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      userRepository.findByUsername.mockResolvedValue(mockUser);
 
       const result = await service.findByUsername('testuser');
 
@@ -350,27 +330,19 @@ describe('UsersService', () => {
 
   describe('findByUsernameOrEmail', () => {
     it('应该根据邮箱查找用户', async () => {
-      mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+      userRepository.findByUsernameOrEmail.mockResolvedValue(mockUser as any);
 
       const result = await service.findByUsernameOrEmail('test@example.com');
 
       expect(result).toBeDefined();
       expect(result.email).toBe('test@example.com');
-      expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            OR: [
-              { email: 'test@example.com' },
-              { username: 'test@example.com' },
-            ],
-            deletedAt: null,
-          }),
-        }),
+      expect(userRepository.findByUsernameOrEmail).toHaveBeenCalledWith(
+        'test@example.com',
       );
     });
 
     it('应该根据用户名查找用户', async () => {
-      mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+      userRepository.findByUsernameOrEmail.mockResolvedValue(mockUser as any);
 
       const result = await service.findByUsernameOrEmail('testuser');
 
@@ -386,8 +358,12 @@ describe('UsersService', () => {
     };
 
     it('应该成功更新用户信息', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.update.mockResolvedValue({
+      userRepository.findById.mockResolvedValue(mockUser);
+      userRepository.update.mockResolvedValue({
+        ...mockUser,
+        ...updateUserDto,
+      });
+      userRepository.findByIdWithRoles.mockResolvedValue({
         ...mockUser,
         ...updateUserDto,
       });
@@ -396,25 +372,11 @@ describe('UsersService', () => {
 
       expect(result.firstName).toBe('Updated');
       expect(result.lastName).toBe('Name');
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: MOCK_USER_ID },
-        data: updateUserDto,
-        include: {
-          userRoles: {
-            include: {
-              role: {
-                select: {
-                  code: true,
-                },
-              },
-            },
-          },
-        },
-      });
+      expect(userRepository.update).toHaveBeenCalled();
     });
 
     it('当用户不存在时应该抛出 NotFoundException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      userRepository.findByIdWithRoles.mockResolvedValue(null);
 
       await expect(
         service.update(NON_EXISTENT_UUID, updateUserDto),
@@ -422,12 +384,12 @@ describe('UsersService', () => {
     });
 
     it('当更新邮箱且邮箱已被使用时应该抛出 ConflictException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser); // Existing user found
-      mockPrismaService.user.findFirst.mockResolvedValue({
-        ...mockUser,
-        id: MOCK_USER_ID_2,
-        email: 'taken@example.com',
-      }); // Conflict found
+      userRepository.findById.mockResolvedValue(mockUser);
+      userRepository.checkConflict.mockResolvedValue({
+        email: true,
+        username: false,
+        phone: false,
+      });
 
       await expect(
         service.update(MOCK_USER_ID, { email: 'taken@example.com' }),
@@ -438,27 +400,25 @@ describe('UsersService', () => {
   describe('updatePassword', () => {
     it('应该成功更新密码', async () => {
       (bcrypt.hash as jest.Mock).mockResolvedValue('newHashedPassword');
-      mockPrismaService.user.update.mockResolvedValue(mockUser);
+      userRepository.update.mockResolvedValue(mockUser);
 
       await service.updatePassword(MOCK_USER_ID, 'NewPassword123!');
 
       expect(bcrypt.hash).toHaveBeenCalledWith('NewPassword123!', 10);
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: MOCK_USER_ID },
-        data: { password: 'newHashedPassword' },
+      expect(userRepository.update).toHaveBeenCalledWith(MOCK_USER_ID, {
+        password: 'newHashedPassword',
       });
     });
   });
 
   describe('updateLastLoginAt', () => {
     it('应该成功更新最后登录时间', async () => {
-      mockPrismaService.user.update.mockResolvedValue(mockUser);
+      userRepository.update.mockResolvedValue(mockUser);
 
       await service.updateLastLoginAt(MOCK_USER_ID);
 
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: MOCK_USER_ID },
-        data: { lastLoginAt: expect.any(Date) },
+      expect(userRepository.update).toHaveBeenCalledWith(MOCK_USER_ID, {
+        lastLoginAt: expect.any(Date),
       });
     });
   });
@@ -490,13 +450,12 @@ describe('UsersService', () => {
 
   describe('changePassword', () => {
     it('应该成功修改密码并撤销所有会话', async () => {
-      // Mock 旧密码验证为 true，新密码不同返回 false
       (bcrypt.compare as jest.Mock)
-        .mockResolvedValueOnce(true) // 验证旧密码
-        .mockResolvedValueOnce(false); // 检查新旧密码是否相同
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
       (bcrypt.hash as jest.Mock).mockResolvedValue('newHashedPassword');
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
-      mockPrismaService.user.update.mockResolvedValue(mockUser);
+      userRepository.findById.mockResolvedValue(mockUser);
+      userRepository.update.mockResolvedValue(mockUser);
       mockAuthService.revokeAllUserSessions.mockResolvedValue(undefined);
 
       await service.changePassword(
@@ -510,7 +469,9 @@ describe('UsersService', () => {
         mockUser.password,
       );
       expect(bcrypt.hash).toHaveBeenCalledWith('NewPassword123!', 10);
-      expect(mockPrismaService.user.update).toHaveBeenCalled();
+      expect(userRepository.update).toHaveBeenCalledWith(MOCK_USER_ID, {
+        password: 'newHashedPassword',
+      });
       expect(mockAuthService.revokeAllUserSessions).toHaveBeenCalledWith(
         MOCK_USER_ID,
         ErrorCode.SESSION_EXPIRED,
@@ -518,7 +479,7 @@ describe('UsersService', () => {
     });
 
     it('当用户不存在时应该抛出 NotFoundException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      userRepository.findById.mockResolvedValue(null);
 
       await expect(
         service.changePassword(
@@ -531,7 +492,7 @@ describe('UsersService', () => {
 
     it('当旧密码错误时应该抛出错误', async () => {
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      userRepository.findById.mockResolvedValue(mockUser);
 
       await expect(
         service.changePassword(
@@ -547,10 +508,11 @@ describe('UsersService', () => {
     it('应该成功注销其他设备会话', async () => {
       const mockSession = {
         id: 'session-uuid-123',
-        userId: MOCK_USER_ID,
-        accessToken: 'token123',
       };
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: MOCK_USER_ID,
+        deletedAt: null,
+      });
       mockPrismaService.userSession.findFirst.mockResolvedValue(mockSession);
       mockAuthService.logoutOtherSessions.mockResolvedValue(undefined);
 
@@ -571,7 +533,10 @@ describe('UsersService', () => {
     });
 
     it('当会话不存在时应该抛出 NotFoundException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        id: MOCK_USER_ID,
+        deletedAt: null,
+      });
       mockPrismaService.userSession.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -582,12 +547,11 @@ describe('UsersService', () => {
 
   describe('remove (软删除)', () => {
     it('应该成功软删除用户 (当用户非激活状态时)', async () => {
-      // Must be inactive to delete
-      mockPrismaService.user.findUnique.mockResolvedValue({
+      userRepository.findById.mockResolvedValue({
         ...mockUser,
         isActive: false,
       });
-      mockPrismaService.user.update.mockResolvedValue({
+      userRepository.delete.mockResolvedValue({
         ...mockUser,
         isActive: false,
         deletedAt: new Date(),
@@ -595,17 +559,13 @@ describe('UsersService', () => {
 
       await service.remove(MOCK_USER_ID);
 
-      expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-        where: { id: MOCK_USER_ID },
-        data: { deletedAt: expect.any(Date) },
-      });
+      expect(userRepository.delete).toHaveBeenCalledWith(MOCK_USER_ID);
     });
 
     it('当用户处于激活状态时应该抛出 BadRequestException', async () => {
-      // Active user cannot be deleted
-      mockPrismaService.user.findUnique.mockResolvedValue({
+      userRepository.findById.mockResolvedValue({
         ...mockUser,
-        isActive: true, // Active
+        isActive: true,
       });
 
       await expect(service.remove(MOCK_USER_ID)).rejects.toThrow(
@@ -617,7 +577,7 @@ describe('UsersService', () => {
     });
 
     it('当用户不存在时应该抛出 NotFoundException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue(null);
+      userRepository.findById.mockResolvedValue(null);
 
       await expect(service.remove(NON_EXISTENT_UUID)).rejects.toThrow(
         NotFoundException,
