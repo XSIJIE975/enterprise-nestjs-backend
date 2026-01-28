@@ -1,13 +1,17 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@/prisma/prisma/client';
+import { CircuitBreakerService } from '@/shared/resilience/circuit-breaker.service';
 
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private readonly circuitBreaker: CircuitBreakerService,
+  ) {
     super({
       datasources: {
         db: {
@@ -49,5 +53,20 @@ export class PrismaService
 
   async onModuleDestroy() {
     await this.$disconnect();
+  }
+
+  /**
+   * 使用熔断器执行数据库操作
+   *
+   * 注意：
+   * - 不要包装事务操作（会破坏原子性）
+   * - 只用于可能长时间阻塞的关键查询
+   * - 熔断打开时会抛出 ServiceUnavailableException
+   *
+   * @param operation 要执行的数据库操作
+   * @returns 操作结果
+   */
+  async executeWithCircuitBreaker<T>(operation: () => Promise<T>): Promise<T> {
+    return this.circuitBreaker.execute('database', operation);
   }
 }
