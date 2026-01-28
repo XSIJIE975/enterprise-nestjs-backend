@@ -41,4 +41,25 @@ export interface RoleRepository {
     roleId: number,
     tx?: Prisma.TransactionClient,
   ): Promise<RolePermissionModel[]>;
+
+  /**
+   * 根据 ID 数组统计角色数量
+   */
+  countByIds(ids: number[], tx?: Prisma.TransactionClient): Promise<number>;
+
+  /**
+   * 批量删除角色
+   */
+  batchDelete(
+    ids: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<{ count: number }>;
+
+  /**
+   * 统计角色数量
+   */
+  count(
+    where?: Prisma.RoleWhereInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<number>;
 }

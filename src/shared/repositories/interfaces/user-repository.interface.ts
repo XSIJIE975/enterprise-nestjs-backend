@@ -100,4 +100,21 @@ export interface UserRepository {
    * 软删除：设置 deletedAt
    */
   delete(id: string, tx?: Prisma.TransactionClient): Promise<UserModel>;
+
+  /**
+   * 批量软删除用户
+   */
+  batchSoftDelete(
+    ids: string[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<{ count: number }>;
+
+  /**
+   * 为用户分配角色
+   */
+  assignRoles(
+    userId: string,
+    roleIds: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<void>;
 }

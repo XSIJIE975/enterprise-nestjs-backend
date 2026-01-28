@@ -87,6 +87,47 @@ export class PermissionRepository implements PermissionRepositoryInterface {
     }
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
+  async countByIds(
+    ids: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<number> {
+    return this.client(tx).permission.count({
+      where: { id: { in: ids } },
+    });
+  }
+
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
+  async findByIds(
+    ids: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<PermissionModel[]> {
+    return this.client(tx).permission.findMany({
+      where: { id: { in: ids } },
+    });
+  }
+
+  async batchDelete(
+    ids: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<{ count: number }> {
+    const result = await this.client(tx).permission.deleteMany({
+      where: { id: { in: ids } },
+    });
+    return { count: result.count };
+  }
+
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
+  async count(
+    where?: Prisma.PermissionWhereInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<number> {
+    return this.client(tx).permission.count({ where });
+  }
+
   private handleKnownError(error: unknown): never {
     if (error instanceof PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {

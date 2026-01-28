@@ -32,4 +32,33 @@ export interface PermissionRepository {
   ): Promise<PermissionModel>;
 
   delete(id: number, tx?: Prisma.TransactionClient): Promise<PermissionModel>;
+
+  /**
+   * 根据 ID 数组统计权限数量
+   */
+  countByIds(ids: number[], tx?: Prisma.TransactionClient): Promise<number>;
+
+  /**
+   * 根据 ID 数组查找权限
+   */
+  findByIds(
+    ids: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<PermissionModel[]>;
+
+  /**
+   * 批量删除权限
+   */
+  batchDelete(
+    ids: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<{ count: number }>;
+
+  /**
+   * 统计权限数量
+   */
+  count(
+    where?: Prisma.PermissionWhereInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<number>;
 }

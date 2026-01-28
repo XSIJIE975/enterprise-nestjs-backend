@@ -141,6 +141,36 @@ export class RoleRepository implements RoleRepositoryInterface {
     return this.client(tx).rolePermission.findMany({ where: { roleId } });
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
+  async countByIds(
+    ids: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<number> {
+    return this.client(tx).role.count({
+      where: { id: { in: ids }, isActive: true },
+    });
+  }
+
+  async batchDelete(
+    ids: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<{ count: number }> {
+    const result = await this.client(tx).role.deleteMany({
+      where: { id: { in: ids } },
+    });
+    return { count: result.count };
+  }
+
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
+  async count(
+    where?: Prisma.RoleWhereInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<number> {
+    return this.client(tx).role.count({ where });
+  }
+
   private handleKnownError(error: unknown): never {
     if (error instanceof PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {

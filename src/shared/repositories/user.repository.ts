@@ -333,6 +333,38 @@ export class UserRepository implements UserRepositoryInterface {
     });
   }
 
+  async batchSoftDelete(
+    ids: string[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<{ count: number }> {
+    const client = this.client(tx);
+    const result = await client.user.updateMany({
+      where: { id: { in: ids }, deletedAt: null },
+      data: { deletedAt: new Date() },
+    });
+    return { count: result.count };
+  }
+
+  async assignRoles(
+    userId: string,
+    roleIds: number[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    if (tx) {
+      await tx.userRole.deleteMany({ where: { userId } });
+      await tx.userRole.createMany({
+        data: roleIds.map(roleId => ({ userId, roleId })),
+      });
+    } else {
+      await this.prisma.$transaction([
+        this.prisma.userRole.deleteMany({ where: { userId } }),
+        this.prisma.userRole.createMany({
+          data: roleIds.map(roleId => ({ userId, roleId })),
+        }),
+      ]);
+    }
+  }
+
   private handleKnownError(error: unknown): never {
     if (error instanceof PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {
