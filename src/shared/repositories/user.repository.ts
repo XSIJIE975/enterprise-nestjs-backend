@@ -17,6 +17,8 @@ import type {
   UserConflictResult,
   UserPaginationOptions,
 } from './interfaces/user-repository.interface';
+import { Idempotent } from '../resilience/decorators/idempotent.decorator';
+import { Retryable } from '../resilience/decorators/retryable.decorator';
 
 @Injectable()
 export class UserRepository implements UserRepositoryInterface {
@@ -26,6 +28,8 @@ export class UserRepository implements UserRepositoryInterface {
     return tx ?? this.prisma;
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findById(
     id: string,
     tx?: Prisma.TransactionClient,
@@ -38,6 +42,8 @@ export class UserRepository implements UserRepositoryInterface {
     });
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findByEmail(
     email: string,
     tx?: Prisma.TransactionClient,
@@ -116,6 +122,8 @@ export class UserRepository implements UserRepositoryInterface {
    * 查询所有用户（含角色关联）
    * 使用 include 预加载 userRoles.role，避免 N+1 查询
    */
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findAll(tx?: Prisma.TransactionClient): Promise<UserModel[]> {
     return this.client(tx).user.findMany({
       where: {
@@ -138,6 +146,8 @@ export class UserRepository implements UserRepositoryInterface {
    * 根据用户名或邮箱查询用户（含角色和权限关联）
    * 深层 include: user → userRoles → role → rolePermissions → permission
    */
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findByUsernameOrEmail(
     usernameOrEmail: string,
     tx?: Prisma.TransactionClient,
@@ -168,6 +178,8 @@ export class UserRepository implements UserRepositoryInterface {
   /**
    * 根据用户名查找用户
    */
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findByUsername(
     username: string,
     tx?: Prisma.TransactionClient,
@@ -190,6 +202,8 @@ export class UserRepository implements UserRepositoryInterface {
   /**
    * 根据 ID 查找用户（含 userRoles.role）
    */
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findByIdWithRoles(
     id: string,
     tx?: Prisma.TransactionClient,
@@ -215,6 +229,8 @@ export class UserRepository implements UserRepositoryInterface {
    * @param excludeId 排除的用户 ID（用于更新场景）
    * @returns 冲突字段结果
    */
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async checkConflict(
     fields: UserConflictFields,
     excludeId?: string,
@@ -272,6 +288,8 @@ export class UserRepository implements UserRepositoryInterface {
   /**
    * 统计用户数量
    */
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async count(
     where?: Prisma.UserWhereInput,
     tx?: Prisma.TransactionClient,
@@ -287,6 +305,8 @@ export class UserRepository implements UserRepositoryInterface {
   /**
    * 分页查询用户列表（含 userRoles.role）
    */
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findManyPaginated(
     options: UserPaginationOptions,
     tx?: Prisma.TransactionClient,

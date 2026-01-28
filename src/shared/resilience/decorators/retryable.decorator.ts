@@ -106,11 +106,7 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
     descriptor: PropertyDescriptor,
   ) {
     // 检查是否标记为幂等
-    const isIdempotent = Reflect.getMetadata(
-      IDEMPOTENT_KEY,
-      target,
-      propertyKey,
-    );
+    const isIdempotent = Reflect.getMetadata(IDEMPOTENT_KEY, descriptor.value);
     if (!isIdempotent) {
       throw new Error(
         `Method ${String(propertyKey)} must be marked with @Idempotent() to use @Retryable()`,

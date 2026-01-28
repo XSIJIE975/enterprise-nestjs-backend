@@ -8,6 +8,8 @@ import type { Prisma } from '@/prisma/prisma/client';
 import type { RoleModel, RolePermissionModel } from '@/generated/prisma/models';
 import { PrismaService } from '@/shared/database/prisma.service';
 import type { RoleRepository as RoleRepositoryInterface } from './interfaces/role-repository.interface';
+import { Idempotent } from '../resilience/decorators/idempotent.decorator';
+import { Retryable } from '../resilience/decorators/retryable.decorator';
 
 @Injectable()
 export class RoleRepository implements RoleRepositoryInterface {
@@ -17,6 +19,8 @@ export class RoleRepository implements RoleRepositoryInterface {
     return tx ?? this.prisma;
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findById(
     id: number,
     tx?: Prisma.TransactionClient,
@@ -24,6 +28,8 @@ export class RoleRepository implements RoleRepositoryInterface {
     return this.client(tx).role.findUnique({ where: { id } });
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findByCode(
     code: string,
     tx?: Prisma.TransactionClient,
@@ -35,6 +41,8 @@ export class RoleRepository implements RoleRepositoryInterface {
    * 查询所有角色（含权限关联）
    * 使用 include 预加载 rolePermissions.permission，避免 N+1 查询
    */
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findAll(tx?: Prisma.TransactionClient): Promise<RoleModel[]> {
     return this.client(tx).role.findMany({
       include: {
@@ -124,6 +132,8 @@ export class RoleRepository implements RoleRepositoryInterface {
     }
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findRolePermissions(
     roleId: number,
     tx?: Prisma.TransactionClient,

@@ -8,6 +8,8 @@ import type { Prisma } from '@/prisma/prisma/client';
 import type { PermissionModel } from '@/generated/prisma/models';
 import { PrismaService } from '@/shared/database/prisma.service';
 import type { PermissionRepository as PermissionRepositoryInterface } from './interfaces/permission-repository.interface';
+import { Idempotent } from '../resilience/decorators/idempotent.decorator';
+import { Retryable } from '../resilience/decorators/retryable.decorator';
 
 @Injectable()
 export class PermissionRepository implements PermissionRepositoryInterface {
@@ -17,6 +19,8 @@ export class PermissionRepository implements PermissionRepositoryInterface {
     return tx ?? this.prisma;
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findById(
     id: number,
     tx?: Prisma.TransactionClient,
@@ -24,6 +28,8 @@ export class PermissionRepository implements PermissionRepositoryInterface {
     return this.client(tx).permission.findUnique({ where: { id } });
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findByCode(
     code: string,
     tx?: Prisma.TransactionClient,
@@ -31,6 +37,8 @@ export class PermissionRepository implements PermissionRepositoryInterface {
     return this.client(tx).permission.findUnique({ where: { code } });
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findAll(
     params?: {
       skip?: number;

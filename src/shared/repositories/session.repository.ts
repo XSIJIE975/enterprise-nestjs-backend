@@ -4,6 +4,8 @@ import type { Prisma } from '@/prisma/prisma/client';
 import type { UserSessionModel } from '@/generated/prisma/models';
 import { PrismaService } from '@/shared/database/prisma.service';
 import type { SessionRepositoryInterface } from './interfaces/session-repository.interface';
+import { Idempotent } from '../resilience/decorators/idempotent.decorator';
+import { Retryable } from '../resilience/decorators/retryable.decorator';
 
 @Injectable()
 export class SessionRepository implements SessionRepositoryInterface {
@@ -13,6 +15,8 @@ export class SessionRepository implements SessionRepositoryInterface {
     return tx ?? this.prisma;
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findById(
     id: string,
     tx?: Prisma.TransactionClient,
@@ -67,6 +71,8 @@ export class SessionRepository implements SessionRepositoryInterface {
     }
   }
 
+  @Retryable({ maxRetries: 3, initialDelay: 100 })
+  @Idempotent()
   async findActiveByUserId(
     userId: string,
     tx?: Prisma.TransactionClient,
