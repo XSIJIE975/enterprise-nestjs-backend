@@ -8,7 +8,7 @@ import * as compression from 'compression';
 import * as express from 'express';
 import helmet from 'helmet';
 import * as basicAuth from 'express-basic-auth';
-import cookieParser from 'cookie-parser';
+import * as cookieParser from 'cookie-parser';
 import { randomUUID } from 'crypto';
 import { doubleCsrf } from 'csrf-csrf';
 import { AppModule } from './app.module';
