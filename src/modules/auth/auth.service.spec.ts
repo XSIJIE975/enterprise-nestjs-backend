@@ -9,6 +9,7 @@ import { LoggerService } from '@/shared/logger/logger.service';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
+import { AccountLockoutService } from './services/account-lockout.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -170,6 +171,13 @@ describe('AuthService', () => {
     error: jest.fn(),
   };
 
+  const mockAccountLockoutService = {
+    recordFailedAttempt: jest.fn().mockResolvedValue(0),
+    checkLockStatus: jest.fn().mockResolvedValue({ locked: false }),
+    resetFailureCount: jest.fn().mockResolvedValue(undefined),
+    unlockAccount: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -207,6 +215,10 @@ describe('AuthService', () => {
         {
           provide: LoggerService,
           useValue: mockLoggerService,
+        },
+        {
+          provide: AccountLockoutService,
+          useValue: mockAccountLockoutService,
         },
       ],
     }).compile();
