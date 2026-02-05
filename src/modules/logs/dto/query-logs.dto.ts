@@ -118,10 +118,36 @@ export class QueryAuditLogsDto {
   @ApiPropertyOptional({
     description: '操作类型',
     example: 'UPDATE',
-    enum: ['CREATE', 'UPDATE', 'DELETE'],
+    enum: [
+      'CREATE',
+      'UPDATE',
+      'DELETE',
+      'UPDATE_STATUS',
+      'BATCH_DELETE',
+      'ASSIGN_PERMISSIONS',
+      'ASSIGN_ROLES',
+      'REMOVE_ROLE',
+      'UPDATE_PROFILE',
+      'CHANGE_PASSWORD',
+      'VERIFY_USER',
+      'CREATE_USER',
+    ],
   })
   @IsOptional()
-  @IsEnum(['CREATE', 'UPDATE', 'DELETE'])
+  @IsEnum([
+    'CREATE',
+    'UPDATE',
+    'DELETE',
+    'UPDATE_STATUS',
+    'BATCH_DELETE',
+    'ASSIGN_PERMISSIONS',
+    'ASSIGN_ROLES',
+    'REMOVE_ROLE',
+    'UPDATE_PROFILE',
+    'CHANGE_PASSWORD',
+    'VERIFY_USER',
+    'CREATE_USER',
+  ])
   action?: string;
 
   @ApiPropertyOptional({ description: '资源类型', example: 'user' })
@@ -156,6 +182,14 @@ export class CreateAuditLogDto {
   @IsOptional()
   @IsString()
   userId?: string;
+
+  @ApiPropertyOptional({
+    description: '请求 ID',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsOptional()
+  @IsString()
+  requestId?: string;
 
   @ApiPropertyOptional({ description: '操作类型', example: 'UPDATE' })
   @IsString()

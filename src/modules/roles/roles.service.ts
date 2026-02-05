@@ -11,6 +11,10 @@ import { ErrorMessages } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { RoleRepository } from '@/shared/repositories/role.repository';
+import { LogsService } from '../logs/logs.service';
+import { AuditLogService } from '@/shared/audit/audit-log.service';
+import { AuditLog } from '@/common/decorators/audit-log.decorator';
+import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
 import { PermissionResponseVo } from '../permissions/vo/permission-response.vo';
 import {
   CreateRoleDto,
@@ -29,6 +33,8 @@ export class RolesService {
     private readonly prisma: PrismaService,
     private readonly rbacCacheService: RbacCacheService,
     private readonly roleRepository: RoleRepository,
+    private readonly logsService: LogsService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   /**
@@ -36,6 +42,11 @@ export class RolesService {
    * @param createRoleDto 创建角色 DTO
    * @returns 角色信息
    */
+  @AuditLog({
+    action: AuditAction.CREATE,
+    resource: AuditResource.role,
+    resourceIdFromResult: 'id',
+  })
   async create(createRoleDto: CreateRoleDto): Promise<RoleResponseVo> {
     try {
       // 使用 Repository 创建角色
@@ -211,11 +222,16 @@ export class RolesService {
    * @param updateRoleDto 更新角色 DTO
    * @returns 更新后的角色信息
    */
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    resource: AuditResource.role,
+    resourceIdArg: 0,
+  })
   async update(
     id: number,
     updateRoleDto: UpdateRoleDto,
   ): Promise<RoleResponseVo> {
-    // 检查角色是否存在
+    // 检查角色是否存在，保存原数据以用于审计日志
     const existingRole = await this.roleRepository.findById(id);
 
     if (!existingRole) {
@@ -280,7 +296,22 @@ export class RolesService {
    * 删除角色
    * @param id 角色ID
    */
+  @AuditLog({
+    action: AuditAction.DELETE,
+    resource: AuditResource.role,
+    resourceIdArg: 0,
+  })
   async remove(id: number): Promise<void> {
+    // 先查询角色完整信息用于审计日志
+    const roleToDelete = await this.roleRepository.findById(id);
+
+    if (!roleToDelete) {
+      throw new BusinessException(
+        ErrorCode.ROLE_NOT_FOUND,
+        ErrorMessages[ErrorCode.ROLE_NOT_FOUND],
+      );
+    }
+
     await this.prisma.$transaction(async tx => {
       // 检查角色是否存在
       const role = await tx.role.findUnique({
@@ -320,11 +351,16 @@ export class RolesService {
    * @param isActive 角色状态
    * @returns 更新后的角色信息
    */
+  @AuditLog({
+    action: AuditAction.UPDATE_STATUS,
+    resource: AuditResource.role,
+    resourceIdArg: 0,
+  })
   async updateRoleStatus(
     id: number,
     isActive: boolean,
   ): Promise<RoleResponseVo> {
-    // 检查角色是否存在
+    // 检查角色是否存在，保存原数据以用于审计日志
     const role = await this.roleRepository.findById(id);
 
     if (!role) {
@@ -349,6 +385,11 @@ export class RolesService {
    * @param assignPermissionsDto 分配权限 DTO
    * @returns 更新后的角色信息（包含权限）
    */
+  @AuditLog({
+    action: AuditAction.ASSIGN_PERMISSIONS,
+    resource: AuditResource.role,
+    resourceIdArg: 0,
+  })
   async assignPermissions(
     roleId: number,
     assignPermissionsDto: AssignPermissionsDto,
@@ -468,6 +509,12 @@ export class RolesService {
    * @param ids 角色ID列表
    * @returns 删除的角色数量
    */
+  @AuditLog({
+    action: AuditAction.BATCH_DELETE,
+    resource: AuditResource.role,
+    resourceIdArg: 0,
+    batch: true,
+  })
   async batchDelete(ids: number[]): Promise<number> {
     const uniqueIds = [...new Set(ids)];
 

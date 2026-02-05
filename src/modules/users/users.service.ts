@@ -16,6 +16,10 @@ import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { UserRepository } from '@/shared/repositories/user.repository';
 import { AuthService } from '../auth/auth.service';
+import { LogsService } from '../logs/logs.service';
+import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
+import { AuditLog } from '@/common/decorators/audit-log.decorator';
+import { AuditLogService } from '@/shared/audit/audit-log.service';
 import { CreateUserDto, UpdateUserDto, UpdateProfileDto } from './dto';
 import { UserRoleVo, UserResponseVo, UserSessionVo } from './vo';
 
@@ -33,6 +37,8 @@ export class UsersService {
     private readonly authService: AuthService,
     private readonly rbacCacheService: RbacCacheService,
     private readonly userRepository: UserRepository,
+    private readonly logsService: LogsService,
+    private readonly auditLogService: AuditLogService,
   ) {
     this.bcryptRounds = this.configService.get<number>(
       'security.bcrypt.rounds',
@@ -45,6 +51,11 @@ export class UsersService {
    * @param createUserDto 创建用户 DTO
    * @returns 用户信息（不含密码）
    */
+  @AuditLog({
+    action: AuditAction.CREATE_USER,
+    resource: AuditResource.user,
+    resourceIdFromResult: 'id',
+  })
   async create(createUserDto: CreateUserDto): Promise<UserResponseVo> {
     // 检查唯一性冲突 (邮箱、用户名、手机号)
     const conflict = await this.userRepository.checkConflict({
@@ -156,6 +167,11 @@ export class UsersService {
    * @param updateUserDto 更新用户 DTO
    * @returns 更新后的用户信息
    */
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    resource: AuditResource.user,
+    resourceIdArg: 0,
+  })
   async update(
     id: string,
     updateUserDto: UpdateUserDto,
@@ -231,6 +247,11 @@ export class UsersService {
    * 删除用户（软删除）
    * @param id 用户 ID
    */
+  @AuditLog({
+    action: AuditAction.DELETE,
+    resource: AuditResource.user,
+    resourceIdArg: 0,
+  })
   async remove(id: string): Promise<void> {
     const user = await this.userRepository.findById(id);
 
@@ -339,6 +360,11 @@ export class UsersService {
    * @param updateProfileDto 更新资料 DTO
    * @returns 更新后的用户信息
    */
+  @AuditLog({
+    action: AuditAction.UPDATE_PROFILE,
+    resource: AuditResource.user,
+    resourceIdArg: 0,
+  })
   async updateProfile(
     userId: string,
     updateProfileDto: UpdateProfileDto,
@@ -400,6 +426,11 @@ export class UsersService {
    * @param oldPassword 旧密码
    * @param newPassword 新密码
    */
+  @AuditLog({
+    action: AuditAction.CHANGE_PASSWORD,
+    resource: AuditResource.user,
+    resourceIdArg: 0,
+  })
   async changePassword(
     userId: string,
     oldPassword: string,
@@ -467,6 +498,11 @@ export class UsersService {
    * @param id 用户 ID
    * @returns 更新后的用户信息
    */
+  @AuditLog({
+    action: AuditAction.VERIFY_USER,
+    resource: AuditResource.user,
+    resourceIdArg: 0,
+  })
   async verifyUser(id: string): Promise<UserResponseVo> {
     const user = await this.userRepository.findById(id);
 
@@ -513,6 +549,11 @@ export class UsersService {
    * @param roleIds 角色 ID 数组
    * @returns 更新后的用户信息
    */
+  @AuditLog({
+    action: AuditAction.ASSIGN_ROLES,
+    resource: AuditResource.user,
+    resourceIdArg: 0,
+  })
   async assignRoles(
     userId: string,
     roleIds: number[],
@@ -578,6 +619,11 @@ export class UsersService {
    * @param userId 用户 ID
    * @param roleId 角色 ID
    */
+  @AuditLog({
+    action: AuditAction.REMOVE_ROLE,
+    resource: AuditResource.user,
+    resourceIdArg: 0,
+  })
   async removeRole(userId: string, roleId: number): Promise<void> {
     // 检查用户是否存在
     const user = await this.prisma.user.findUnique({
@@ -854,6 +900,12 @@ export class UsersService {
    * @param ids 用户 ID 数组
    * @returns 删除的用户数量
    */
+  @AuditLog({
+    action: AuditAction.BATCH_DELETE,
+    resource: AuditResource.user,
+    resourceIdArg: 0,
+    batch: true,
+  })
   async batchDelete(ids: string[]): Promise<number> {
     const result = await this.prisma.user.updateMany({
       where: {

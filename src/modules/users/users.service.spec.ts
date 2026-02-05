@@ -14,6 +14,8 @@ import { AuthService } from '../auth/auth.service';
 import { UsersService } from './users.service';
 import { UserRepository } from '@/shared/repositories/user.repository';
 import { PermissionRepository } from '@/shared/repositories/permission.repository';
+import { AuditLogService } from '@/shared/audit/audit-log.service';
+import { LogsService } from '../logs/logs.service';
 
 // Mock bcrypt
 jest.mock('bcrypt');
@@ -105,7 +107,19 @@ describe('UsersService', () => {
     },
     userRole: {
       deleteMany: jest.fn(),
+      createMany: jest.fn(),
     },
+    $transaction: jest.fn(),
+  };
+
+  const mockAuditLogService = {
+    execute: jest.fn((options, originalMethod, args, context) =>
+      originalMethod.apply(context, args),
+    ),
+  };
+
+  const mockLogsService = {
+    createAuditLog: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -138,6 +152,14 @@ describe('UsersService', () => {
         {
           provide: PrismaService,
           useValue: mockPrismaService,
+        },
+        {
+          provide: AuditLogService,
+          useValue: mockAuditLogService,
+        },
+        {
+          provide: LogsService,
+          useValue: mockLogsService,
         },
       ],
     }).compile();

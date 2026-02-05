@@ -312,6 +312,7 @@ export class LogsService {
           newData: JsonUtil.serialize(data.newData),
           ip: data.ip,
           userAgent: data.userAgent,
+          requestId: data.requestId,
         },
       });
     } catch (error) {

@@ -10,6 +10,10 @@ import { ErrorMessages } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { PermissionRepository } from '@/shared/repositories/permission.repository';
+import { LogsService } from '../logs/logs.service';
+import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
+import { AuditLog } from '@/common/decorators/audit-log.decorator';
+import { AuditLogService } from '@/shared/audit/audit-log.service';
 import {
   CreatePermissionDto,
   UpdatePermissionDto,
@@ -30,6 +34,8 @@ export class PermissionsService {
     private readonly prisma: PrismaService,
     private readonly rbacCacheService: RbacCacheService,
     private readonly permissionRepository: PermissionRepository,
+    private readonly logsService: LogsService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   /**
@@ -37,6 +43,11 @@ export class PermissionsService {
    * @param createPermissionDto 创建权限 DTO
    * @returns 权限信息
    */
+  @AuditLog({
+    action: AuditAction.CREATE,
+    resource: AuditResource.permission,
+    resourceIdFromResult: 'id',
+  })
   async create(
     createPermissionDto: CreatePermissionDto,
   ): Promise<PermissionResponseVo> {
@@ -121,11 +132,22 @@ export class PermissionsService {
    * @param updatePermissionDto 更新权限 DTO
    * @returns 更新后的权限信息
    */
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    resource: AuditResource.permission,
+    resourceIdArg: 0,
+  })
   async update(
     id: number,
     updatePermissionDto: UpdatePermissionDto,
   ): Promise<PermissionResponseVo> {
     try {
+      // 查询原数据（在更新之前）
+      const oldPermission = await this.permissionRepository.findById(id);
+      if (!oldPermission) {
+        throw new NotFoundException('Permission not found');
+      }
+
       // 使用 Repository 更新权限
       const updatedPermission = await this.permissionRepository.update(
         id,
@@ -167,8 +189,19 @@ export class PermissionsService {
    * 删除权限
    * @param id 权限 ID
    */
+  @AuditLog({
+    action: AuditAction.DELETE,
+    resource: AuditResource.permission,
+    resourceIdArg: 0,
+  })
   async remove(id: number): Promise<void> {
     try {
+      // 查询原数据（在删除之前）
+      const oldPermission = await this.permissionRepository.findById(id);
+      if (!oldPermission) {
+        throw new NotFoundException('Permission not found');
+      }
+
       // 使用 Repository 删除权限
       await this.permissionRepository.delete(id);
 
@@ -271,11 +304,28 @@ export class PermissionsService {
    * @param isActive 是否激活
    * @returns 更新后的权限信息
    */
+  @AuditLog({
+    action: AuditAction.UPDATE_STATUS,
+    resource: AuditResource.permission,
+    resourceIdArg: 0,
+  })
   async updatePermissionStatus(
     id: number,
     isActive: boolean,
   ): Promise<PermissionResponseVo> {
     try {
+      // 查询原数据（在更新之前）
+      const oldPermission = await this.prisma.permission.findUnique({
+        where: { id },
+      });
+
+      if (!oldPermission) {
+        throw new BusinessException(
+          ErrorCode.PERMISSION_NOT_FOUND,
+          ErrorMessages[ErrorCode.PERMISSION_NOT_FOUND],
+        );
+      }
+
       const updatedPermission = await this.prisma.permission.update({
         where: { id },
         data: { isActive },
@@ -351,8 +401,15 @@ export class PermissionsService {
    * @param ids 权限 ID 数组
    * @returns 删除的权限数量
    */
+  @AuditLog({
+    action: AuditAction.BATCH_DELETE,
+    resource: AuditResource.permission,
+    resourceIdArg: 0,
+    batch: true,
+  })
   async batchDelete(ids: number[]): Promise<number> {
     const uniqueIds = [...new Set(ids)];
+
     // 批量删除
     const result = await this.prisma.permission.deleteMany({
       where: {

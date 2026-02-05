@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { mockDeep, MockProxy } from 'jest-mock-extended';
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
@@ -8,6 +8,8 @@ import { ErrorMessages } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { PermissionRepository } from '@/shared/repositories/permission.repository';
 import { RbacCacheService } from '@/shared/cache';
+import { AuditLogService } from '@/shared/audit/audit-log.service';
+import { LogsService } from '../logs/logs.service';
 import {
   CreatePermissionDto,
   UpdatePermissionDto,
@@ -47,6 +49,16 @@ describe('PermissionsService', () => {
     flushAllRbacCache: jest.fn(),
   };
 
+  const mockAuditLogService = {
+    execute: jest.fn((options, originalMethod, args, context) =>
+      originalMethod.apply(context, args),
+    ),
+  };
+
+  const mockLogsService = {
+    createAuditLog: jest.fn(),
+  };
+
   beforeEach(async () => {
     permissionRepository = mockDeep<PermissionRepository>();
 
@@ -80,6 +92,14 @@ describe('PermissionsService', () => {
         {
           provide: RbacCacheService,
           useValue: mockRbacCacheService,
+        },
+        {
+          provide: AuditLogService,
+          useValue: mockAuditLogService,
+        },
+        {
+          provide: LogsService,
+          useValue: mockLogsService,
         },
       ],
     }).compile();
@@ -222,6 +242,7 @@ describe('PermissionsService', () => {
     };
 
     it('应该成功更新权限', async () => {
+      permissionRepository.findById.mockResolvedValue(mockPermission);
       permissionRepository.update.mockResolvedValue({
         ...mockPermission,
         ...updatePermissionDto,
@@ -241,19 +262,15 @@ describe('PermissionsService', () => {
     });
 
     it('当权限不存在时应该抛出 BusinessException', async () => {
-      permissionRepository.update.mockRejectedValue(
-        new NotFoundException('权限不存在'),
-      );
+      permissionRepository.findById.mockResolvedValue(null);
 
       await expect(service.update(999, updatePermissionDto)).rejects.toThrow(
         BusinessException,
       );
-      await expect(service.update(999, updatePermissionDto)).rejects.toThrow(
-        '权限不存在',
-      );
     });
 
     it('当更新权限名称已存在时应该抛出 BusinessException', async () => {
+      permissionRepository.findById.mockResolvedValue(mockPermission);
       permissionRepository.update.mockRejectedValue(
         new ConflictException('权限名称已存在'),
       );
@@ -267,6 +284,7 @@ describe('PermissionsService', () => {
     });
 
     it('当更新权限代码已存在时应该抛出 BusinessException', async () => {
+      permissionRepository.findById.mockResolvedValue(mockPermission);
       permissionRepository.update.mockRejectedValue(
         new ConflictException('权限代码已存在'),
       );
@@ -281,9 +299,11 @@ describe('PermissionsService', () => {
 
     it('应该在更新权限代码与当前代码相同时不进行冲突检查', async () => {
       // Reset mocks
+      permissionRepository.findById.mockClear();
       permissionRepository.update.mockClear();
       mockRbacCacheService.flushAllRbacCache.mockClear();
 
+      permissionRepository.findById.mockResolvedValue(mockPermission);
       permissionRepository.update.mockResolvedValue({
         ...mockPermission,
         code: mockPermission.code, // 代码没有变化
@@ -299,9 +319,11 @@ describe('PermissionsService', () => {
 
     it('应该在更新权限代码为不存在的代码时成功更新', async () => {
       // Reset mocks
+      permissionRepository.findById.mockClear();
       permissionRepository.update.mockClear();
       mockRbacCacheService.flushAllRbacCache.mockClear();
 
+      permissionRepository.findById.mockResolvedValue(mockPermission);
       permissionRepository.update.mockResolvedValue({
         ...mockPermission,
         code: 'new_unique_code',
@@ -318,6 +340,7 @@ describe('PermissionsService', () => {
 
   describe('删除', () => {
     it('应该成功删除权限', async () => {
+      permissionRepository.findById.mockResolvedValue(mockPermission);
       permissionRepository.delete.mockResolvedValue(undefined);
 
       await service.remove(1);
@@ -327,9 +350,7 @@ describe('PermissionsService', () => {
     });
 
     it('当权限不存在时应该抛出 BusinessException', async () => {
-      permissionRepository.delete.mockRejectedValue(
-        new NotFoundException('权限不存在'),
-      );
+      permissionRepository.findById.mockResolvedValue(null);
 
       await expect(service.remove(999)).rejects.toThrow(
         new BusinessException(
@@ -426,6 +447,7 @@ describe('PermissionsService', () => {
 
   describe('更新权限状态', () => {
     it('应该成功更新权限状态', async () => {
+      prismaService.permission.findUnique.mockResolvedValue(mockPermission);
       prismaService.permission.update.mockResolvedValue({
         ...mockPermission,
         isActive: false,
@@ -442,11 +464,7 @@ describe('PermissionsService', () => {
     });
 
     it('当权限不存在时应该抛出 BusinessException', async () => {
-      // 模拟 Prisma P2025 错误
-      const p2025Error: any = new Error('Record to update not found');
-      p2025Error.code = 'P2025';
-
-      prismaService.permission.update.mockRejectedValue(p2025Error);
+      prismaService.permission.findUnique.mockResolvedValue(null);
 
       await expect(service.updatePermissionStatus(999, true)).rejects.toThrow(
         new BusinessException(

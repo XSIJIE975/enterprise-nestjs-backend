@@ -8,6 +8,8 @@ import { RbacCacheService } from '@/shared/cache';
 import { RolesService } from './roles.service';
 import { RoleRepository } from '@/shared/repositories/role.repository';
 import { PrismaService } from '@/shared/database/prisma.service';
+import { AuditLogService } from '@/shared/audit/audit-log.service';
+import { LogsService } from '../logs/logs.service';
 
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
@@ -22,6 +24,16 @@ describe('角色服务', () => {
     getRolePermissions: jest.fn(),
     setRolePermissions: jest.fn(),
     flushAllRbacCache: jest.fn(),
+  };
+
+  const mockAuditLogService = {
+    execute: jest.fn((options, originalMethod, args, context) =>
+      originalMethod.apply(context, args),
+    ),
+  };
+
+  const mockLogsService = {
+    createAuditLog: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -68,6 +80,14 @@ describe('角色服务', () => {
         {
           provide: RbacCacheService,
           useValue: mockRbacCacheService,
+        },
+        {
+          provide: LogsService,
+          useValue: mockLogsService,
+        },
+        {
+          provide: AuditLogService,
+          useValue: mockAuditLogService,
         },
       ],
     }).compile();
@@ -615,6 +635,7 @@ describe('角色服务', () => {
         },
       };
 
+      roleRepository.findById.mockResolvedValue(role);
       prismaService.$transaction.mockImplementation((callback: any) =>
         callback(mockTx),
       );
@@ -645,6 +666,7 @@ describe('角色服务', () => {
         },
       };
 
+      roleRepository.findById.mockResolvedValue(role);
       prismaService.$transaction.mockImplementation((callback: any) =>
         callback(mockTx),
       );
@@ -737,6 +759,7 @@ describe('角色服务', () => {
       };
 
       roleRepository.findById.mockResolvedValue(role);
+      roleRepository.findRolePermissions.mockResolvedValue([]);
       prismaService.permission.count.mockResolvedValue(3);
 
       const mockTx = {};
@@ -792,6 +815,7 @@ describe('角色服务', () => {
       };
 
       roleRepository.findById.mockResolvedValue(role);
+      roleRepository.findRolePermissions.mockResolvedValue([]);
       prismaService.permission.count.mockResolvedValue(2); // Only 2 exist
 
       await expect(
