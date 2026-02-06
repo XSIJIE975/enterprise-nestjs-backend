@@ -241,6 +241,40 @@ this.logger.logSecurityEvent('Failed login attempt', 'medium', {
 
 ### 审计日志
 
+> **推荐**: 使用 `@AuditLog()` 装饰器自动记录审计日志，详见 [审计日志装饰器使用指南](./audit-log.md)
+
+#### 方式一：使用 @AuditLog 装饰器（推荐）
+
+```typescript
+import { AuditLog } from '@/common/decorators/audit-log.decorator';
+import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
+import { AuditLogService } from '@/shared/audit/audit-log.service';
+
+@Injectable()
+export class UsersService {
+  constructor(
+    private readonly auditLogService: AuditLogService, // 必须注入
+  ) {}
+
+  @AuditLog({
+    action: AuditAction.UPDATE,
+    resource: AuditResource.user,
+    resourceIdArg: 0, // 第一个参数是用户 ID
+  })
+  async updateUser(userId: number, newData: any) {
+    // 装饰器会自动：
+    // 1. 在执行前获取 oldData
+    // 2. 在执行后记录审计日志（异步）
+    return this.prisma.user.update({
+      where: { id: userId },
+      data: newData,
+    });
+  }
+}
+```
+
+#### 方式二：手动调用 LogsService
+
 ```typescript
 import { LogsService } from '@/modules/logs/logs.service';
 
@@ -255,7 +289,7 @@ async updateUser(userId: number, newData: any) {
     data: newData,
   });
 
-  // 记录审计日志
+  // 手动记录审计日志
   await this.logsService.createAuditLog({
     userId: RequestContextService.getUserId(),
     action: 'UPDATE',
