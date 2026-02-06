@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsInt, ArrayNotEmpty, ArrayUnique } from 'class-validator';
+import { IsArray, IsInt, ArrayUnique } from 'class-validator';
 import { Type } from 'class-transformer';
 
 /**
@@ -13,7 +13,6 @@ export class AssignRolesDto {
     type: [Number],
   })
   @IsArray({ message: '角色ID必须是数组' })
-  @ArrayNotEmpty({ message: '角色ID数组不能为空' })
   @Type(() => Number)
   @IsInt({ each: true, message: '角色ID必须是整数' })
   @ArrayUnique({ message: '角色ID不能重复' })
