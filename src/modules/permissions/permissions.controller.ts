@@ -23,9 +23,7 @@ import {
   ApiErrorResponseDecorator,
   ApiSuccessResponseArrayDecorator,
 } from '@/common/decorators/swagger-response.decorator';
-import { RolesGuard } from '@/common/guards/roles.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
-import { Roles } from '@/common/decorators/roles.decorator';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { PermissionsService } from './permissions.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -49,12 +47,11 @@ import {
 @ApiTags('Permissions')
 @ApiBearerAuth('JWT-auth')
 @Controller('permissions')
-@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
   @Post()
-  @Roles('admin')
   @Permissions('permission:create')
   @ApiOperation({ summary: '创建权限' })
   @ApiSuccessResponseDecorator(PermissionResponseVo, {
@@ -82,7 +79,7 @@ export class PermissionsController {
   }
 
   @Get('paginated')
-  @Permissions('permission:read')
+  @Permissions('permission:list')
   @ApiOperation({ summary: '分页查询权限列表' })
   @ApiSuccessResponseDecorator(PermissionPageVo, {
     status: HttpStatus.OK,
@@ -116,7 +113,6 @@ export class PermissionsController {
   }
 
   @Patch(':id')
-  @Roles('admin')
   @Permissions('permission:update')
   @ApiOperation({ summary: '更新权限信息' })
   @ApiParam({
@@ -142,7 +138,6 @@ export class PermissionsController {
   }
 
   @Patch(':id/status')
-  @Roles('admin')
   @Permissions('permission:update')
   @ApiOperation({ summary: '更新权限状态' })
   @ApiParam({
@@ -168,7 +163,6 @@ export class PermissionsController {
   }
 
   @Delete(':id')
-  @Roles('admin')
   @Permissions('permission:delete')
   @ApiOperation({ summary: '删除权限' })
   @ApiParam({
@@ -189,7 +183,7 @@ export class PermissionsController {
   }
 
   @Get('stats/overview')
-  @Permissions('permission:read')
+  @Permissions('permission:statistics')
   @ApiOperation({ summary: '获取权限统计数据' })
   @ApiSuccessResponseDecorator(PermissionStatisticsVo, {
     status: HttpStatus.OK,
@@ -200,7 +194,6 @@ export class PermissionsController {
   }
 
   @Post('batch-delete')
-  @Roles('admin')
   @Permissions('permission:delete')
   @ApiOperation({ summary: '批量删除权限' })
   @ApiSuccessResponseDecorator(undefined, {

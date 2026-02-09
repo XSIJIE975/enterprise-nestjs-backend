@@ -4,7 +4,6 @@ import {
   Body,
   UseGuards,
   Request,
-  HttpCode,
   HttpStatus,
   Ip,
 } from '@nestjs/common';
@@ -44,7 +43,6 @@ export class AuthController {
    * @returns 注册响应
    */
   @Post('register')
-  @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: '用户注册' })
   @ApiSuccessResponseDecorator(RegisterResponseVo, {
     status: HttpStatus.CREATED,
@@ -71,7 +69,6 @@ export class AuthController {
    */
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 1分钟内最多5次（防止暴力破解）
   @ApiOperation({ summary: '用户登录' })
   @ApiSuccessResponseDecorator(AuthResponseVo, {
@@ -106,7 +103,6 @@ export class AuthController {
    * @returns 新的认证响应
    */
   @Post('refresh')
-  @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 1分钟内最多10次
   @ApiOperation({ summary: '刷新 Token' })
   @ApiSuccessResponseDecorator(AuthResponseVo, {
@@ -140,7 +136,6 @@ export class AuthController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('logout')
-  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: '退出登录' })
   @ApiSuccessResponseDecorator(undefined, {
@@ -178,7 +173,6 @@ export class AuthController {
    */
   @UseGuards(JwtAuthGuard)
   @Post('me')
-  @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: '获取当前用户信息' })
   @ApiSuccessResponseDecorator(AuthMeResponseVo, {

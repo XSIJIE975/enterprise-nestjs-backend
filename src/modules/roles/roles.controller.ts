@@ -9,7 +9,6 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
-  HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import {
@@ -20,9 +19,7 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { RolesGuard } from '@/common/guards/roles.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
-import { Roles } from '@/common/decorators/roles.decorator';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import {
   ApiSuccessResponseDecorator,
@@ -49,12 +46,11 @@ import { PermissionResponseVo } from '../permissions/vo/permission-response.vo';
 @ApiTags('Roles')
 @ApiBearerAuth('JWT-auth')
 @Controller('roles')
-@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post()
-  @Roles('admin')
   @Permissions('role:create')
   @ApiOperation({
     summary: '创建角色',
@@ -75,8 +71,7 @@ export class RolesController {
   }
 
   @Get()
-  @Roles('admin')
-  @Permissions('role:read')
+  @Permissions('role:list')
   @ApiOperation({
     summary: '获取角色列表',
     description: '获取所有角色的基础列表，需要管理员权限和角色读取权限',
@@ -93,8 +88,7 @@ export class RolesController {
   }
 
   @Get('paginated')
-  @Roles('admin')
-  @Permissions('role:read')
+  @Permissions('role:list')
   @ApiOperation({
     summary: '分页查询角色',
     description: '支持关键词搜索、状态筛选和排序的分页查询',
@@ -108,7 +102,6 @@ export class RolesController {
   }
 
   @Get(':id')
-  @Roles('admin')
   @Permissions('role:read')
   @ApiOperation({
     summary: '获取角色详情',
@@ -141,7 +134,6 @@ export class RolesController {
   }
 
   @Get('code/:code')
-  @Roles('admin')
   @Permissions('role:read')
   @ApiOperation({
     summary: '根据代码获取角色',
@@ -164,7 +156,6 @@ export class RolesController {
   }
 
   @Patch(':id')
-  @Roles('admin')
   @Permissions('role:update')
   @ApiOperation({
     summary: '更新角色',
@@ -193,7 +184,6 @@ export class RolesController {
   }
 
   @Patch(':id/status')
-  @Roles('admin')
   @Permissions('role:update')
   @ApiOperation({
     summary: '更新角色状态',
@@ -219,8 +209,7 @@ export class RolesController {
   }
 
   @Post(':id/permissions')
-  @Roles('admin')
-  @Permissions('role:update')
+  @Permissions('role:assign_permissions')
   @ApiOperation({
     summary: '为角色分配权限',
     description: '替换角色的所有权限，会清除原有权限并设置新权限',
@@ -245,8 +234,7 @@ export class RolesController {
   }
 
   @Get(':id/permissions')
-  @Roles('admin')
-  @Permissions('role:read')
+  @Permissions('role:list')
   @ApiOperation({
     summary: '获取角色的权限',
     description: '获取指定角色拥有的所有权限',
@@ -270,8 +258,7 @@ export class RolesController {
   }
 
   @Get('statistics/overview')
-  @Roles('admin')
-  @Permissions('role:read')
+  @Permissions('role:statistics')
   @ApiOperation({
     summary: '获取角色统计信息',
     description: '获取角色总数、激活/禁用状态统计等信息',
@@ -285,7 +272,6 @@ export class RolesController {
   }
 
   @Delete(':id')
-  @Roles('admin')
   @Permissions('role:delete')
   @ApiOperation({
     summary: '删除角色',
@@ -311,9 +297,7 @@ export class RolesController {
   }
 
   @Post('batch-delete')
-  @Roles('admin')
   @Permissions('role:delete')
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: '批量删除角色',
     description: '批量删除多个角色，如果有角色正在被用户使用则全部无法删除',
@@ -333,8 +317,7 @@ export class RolesController {
   }
 
   @Get('active/codes')
-  @Roles('admin')
-  @Permissions('role:read')
+  @Permissions('role:list')
   @ApiOperation({
     summary: '获取所有激活角色的代码',
     description: '获取所有激活状态角色的代码列表，用于权限验证',

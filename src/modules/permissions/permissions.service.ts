@@ -10,7 +10,6 @@ import { ErrorMessages } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { PermissionRepository } from '@/shared/repositories/permission.repository';
-import { LogsService } from '../logs/logs.service';
 import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
 import { AuditLog } from '@/common/decorators/audit-log.decorator';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
@@ -34,7 +33,6 @@ export class PermissionsService {
     private readonly prisma: PrismaService,
     private readonly rbacCacheService: RbacCacheService,
     private readonly permissionRepository: PermissionRepository,
-    private readonly logsService: LogsService,
     private readonly auditLogService: AuditLogService,
   ) {}
 

@@ -9,7 +9,6 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
-  HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import {
@@ -24,9 +23,7 @@ import {
   ApiErrorResponseDecorator,
   ApiSuccessResponseArrayDecorator,
 } from '@/common/decorators/swagger-response.decorator';
-import { RolesGuard } from '@/common/guards/roles.guard';
 import { PermissionsGuard } from '@/common/guards/permissions.guard';
-import { Roles } from '@/common/decorators/roles.decorator';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
@@ -58,6 +55,7 @@ import {
  */
 @ApiTags('Users')
 @ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
@@ -65,8 +63,7 @@ export class UsersController {
   /* ==================== 管理员接口 ==================== */
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:create')
   @ApiOperation({ summary: '创建新用户（管理员）' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
     status: HttpStatus.CREATED,
@@ -83,8 +80,7 @@ export class UsersController {
    * 获取用户列表（分页、搜索、过滤）
    */
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:list')
   @ApiOperation({ summary: '获取用户列表（管理员）' })
   @ApiSuccessResponseDecorator(UserPageVo, {
     status: HttpStatus.OK,
@@ -98,8 +94,7 @@ export class UsersController {
    * 获取用户统计数据
    */
   @Get('statistics')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:statistics')
   @ApiOperation({ summary: '获取用户统计数据（管理员）' })
   @ApiSuccessResponseDecorator(UserStatisticsVo, {
     status: HttpStatus.OK,
@@ -110,9 +105,7 @@ export class UsersController {
   }
 
   @Get(':id/sessions')
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles('admin')
-  @Permissions('user_session:list')
+  @Permissions('user:session_list')
   @ApiOperation({ summary: '获取指定用户的会话列表（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseArrayDecorator(UserSessionVo, {
@@ -132,8 +125,7 @@ export class UsersController {
    * 获取指定用户详情
    */
   @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:read')
   @ApiOperation({ summary: '获取用户详情（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
@@ -148,10 +140,7 @@ export class UsersController {
   }
 
   @Delete(':id/sessions/:sessionId')
-  @UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
-  @Roles('admin')
-  @Permissions('user_session:revoke')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @Permissions('user:session_revoke')
   @ApiOperation({ summary: '注销指定用户的指定会话（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiParam({ name: 'sessionId', description: '会话 ID' })
@@ -173,8 +162,7 @@ export class UsersController {
    * 更新用户信息
    */
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:update')
   @ApiOperation({ summary: '更新用户信息（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
@@ -198,10 +186,7 @@ export class UsersController {
    * 删除用户（软删除）
    */
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: '删除用户（管理员）' })
+  @Permissions('user:delete')
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.NO_CONTENT,
@@ -218,10 +203,9 @@ export class UsersController {
    * 更新用户状态（激活/禁用）
    */
   @Patch(':id/status')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @ApiOperation({ summary: '更新用户状态（管理员）' })
+  @Permissions('user:update')
   @ApiParam({ name: 'id', description: '用户 ID' })
+  @ApiOperation({ summary: '更新用户状态（管理员）' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
     status: HttpStatus.OK,
     description: '成功更新用户状态',
@@ -240,8 +224,7 @@ export class UsersController {
    * 验证用户邮箱
    */
   @Patch(':id/verify')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:update')
   @ApiOperation({ summary: '验证用户邮箱（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
@@ -262,10 +245,8 @@ export class UsersController {
    * 重置用户密码（管理员操作）
    */
   @Post(':id/reset-password')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:reset_password')
   @DisableDatabaseLog()
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '重置用户密码（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseDecorator(undefined, {
@@ -286,8 +267,7 @@ export class UsersController {
    * 分配角色给用户
    */
   @Post(':id/roles')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:assign_role')
   @ApiOperation({ summary: '分配角色给用户（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
@@ -311,9 +291,7 @@ export class UsersController {
    * 移除用户的角色
    */
   @Delete(':id/roles/:roleId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @Permissions('user:assign_role')
   @ApiOperation({ summary: '移除用户的角色（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiParam({ name: 'roleId', description: '角色 ID' })
@@ -335,8 +313,7 @@ export class UsersController {
    * 获取用户的角色列表
    */
   @Get(':id/roles')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Permissions('user:assign_role')
   @ApiOperation({ summary: '获取用户的角色列表（管理员）' })
   @ApiParam({ name: 'id', description: '用户 ID' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
@@ -354,9 +331,7 @@ export class UsersController {
    * 批量删除用户
    */
   @Post('batch-delete')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
-  @HttpCode(HttpStatus.OK)
+  @Permissions('user:delete')
   @ApiOperation({ summary: '批量删除用户（管理员）' })
   @ApiSuccessResponseDecorator(undefined, {
     description: '成功删除用户',
@@ -376,7 +351,6 @@ export class UsersController {
    * 获取当前用户资料
    */
   @Get('profile/me')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '获取当前用户资料' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
     description: '成功获取个人资料',
@@ -392,7 +366,6 @@ export class UsersController {
    * 更新个人资料
    */
   @Patch('profile/me')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '更新个人资料' })
   @ApiSuccessResponseDecorator(UserResponseVo, {
     description: '成功更新个人资料',
@@ -414,9 +387,7 @@ export class UsersController {
    * 修改密码
    */
   @Post('profile/change-password')
-  @UseGuards(JwtAuthGuard)
   @DisableDatabaseLog()
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '修改密码' })
   @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.NO_CONTENT,
@@ -443,7 +414,6 @@ export class UsersController {
    * 获取会话列表
    */
   @Get('profile/sessions')
-  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: '获取当前用户的会话列表' })
   @ApiSuccessResponseArrayDecorator(UserSessionVo, {
     description: '成功获取会话列表',
@@ -462,8 +432,6 @@ export class UsersController {
    * 注销其他会话（保留当前会话）
    */
   @Post('profile/logout-other-sessions')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '注销其他会话' })
   @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.NO_CONTENT,

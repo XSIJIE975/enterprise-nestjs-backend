@@ -16,7 +16,6 @@ import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { UserRepository } from '@/shared/repositories/user.repository';
 import { AuthService } from '../auth/auth.service';
-import { LogsService } from '../logs/logs.service';
 import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
 import { AuditLog } from '@/common/decorators/audit-log.decorator';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
@@ -37,7 +36,6 @@ export class UsersService {
     private readonly authService: AuthService,
     private readonly rbacCacheService: RbacCacheService,
     private readonly userRepository: UserRepository,
-    private readonly logsService: LogsService,
     private readonly auditLogService: AuditLogService,
   ) {
     this.bcryptRounds = this.configService.get<number>(

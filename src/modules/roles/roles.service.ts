@@ -11,7 +11,6 @@ import { ErrorMessages } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { RoleRepository } from '@/shared/repositories/role.repository';
-import { LogsService } from '../logs/logs.service';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
 import { AuditLog } from '@/common/decorators/audit-log.decorator';
 import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
@@ -33,7 +32,6 @@ export class RolesService {
     private readonly prisma: PrismaService,
     private readonly rbacCacheService: RbacCacheService,
     private readonly roleRepository: RoleRepository,
-    private readonly logsService: LogsService,
     private readonly auditLogService: AuditLogService,
   ) {}
 

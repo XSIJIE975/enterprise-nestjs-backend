@@ -5,13 +5,14 @@ import {
   Param,
   UseGuards,
   HttpStatus,
-  HttpCode,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import {
   ApiSuccessResponseDecorator,
   ApiErrorResponseDecorator,
 } from '@/common/decorators/swagger-response.decorator';
+import { PermissionsGuard } from '@/common/guards/permissions.guard';
+import { Permissions } from '@/common/decorators/permissions.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { LogsService } from './logs.service';
 import { QueryApiLogsDto, QueryErrorLogsDto, QueryAuditLogsDto } from './dto';
@@ -29,7 +30,7 @@ import {
  */
 @ApiTags('Logs')
 @Controller('logs')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionsGuard)
 @ApiBearerAuth('JWT-auth')
 export class LogsController {
   constructor(private readonly logsService: LogsService) {}
@@ -40,7 +41,7 @@ export class LogsController {
    * @returns API 日志分页列表
    */
   @Get('api')
-  @HttpCode(HttpStatus.OK)
+  @Permissions('logs:api_list')
   @ApiOperation({
     summary: '查询 API 日志',
     description:
@@ -66,7 +67,7 @@ export class LogsController {
    * @returns API 日志详情或 null（未找到）
    */
   @Get('api/:requestId')
-  @HttpCode(HttpStatus.OK)
+  @Permissions('logs:api_read')
   @ApiOperation({
     summary: '根据 requestId 查询 API 日志详情',
     description:
@@ -94,7 +95,7 @@ export class LogsController {
    * @returns 错误日志分页列表
    */
   @Get('errors')
-  @HttpCode(HttpStatus.OK)
+  @Permissions('logs:error_list')
   @ApiOperation({
     summary: '查询错误日志',
     description: '分页查询系统错误日志，支持按错误代码、用户ID、时间范围筛选',
@@ -121,7 +122,7 @@ export class LogsController {
    * @returns 审计日志分页列表
    */
   @Get('audit')
-  @HttpCode(HttpStatus.OK)
+  @Permissions('logs:audit_list')
   @ApiOperation({
     summary: '查询审计日志',
     description:
@@ -150,7 +151,7 @@ export class LogsController {
    * @returns 日志统计数据
    */
   @Get('statistics')
-  @HttpCode(HttpStatus.OK)
+  @Permissions('logs:statistics')
   @ApiOperation({
     summary: '获取日志统计信息',
     description:

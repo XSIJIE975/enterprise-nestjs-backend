@@ -143,6 +143,28 @@ async function main() {
   const permissions = await Promise.all([
     // 用户管理权限
     prisma.permission.upsert({
+      where: { code: 'user:list' },
+      update: {},
+      create: {
+        name: '查看用户列表',
+        code: 'user:list',
+        resource: 'user',
+        action: 'list',
+        description: '查看用户列表的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'user:statistics' },
+      update: {},
+      create: {
+        name: '查看用户统计',
+        code: 'user:statistics',
+        resource: 'user',
+        action: 'statistics',
+        description: '查看用户统计数据的权限',
+      },
+    }),
+    prisma.permission.upsert({
       where: { code: 'user:read' },
       update: {},
       create: {
@@ -187,28 +209,50 @@ async function main() {
       },
     }),
     prisma.permission.upsert({
-      where: { code: 'user_session:list' },
+      where: { code: 'user:session_list' },
       update: {},
       create: {
         name: '查看用户会话',
-        code: 'user_session:list',
-        resource: 'user_session',
-        action: 'list',
+        code: 'user:session_list',
+        resource: 'user',
+        action: 'session_list',
         description: '查看指定用户会话列表的权限',
       },
     }),
     prisma.permission.upsert({
-      where: { code: 'user_session:revoke' },
+      where: { code: 'user:session_revoke' },
       update: {},
       create: {
         name: '注销用户会话',
-        code: 'user_session:revoke',
-        resource: 'user_session',
-        action: 'revoke',
+        code: 'user:session_revoke',
+        resource: 'user',
+        action: 'session_revoke',
         description: '注销指定用户指定会话的权限',
       },
     }),
     // 角色管理权限
+    prisma.permission.upsert({
+      where: { code: 'role:list' },
+      update: {},
+      create: {
+        name: '查看角色列表',
+        code: 'role:list',
+        resource: 'role',
+        action: 'list',
+        description: '查看角色列表的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'role:statistics' },
+      update: {},
+      create: {
+        name: '查看角色统计',
+        code: 'role:statistics',
+        resource: 'role',
+        action: 'statistics',
+        description: '查看角色统计数据的权限',
+      },
+    }),
     prisma.permission.upsert({
       where: { code: 'role:read' },
       update: {},
@@ -251,6 +295,17 @@ async function main() {
         resource: 'role',
         action: 'delete',
         description: '删除角色的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'role:assign_permissions' },
+      update: {},
+      create: {
+        name: '分配角色权限',
+        code: 'role:assign_permissions',
+        resource: 'role',
+        action: 'assign_permissions',
+        description: '为角色分配权限的权限',
       },
     }),
     // 系统管理权限
@@ -322,14 +377,70 @@ async function main() {
       },
     }),
     prisma.permission.upsert({
-      where: { code: 'permission:manage' },
+      where: { code: 'permission:statistics' },
       update: {},
       create: {
-        name: '权限管理',
-        code: 'permission:manage',
+        name: '查看权限统计',
+        code: 'permission:statistics',
         resource: 'permission',
-        action: 'manage',
-        description: '权限管理的综合权限（包含状态管理等）',
+        action: 'statistics',
+        description: '查看权限统计数据的权限',
+      },
+    }),
+    // 日志管理权限
+    prisma.permission.upsert({
+      where: { code: 'logs:api_list' },
+      update: {},
+      create: {
+        name: '查看 API 日志',
+        code: 'logs:api_list',
+        resource: 'logs',
+        action: 'api_list',
+        description: '查看 API 请求日志的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'logs:api_read' },
+      update: {},
+      create: {
+        name: '查看 API 日志详情',
+        code: 'logs:api_read',
+        resource: 'logs',
+        action: 'api_read',
+        description: '查看单条 API 请求日志详情的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'logs:error_list' },
+      update: {},
+      create: {
+        name: '查看错误日志',
+        code: 'logs:error_list',
+        resource: 'logs',
+        action: 'error_list',
+        description: '查看系统错误日志的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'logs:audit_list' },
+      update: {},
+      create: {
+        name: '查看审计日志',
+        code: 'logs:audit_list',
+        resource: 'logs',
+        action: 'audit_list',
+        description: '查看系统审计日志的权限',
+      },
+    }),
+    prisma.permission.upsert({
+      where: { code: 'logs:statistics' },
+      update: {},
+      create: {
+        name: '查看日志统计',
+        code: 'logs:statistics',
+        resource: 'logs',
+        action: 'statistics',
+        description: '查看日志统计信息的权限',
       },
     }),
   ]);
