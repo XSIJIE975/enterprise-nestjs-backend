@@ -1,10 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 /**
- * 用户响应 VO
- * 注意：不包含敏感信息
+ * 用户个人资料响应 VO
  */
-export class UserResponseVo {
+export class UserProfileResponseVo {
   @ApiProperty({
     description: '用户ID',
     example: '123e4567-e89b-12d3-a456-426614174000',
@@ -65,18 +64,6 @@ export class UserResponseVo {
   })
   lastLoginAt?: Date;
 
-  @ApiProperty({
-    description: '创建时间',
-    example: '2025-10-09T10:00:00.000Z',
-  })
-  createdAt: Date;
-
-  @ApiProperty({
-    description: '更新时间',
-    example: '2025-10-09T10:00:00.000Z',
-  })
-  updatedAt: Date;
-
   @ApiPropertyOptional({
     description: '用户角色列表',
     type: [String],
@@ -85,9 +72,9 @@ export class UserResponseVo {
   roles?: string[];
 
   @ApiPropertyOptional({
-    description: '用户权限码列表',
+    description: '用户权限列表',
     type: [String],
-    example: ['user:read', 'user:create'],
+    example: ['user:read', 'user:write'],
   })
   permissions?: string[];
 }

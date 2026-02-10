@@ -61,6 +61,27 @@ describe('UsersService', () => {
           isActive: true,
           createdAt: new Date('2025-01-01'),
           updatedAt: new Date('2025-01-01'),
+          rolePermissions: [
+            {
+              id: 1,
+              roleId: 1,
+              permissionId: 1,
+              assignedAt: new Date('2025-01-01'),
+              assignedBy: 'system',
+              createdAt: new Date('2025-01-01'),
+              permission: {
+                id: 1,
+                code: 'user:read',
+                name: '读取用户',
+                description: '读取用户信息',
+                resource: 'user',
+                action: 'read',
+                isActive: true,
+                createdAt: new Date('2025-01-01'),
+                updatedAt: new Date('2025-01-01'),
+              },
+            },
+          ],
         },
       },
     ],
@@ -184,7 +205,7 @@ describe('UsersService', () => {
       phone: '13900139000',
     };
 
-    it('应该成功创建新用户', async () => {
+    it('应该成功创建新用户（含 permissions）', async () => {
       // Mock bcrypt.hash
       (bcrypt.hash as jest.Mock).mockResolvedValue('hashedPassword');
 
@@ -212,6 +233,7 @@ describe('UsersService', () => {
       expect(result).toBeDefined();
       expect(result.email).toBe(createUserDto.email);
       expect(result.username).toBe(createUserDto.username);
+      expect(result.permissions).toEqual(['user:read']);
 
       expect(userRepository.checkConflict).toHaveBeenCalledWith({
         email: createUserDto.email,
@@ -293,7 +315,7 @@ describe('UsersService', () => {
   });
 
   describe('findOne', () => {
-    it('应该根据 ID 返回用户', async () => {
+    it('应该根据 ID 返回用户（含 roles 和 permissions）', async () => {
       userRepository.findByIdWithRoles.mockResolvedValue(mockUser);
 
       const result = await service.findOne(MOCK_USER_ID);
@@ -301,6 +323,8 @@ describe('UsersService', () => {
       expect(result).toBeDefined();
       expect(result.email).toBe(mockUser.email);
       expect(result).not.toHaveProperty('password');
+      expect(result.roles).toEqual(['USER']);
+      expect(result.permissions).toEqual(['user:read']);
       expect(userRepository.findByIdWithRoles).toHaveBeenCalledWith(
         MOCK_USER_ID,
       );
@@ -531,10 +555,7 @@ describe('UsersService', () => {
       const mockSession = {
         id: 'session-uuid-123',
       };
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        id: MOCK_USER_ID,
-        deletedAt: null,
-      });
+      userRepository.findById.mockResolvedValue(mockUser);
       mockPrismaService.userSession.findFirst.mockResolvedValue(mockSession);
       mockAuthService.logoutOtherSessions.mockResolvedValue(undefined);
 
@@ -555,10 +576,7 @@ describe('UsersService', () => {
     });
 
     it('当会话不存在时应该抛出 NotFoundException', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({
-        id: MOCK_USER_ID,
-        deletedAt: null,
-      });
+      userRepository.findById.mockResolvedValue(mockUser);
       mockPrismaService.userSession.findFirst.mockResolvedValue(null);
 
       await expect(
@@ -603,6 +621,38 @@ describe('UsersService', () => {
 
       await expect(service.remove(NON_EXISTENT_UUID)).rejects.toThrow(
         NotFoundException,
+      );
+    });
+  });
+
+  describe('getProfile', () => {
+    it('应该返回用户个人资料（含 permissions，不含 createdAt/updatedAt）', async () => {
+      userRepository.findByIdWithRoles.mockResolvedValue(mockUser as any);
+
+      const result = await service.getProfile(MOCK_USER_ID);
+
+      expect(result).toBeDefined();
+      expect(result.id).toBe(MOCK_USER_ID);
+      expect(result.email).toBe(mockUser.email);
+      expect(result.username).toBe(mockUser.username);
+      expect(result.roles).toEqual(['USER']);
+      expect(result.permissions).toEqual(['user:read']);
+      expect(result).not.toHaveProperty('password');
+      expect(result).not.toHaveProperty('createdAt');
+      expect(result).not.toHaveProperty('updatedAt');
+      expect(userRepository.findByIdWithRoles).toHaveBeenCalledWith(
+        MOCK_USER_ID,
+      );
+    });
+
+    it('当用户不存在时应该抛出 NotFoundException', async () => {
+      userRepository.findByIdWithRoles.mockResolvedValue(null);
+
+      await expect(service.getProfile(NON_EXISTENT_UUID)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.getProfile(NON_EXISTENT_UUID)).rejects.toThrow(
+        '用户不存在',
       );
     });
   });

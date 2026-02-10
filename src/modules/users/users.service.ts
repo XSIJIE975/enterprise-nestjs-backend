@@ -19,8 +19,19 @@ import { AuthService } from '../auth/auth.service';
 import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
 import { AuditLog } from '@/common/decorators/audit-log.decorator';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
-import { CreateUserDto, UpdateUserDto, UpdateProfileDto } from './dto';
-import { UserRoleVo, UserResponseVo, UserSessionVo } from './vo';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UpdateProfileDto,
+  QueryUsersDto,
+} from './dto';
+import {
+  UserRoleVo,
+  UserResponseVo,
+  UserProfileResponseVo,
+  UserSessionVo,
+  UserPageVo,
+} from './vo';
 
 /**
  * 用户服务
@@ -116,6 +127,42 @@ export class UsersService {
     }
 
     return this.toUserResponse(user);
+  }
+
+  /**
+   * 获取当前用户个人资料（含权限，实时查询数据库）
+   * @param userId 用户 ID
+   * @returns 用户个人资料（含 permissions，不含 createdAt/updatedAt）
+   */
+  async getProfile(userId: string): Promise<UserProfileResponseVo> {
+    const user = await this.userRepository.findByIdWithRoles(userId);
+
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    const roles = user.userRoles?.map(ur => ur.role.code) || [];
+    const permissions = new Set<string>();
+    for (const ur of user.userRoles) {
+      for (const rp of ur.role.rolePermissions) {
+        permissions.add(rp.permission.code);
+      }
+    }
+
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      avatar: user.avatar,
+      phone: user.phone,
+      isActive: user.isActive,
+      isVerified: user.isVerified,
+      lastLoginAt: user.lastLoginAt,
+      roles,
+      permissions: Array.from(permissions),
+    };
   }
 
   /**
@@ -283,7 +330,7 @@ export class UsersService {
    * @param query 查询参数
    * @returns 分页用户列表
    */
-  async findAllPaginated(query: any): Promise<any> {
+  async findAllPaginated(query: QueryUsersDto): Promise<UserPageVo> {
     const {
       page = 1,
       pageSize = 10,
@@ -295,14 +342,10 @@ export class UsersService {
       order = 'desc',
     } = query;
 
-    // 确保分页参数有效
-    const safePage = Math.max(1, page);
-    const safePageSize = Math.max(1, pageSize);
-    const skip = (safePage - 1) * safePageSize;
+    const skip = (page - 1) * pageSize;
 
-    // 构建查询条件
+    // 构建查询条件（deletedAt: null 由 repository 层统一保证）
     const where: Prisma.UserWhereInput = {
-      deletedAt: null,
       ...(keyword && {
         OR: [
           { username: { contains: keyword } },
@@ -330,24 +373,24 @@ export class UsersService {
       this.userRepository.findManyPaginated({
         where,
         skip,
-        take: safePageSize,
+        take: pageSize,
         orderBy: {
           [sortBy]: order,
         },
       }),
     ]);
 
-    const totalPages = Math.ceil(total / safePageSize);
+    const totalPages = Math.ceil(total / pageSize);
 
     return {
       data: users.map(user => this.toUserResponse(user)),
       meta: {
-        page: safePage,
-        pageSize: safePageSize,
+        page,
+        pageSize,
         total,
         totalPages,
-        hasPreviousPage: safePage > 1,
-        hasNextPage: safePage < totalPages,
+        hasPreviousPage: page > 1,
+        hasNextPage: page < totalPages,
       },
     };
   }
@@ -526,12 +569,9 @@ export class UsersService {
    * @param newPassword 新密码
    */
   async resetUserPassword(id: string, newPassword: string): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: { deletedAt: true },
-    });
+    const user = await this.userRepository.findById(id);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 
@@ -557,11 +597,9 @@ export class UsersService {
     roleIds: number[],
   ): Promise<UserResponseVo> {
     // 检查用户是否存在
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
+    const user = await this.userRepository.findById(userId);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 
@@ -578,36 +616,13 @@ export class UsersService {
     }
 
     // 使用事务确保原子性：删除旧角色并添加新角色
-    await this.prisma.$transaction([
-      this.prisma.userRole.deleteMany({
-        where: { userId },
-      }),
-      this.prisma.userRole.createMany({
-        data: roleIds.map(roleId => ({
-          userId,
-          roleId,
-        })),
-      }),
-    ]);
+    await this.userRepository.assignRoles(userId, roleIds);
 
     // 清除用户的 RBAC 缓存，确保下次请求获取最新的角色和权限
     await this.rbacCacheService.deleteUserCache(userId);
 
-    // 返回更新后的用户信息
-    const updatedUser = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        userRoles: {
-          include: {
-            role: {
-              select: {
-                code: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    // 返回更新后的用户信息（含深层 rolePermissions.permission）
+    const updatedUser = await this.userRepository.findByIdWithRoles(userId);
 
     return this.toUserResponse(updatedUser);
   }
@@ -624,11 +639,9 @@ export class UsersService {
   })
   async removeRole(userId: string, roleId: number): Promise<void> {
     // 检查用户是否存在
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
+    const user = await this.userRepository.findById(userId);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 
@@ -737,12 +750,9 @@ export class UsersService {
     currentAccessToken?: string,
   ): Promise<UserSessionVo[]> {
     // 检查用户是否存在
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { deletedAt: true },
-    });
+    const user = await this.userRepository.findById(userId);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 
@@ -783,12 +793,9 @@ export class UsersService {
     currentAccessToken: string,
   ): Promise<void> {
     // 检查用户是否存在
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { deletedAt: true },
-    });
+    const user = await this.userRepository.findById(userId);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 
@@ -819,12 +826,9 @@ export class UsersService {
     userId: string,
     sessionId: string,
   ): Promise<void> {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { deletedAt: true },
-    });
+    const user = await this.userRepository.findById(userId);
 
-    if (!user || user.deletedAt) {
+    if (!user) {
       throw new NotFoundException('用户不存在');
     }
 
@@ -928,9 +932,24 @@ export class UsersService {
    * @returns 用户响应 DTO
    */
   private toUserResponse(
-    user: UserModel & { userRoles?: { role: { code: string } }[] },
+    user: UserModel & {
+      userRoles?: {
+        role: {
+          code: string;
+          rolePermissions?: { permission: { code: string } }[];
+          [key: string]: any;
+        };
+      }[];
+    },
   ): UserResponseVo {
     const roles = user.userRoles?.map(ur => ur.role.code) || [];
+
+    const permissionSet = new Set<string>();
+    for (const ur of user.userRoles || []) {
+      for (const rp of ur.role.rolePermissions || []) {
+        permissionSet.add(rp.permission.code);
+      }
+    }
 
     return {
       id: user.id,
@@ -946,6 +965,7 @@ export class UsersService {
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       roles,
+      permissions: Array.from(permissionSet),
     };
   }
 }

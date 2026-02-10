@@ -44,6 +44,7 @@ import {
 import {
   UserStatisticsVo,
   UserResponseVo,
+  UserProfileResponseVo,
   UserPageVo,
   UserRoleVo,
   UserSessionVo,
@@ -301,6 +302,14 @@ export class UsersController {
   })
   @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '用户不存在或者角色不存在',
+    examples: {
+      UserNotFound: {
+        summary: '用户不存在',
+      },
+      RoleNotFound: {
+        summary: '角色不存在',
+      },
+    },
   })
   async removeRole(
     @Param('id') id: string,
@@ -352,14 +361,16 @@ export class UsersController {
    */
   @Get('profile/me')
   @ApiOperation({ summary: '获取当前用户资料' })
-  @ApiSuccessResponseDecorator(UserResponseVo, {
+  @ApiSuccessResponseDecorator(UserProfileResponseVo, {
     description: '成功获取个人资料',
   })
   @ApiErrorResponseDecorator(HttpStatus.NOT_FOUND, {
     description: '用户不存在',
   })
-  async getProfile(@CurrentUser() user: JwtUser): Promise<UserResponseVo> {
-    return this.usersService.findOne(user.userId);
+  async getProfile(
+    @CurrentUser() user: JwtUser,
+  ): Promise<UserProfileResponseVo> {
+    return this.usersService.getProfile(user.userId);
   }
 
   /**

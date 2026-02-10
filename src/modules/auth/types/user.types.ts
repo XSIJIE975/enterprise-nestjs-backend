@@ -29,14 +29,22 @@ export type UserWithRoles = Prisma.UserGetPayload<{
 export type AuthUser = Omit<UserWithRoles, 'password'>;
 
 /**
- * 用户信息类型（包含角色关联，不含权限详情）
+ * 用户信息类型（包含角色和权限关联）
  * 对应 findByIdWithRoles 方法的返回类型
  */
 export type UserWithRolesSimple = Prisma.UserGetPayload<{
   include: {
     userRoles: {
       include: {
-        role: true;
+        role: {
+          include: {
+            rolePermissions: {
+              include: {
+                permission: true;
+              };
+            };
+          };
+        };
       };
     };
   };

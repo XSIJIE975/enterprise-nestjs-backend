@@ -41,6 +41,24 @@ describe('UserRepository', () => {
           description: '系统管理员',
           createdAt: new Date('2024-01-01'),
           updatedAt: new Date('2024-01-01'),
+          rolePermissions: [
+            {
+              id: 1,
+              roleId: 1,
+              permissionId: 1,
+              assignedAt: new Date('2024-01-01'),
+              assignedBy: null,
+              createdAt: new Date('2024-01-01'),
+              permission: {
+                id: 1,
+                code: 'user:read',
+                name: '读取用户',
+                description: '读取用户信息',
+                createdAt: new Date('2024-01-01'),
+                updatedAt: new Date('2024-01-01'),
+              },
+            },
+          ],
         },
       },
     ],
@@ -66,6 +84,8 @@ describe('UserRepository', () => {
               id: 1,
               roleId: 1,
               permissionId: 1,
+              assignedAt: new Date('2024-01-01'),
+              assignedBy: null,
               createdAt: new Date('2024-01-01'),
               permission: {
                 id: 1,
@@ -179,7 +199,7 @@ describe('UserRepository', () => {
   });
 
   describe('findByIdWithRoles', () => {
-    it('成功: 应该返回用户（含角色）', async () => {
+    it('成功: 应该返回用户（含角色和权限）', async () => {
       prismaService.user.findFirst.mockResolvedValue(mockUserWithRoles as any);
 
       const result = await repository.findByIdWithRoles('user-uuid-1');
@@ -190,7 +210,15 @@ describe('UserRepository', () => {
         include: {
           userRoles: {
             include: {
-              role: true,
+              role: {
+                include: {
+                  rolePermissions: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -464,7 +492,15 @@ describe('UserRepository', () => {
         include: {
           userRoles: {
             include: {
-              role: true,
+              role: {
+                include: {
+                  rolePermissions: {
+                    include: {
+                      permission: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -618,8 +654,12 @@ describe('UserRepository', () => {
           userRoles: {
             include: {
               role: {
-                select: {
-                  code: true,
+                include: {
+                  rolePermissions: {
+                    include: {
+                      permission: true,
+                    },
+                  },
                 },
               },
             },
@@ -647,8 +687,12 @@ describe('UserRepository', () => {
           userRoles: {
             include: {
               role: {
-                select: {
-                  code: true,
+                include: {
+                  rolePermissions: {
+                    include: {
+                      permission: true,
+                    },
+                  },
                 },
               },
             },

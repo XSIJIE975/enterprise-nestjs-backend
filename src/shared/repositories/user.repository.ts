@@ -132,7 +132,15 @@ export class UserRepository implements UserRepositoryInterface {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -200,7 +208,7 @@ export class UserRepository implements UserRepositoryInterface {
   }
 
   /**
-   * 根据 ID 查找用户（含 userRoles.role）
+   * 根据 ID 查找用户（含 userRoles.role.rolePermissions.permission）
    */
   @Retryable({ maxRetries: 3, initialDelay: 100 })
   @Idempotent()
@@ -216,7 +224,15 @@ export class UserRepository implements UserRepositoryInterface {
       include: {
         userRoles: {
           include: {
-            role: true,
+            role: {
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -322,8 +338,12 @@ export class UserRepository implements UserRepositoryInterface {
         userRoles: {
           include: {
             role: {
-              select: {
-                code: true,
+              include: {
+                rolePermissions: {
+                  include: {
+                    permission: true,
+                  },
+                },
               },
             },
           },
