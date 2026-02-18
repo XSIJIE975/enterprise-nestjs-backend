@@ -6,10 +6,10 @@ import {
   PermissionLogic,
   PermissionsOptions,
 } from '../decorators/permissions.decorator';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
-import { LoggerService } from '../../shared/logger/logger.service';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { RbacCacheService } from '@/shared/cache';
+import { LoggerService } from '@/shared/logger/logger.service';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 
 describe('PermissionsGuard', () => {
   let guard: PermissionsGuard;

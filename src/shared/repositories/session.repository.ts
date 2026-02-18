@@ -1,11 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import type { Prisma } from '@/prisma/prisma/client';
 import type { UserSessionModel } from '@/generated/prisma/models';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '@/shared/database/prisma.service';
-import type { SessionRepositoryInterface } from './interfaces/session-repository.interface';
 import { Idempotent } from '../resilience/decorators/idempotent.decorator';
 import { Retryable } from '../resilience/decorators/retryable.decorator';
+import type { SessionRepositoryInterface } from './interfaces/session-repository.interface';
 
 @Injectable()
 export class SessionRepository implements SessionRepositoryInterface {

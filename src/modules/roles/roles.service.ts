@@ -5,16 +5,16 @@ import {
   RolePermissionModel,
   PermissionModel,
 } from '@/generated/prisma/models';
+import { PermissionResponseVo } from '@/modules/permissions/vo';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { ErrorMessages } from '@/common/enums/error-codes.enum';
+import { AuditLog } from '@/common/decorators/audit-log.decorator';
+import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { RoleRepository } from '@/shared/repositories/role.repository';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
-import { AuditLog } from '@/common/decorators/audit-log.decorator';
-import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
-import { PermissionResponseVo } from '../permissions/vo/permission-response.vo';
 import {
   CreateRoleDto,
   UpdateRoleDto,

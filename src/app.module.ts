@@ -1,8 +1,9 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TerminusModule } from '@nestjs/terminus';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 
 // 配置
 import {
@@ -18,9 +19,9 @@ import {
 } from './config';
 
 // 共享模块
+import { CacheModule } from '@/shared/cache';
 import { DatabaseModule } from './shared/database/database.module';
 import { LoggerModule } from './shared/logger/logger.module';
-import { CacheModule } from '@/shared/cache';
 import { RequestContextModule } from './shared/request-context/request-context.module';
 import { ResilienceModule } from './shared/resilience/resilience.module';
 import { AuditLogModule } from './shared/audit/audit-log.module';
@@ -42,7 +43,6 @@ import { MockModule } from './modules/mock/mock.module';
 import { LoggerMiddleware } from './common/middlewares/logger.middleware';
 
 // 拦截器和守卫
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { CustomThrottlerGuard } from './common/guards/custom-throttler.guard';
 import { CsrfGuard } from './common/guards/csrf.guard';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';

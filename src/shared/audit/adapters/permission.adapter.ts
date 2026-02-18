@@ -4,9 +4,9 @@
  */
 
 import { Injectable } from '@nestjs/common';
+import { AuditResource } from '@/common/constants/audit.constants';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { IResourceAdapter } from '@/shared/audit/interfaces/audit-log.interface';
-import { AuditResource } from '@/common/constants/audit.constants';
 
 @Injectable()
 export class PermissionAdapter implements IResourceAdapter {

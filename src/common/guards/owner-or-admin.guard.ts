@@ -1,6 +1,6 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
-import { JwtUser } from '../../modules/auth/interfaces/jwt-payload.interface';
+import { JwtUser } from '@/modules/auth/interfaces/jwt-payload.interface';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 
 /**
  * 所有者或管理员守卫

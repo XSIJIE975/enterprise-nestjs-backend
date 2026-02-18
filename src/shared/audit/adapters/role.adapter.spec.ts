@@ -3,9 +3,9 @@
  * 测试 Role 资源适配器的所有功能：findById、findByIds、权限查询、空数据处理
  */
 
-import { RoleAdapter } from './role.adapter';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { AuditResource } from '@/common/constants/audit.constants';
+import { RoleAdapter } from './role.adapter';
 
 describe('RoleAdapter', () => {
   let adapter: RoleAdapter;

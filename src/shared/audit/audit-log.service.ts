@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
+import { JsonUtil } from '@/common/utils/json.util';
 import { LogsService } from '@/modules/logs/logs.service';
 import { PrismaService } from '@/shared/database/prisma.service';
-import { RequestContextService } from '@/shared/request-context/request-context.service';
-import { JsonUtil } from '@/common/utils/json.util';
 import {
   IAuditLogOptions,
   IResourceAdapter,
 } from '@/shared/audit/interfaces/audit-log.interface';
 import { ResourceAdapterRegistry } from '@/shared/audit/resource-adapter.registry';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 
 @Injectable()
 export class AuditLogService {

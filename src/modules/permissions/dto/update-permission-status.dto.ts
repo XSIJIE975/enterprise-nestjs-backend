@@ -1,5 +1,5 @@
-import { IsBoolean } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsBoolean } from 'class-validator';
 
 /**
  * 更新权限状态 DTO

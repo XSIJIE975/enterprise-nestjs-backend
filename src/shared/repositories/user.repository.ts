@@ -3,22 +3,22 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import type { Prisma } from '@/prisma/prisma/client';
 import type { UserModel } from '@/generated/prisma/models';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { PrismaService } from '@/shared/database/prisma.service';
 import type {
   UserWithRoles,
   UserWithRolesSimple,
 } from '@/modules/auth/types/user.types';
+import { Idempotent } from '../resilience/decorators/idempotent.decorator';
+import { Retryable } from '../resilience/decorators/retryable.decorator';
 import type {
   UserRepository as UserRepositoryInterface,
   UserConflictFields,
   UserConflictResult,
   UserPaginationOptions,
 } from './interfaces/user-repository.interface';
-import { Idempotent } from '../resilience/decorators/idempotent.decorator';
-import { Retryable } from '../resilience/decorators/retryable.decorator';
 
 @Injectable()
 export class UserRepository implements UserRepositoryInterface {

@@ -1,9 +1,9 @@
-import { AuditLogService } from './audit-log.service';
-import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
-import { RequestContextService } from '@/shared/request-context/request-context.service';
-import { ResourceAdapterRegistry } from './resource-adapter.registry';
-import { PrismaService } from '@/shared/database/prisma.service';
 import { LogsService } from '@/modules/logs/logs.service';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
+import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
+import { AuditLogService } from './audit-log.service';
+import { ResourceAdapterRegistry } from './resource-adapter.registry';
 
 const flushPromises = () => new Promise(resolve => setImmediate(resolve));
 

@@ -1,10 +1,10 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
-import { LoggerService } from '../../shared/logger/logger.service';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { RbacCacheService } from '@/shared/cache';
+import { LoggerService } from '@/shared/logger/logger.service';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 
 /**
  * 角色守卫

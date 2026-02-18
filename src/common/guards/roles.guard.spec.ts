@@ -2,10 +2,10 @@
 import { Reflector } from '@nestjs/core';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RolesGuard } from './roles.guard';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { RbacCacheService } from '../../shared/cache/business/rbac-cache.service';
-import { LoggerService } from '../../shared/logger/logger.service';
+import { PrismaService } from '@/shared/database/prisma.service';
+import { RbacCacheService } from '@/shared/cache';
+import { LoggerService } from '@/shared/logger/logger.service';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 
 describe('RolesGuard', () => {
   let guard: RolesGuard;

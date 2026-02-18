@@ -1,8 +1,8 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import { LoggerService } from '../../shared/logger/logger.service';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
+import { LoggerService } from '@/shared/logger/logger.service';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 
 /**
  * 日志中间件

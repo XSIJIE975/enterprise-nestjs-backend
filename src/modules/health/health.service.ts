@@ -4,8 +4,8 @@ import {
   HealthIndicatorResult,
   HealthIndicatorService,
 } from '@nestjs/terminus';
-import { PrismaService } from '../../shared/database/prisma.service';
-import { CacheService } from '../../shared/cache/cache.service';
+import { CacheService } from '@/shared/cache';
+import { PrismaService } from '@/shared/database/prisma.service';
 
 /**
  * 健康检查服务

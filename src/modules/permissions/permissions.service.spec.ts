@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { mockDeep, MockProxy } from 'jest-mock-extended';
 import { ConflictException } from '@nestjs/common';
-import { PermissionsService } from './permissions.service';
-import { BusinessException } from '@/common/exceptions/business.exception';
+import { mockDeep, MockProxy } from 'jest-mock-extended';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { ErrorMessages } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
+import { BusinessException } from '@/common/exceptions/business.exception';
 import { PermissionRepository } from '@/shared/repositories/permission.repository';
 import { RbacCacheService } from '@/shared/cache';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
 import { LogsService } from '../logs/logs.service';
+import { PermissionsService } from './permissions.service';
 import {
   CreatePermissionDto,
   UpdatePermissionDto,

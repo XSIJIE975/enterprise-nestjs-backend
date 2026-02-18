@@ -3,13 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import type { Prisma } from '@/prisma/prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import type { RoleModel, RolePermissionModel } from '@/generated/prisma/models';
 import { PrismaService } from '@/shared/database/prisma.service';
-import type { RoleRepository as RoleRepositoryInterface } from './interfaces/role-repository.interface';
 import { Idempotent } from '../resilience/decorators/idempotent.decorator';
 import { Retryable } from '../resilience/decorators/retryable.decorator';
+import type { RoleRepository as RoleRepositoryInterface } from './interfaces/role-repository.interface';
 
 @Injectable()
 export class RoleRepository implements RoleRepositoryInterface {

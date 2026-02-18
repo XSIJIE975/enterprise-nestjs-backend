@@ -1,6 +1,6 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
-import { JwtUser } from '../../modules/auth/interfaces/jwt-payload.interface';
+import { JwtUser } from '@/modules/auth/interfaces/jwt-payload.interface';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 
 /**
  * 当前用户装饰器

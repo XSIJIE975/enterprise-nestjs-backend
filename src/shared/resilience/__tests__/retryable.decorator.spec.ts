@@ -1,5 +1,5 @@
-import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
+import 'reflect-metadata';
 import { Retryable } from '../decorators/retryable.decorator';
 import { Idempotent, IDEMPOTENT_KEY } from '../decorators/idempotent.decorator';
 

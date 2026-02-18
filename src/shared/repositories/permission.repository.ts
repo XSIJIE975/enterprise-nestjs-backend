@@ -7,9 +7,9 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import type { Prisma } from '@/prisma/prisma/client';
 import type { PermissionModel } from '@/generated/prisma/models';
 import { PrismaService } from '@/shared/database/prisma.service';
-import type { PermissionRepository as PermissionRepositoryInterface } from './interfaces/permission-repository.interface';
 import { Idempotent } from '../resilience/decorators/idempotent.decorator';
 import { Retryable } from '../resilience/decorators/retryable.decorator';
+import type { PermissionRepository as PermissionRepositoryInterface } from './interfaces/permission-repository.interface';
 
 @Injectable()
 export class PermissionRepository implements PermissionRepositoryInterface {

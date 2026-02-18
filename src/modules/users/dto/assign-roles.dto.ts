@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsInt, ArrayUnique } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsArray, IsInt, ArrayUnique } from 'class-validator';
 
 /**
  * 分配角色 DTO

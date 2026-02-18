@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import Redis from 'ioredis';
 import { ICacheService } from '@/shared/cache';
-import { CircuitBreakerService } from '@/shared/resilience/circuit-breaker.service';
 import { LoggerService } from '@/shared/logger/logger.service';
+import { CircuitBreakerService } from '@/shared/resilience/circuit-breaker.service';
 
 /**
  * Redis 缓存服务实现

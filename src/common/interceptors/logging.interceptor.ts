@@ -9,9 +9,9 @@ import { Reflector } from '@nestjs/core';
 import { Observable, throwError } from 'rxjs';
 import { tap, catchError } from 'rxjs/operators';
 import { Request, Response } from 'express';
-import { LogsService } from '../../modules/logs/logs.service';
-import { RequestContextService } from '../../shared/request-context/request-context.service';
-import { LoggerService } from '../../shared/logger/logger.service';
+import { LogsService } from '@/modules/logs/logs.service';
+import { LoggerService } from '@/shared/logger/logger.service';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 import { DATABASE_LOG_KEY } from '../decorators/database-log.decorator';
 
 /**

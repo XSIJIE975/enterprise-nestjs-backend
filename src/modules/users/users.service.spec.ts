@@ -1,4 +1,4 @@
-import { Test, TestingModule } from '@nestjs/testing';
+﻿import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import {
   ConflictException,
@@ -7,15 +7,15 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { mockDeep, MockProxy } from 'jest-mock-extended';
+import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { RbacCacheService } from '@/shared/cache';
 import { PrismaService } from '@/shared/database/prisma.service';
-import { ErrorCode } from '@/common/enums/error-codes.enum';
-import { AuthService } from '../auth/auth.service';
-import { UsersService } from './users.service';
 import { UserRepository } from '@/shared/repositories/user.repository';
 import { PermissionRepository } from '@/shared/repositories/permission.repository';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
 import { LogsService } from '../logs/logs.service';
+import { AuthService } from '../auth/auth.service';
+import { UsersService } from './users.service';
 
 // Mock bcrypt
 jest.mock('bcrypt');

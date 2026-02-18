@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { mockDeep, MockProxy } from 'jest-mock-extended';
 import { ConflictException } from '@nestjs/common';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { BusinessException } from '@/common/exceptions/business.exception';
 import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { ErrorMessages } from '@/common/enums/error-codes.enum';
@@ -10,8 +11,6 @@ import { RoleRepository } from '@/shared/repositories/role.repository';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
 import { LogsService } from '../logs/logs.service';
-
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 describe('角色服务', () => {
   let service: RolesService;

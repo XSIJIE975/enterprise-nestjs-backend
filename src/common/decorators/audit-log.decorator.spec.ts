@@ -2,10 +2,9 @@
  * 审计日志装饰器单元测试
  * 测试 @AuditLog() 装饰器的所有功能场景和异常处理
  */
-
-import { AuditLog } from './audit-log.decorator';
 import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
 import { IAuditLogOptions } from '@/shared/audit/interfaces/audit-log.interface';
+import { AuditLog } from './audit-log.decorator';
 
 describe('AuditLog Decorator', () => {
   let mockAuditLogService: any;

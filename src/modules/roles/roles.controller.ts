@@ -26,6 +26,7 @@ import {
   ApiSuccessResponseArrayDecorator,
   ApiErrorResponseDecorator,
 } from '@/common/decorators/swagger-response.decorator';
+import { PermissionResponseVo } from '@/modules/permissions/vo';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesService } from './roles.service';
 import {
@@ -37,7 +38,6 @@ import {
   BatchDeleteRoleDto,
 } from './dto';
 import { RoleResponseVo, RolePageVo, RoleStatisticsVo } from './vo';
-import { PermissionResponseVo } from '../permissions/vo/permission-response.vo';
 
 /**
  * 角色管理控制器

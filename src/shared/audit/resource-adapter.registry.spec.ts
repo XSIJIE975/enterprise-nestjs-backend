@@ -3,9 +3,9 @@
  * 测试注册表的基础功能：注册、获取和错误处理
  */
 
-import { ResourceAdapterRegistry } from './resource-adapter.registry';
 import { AuditResource } from '@/common/constants/audit.constants';
 import { IResourceAdapter } from './interfaces/audit-log.interface';
+import { ResourceAdapterRegistry } from './resource-adapter.registry';
 
 /**
  * 模拟的资源适配器实现

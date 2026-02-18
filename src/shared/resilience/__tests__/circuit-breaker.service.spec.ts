@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ServiceUnavailableException } from '@nestjs/common';
+import { LoggerService } from '@/shared/logger/logger.service';
 import {
   CircuitBreakerService,
   CircuitState,
   CircuitBreakerConfig,
 } from '../circuit-breaker.service';
-import { LoggerService } from '@/shared/logger/logger.service';
 
 describe('CircuitBreakerService', () => {
   let service: CircuitBreakerService;

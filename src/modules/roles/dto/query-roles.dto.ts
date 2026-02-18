@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsBoolean, IsInt, Min } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
+import { IsOptional, IsString, IsBoolean, IsInt, Min } from 'class-validator';
 
 /**
  * 查询角色 DTO

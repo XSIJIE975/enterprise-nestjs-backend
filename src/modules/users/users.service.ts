@@ -15,10 +15,10 @@ import { ErrorCode } from '@/common/enums/error-codes.enum';
 import { PrismaService } from '@/shared/database/prisma.service';
 import { RbacCacheService } from '@/shared/cache';
 import { UserRepository } from '@/shared/repositories/user.repository';
-import { AuthService } from '../auth/auth.service';
 import { AuditAction, AuditResource } from '@/common/constants/audit.constants';
 import { AuditLog } from '@/common/decorators/audit-log.decorator';
 import { AuditLogService } from '@/shared/audit/audit-log.service';
+import { AuthService } from '../auth/auth.service';
 import {
   CreateUserDto,
   UpdateUserDto,

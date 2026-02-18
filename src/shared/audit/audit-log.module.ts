@@ -1,10 +1,10 @@
 import { Global, Module, OnModuleInit } from '@nestjs/common';
-import { AuditLogService } from './audit-log.service';
-import { ResourceAdapterRegistry } from './resource-adapter.registry';
+import { LogsModule } from '@/modules/logs/logs.module';
 import { RoleAdapter } from './adapters/role.adapter';
 import { PermissionAdapter } from './adapters/permission.adapter';
 import { UserAdapter } from './adapters/user.adapter';
-import { LogsModule } from '@/modules/logs/logs.module';
+import { AuditLogService } from './audit-log.service';
+import { ResourceAdapterRegistry } from './resource-adapter.registry';
 
 /**
  * 审计日志模块

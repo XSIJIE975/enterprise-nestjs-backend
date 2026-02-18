@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { PrismaService } from '@/shared/database/prisma.service';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { UserRepository } from '../user.repository';
 
 describe('UserRepository', () => {

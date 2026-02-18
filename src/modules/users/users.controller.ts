@@ -17,7 +17,6 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
-import { RequestContextService } from '@/shared/request-context/request-context.service';
 import {
   ApiSuccessResponseDecorator,
   ApiErrorResponseDecorator,
@@ -27,6 +26,7 @@ import { PermissionsGuard } from '@/common/guards/permissions.guard';
 import { Permissions } from '@/common/decorators/permissions.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { DisableDatabaseLog } from '@/common/decorators/database-log.decorator';
+import { RequestContextService } from '@/shared/request-context/request-context.service';
 import { JwtUser } from '../auth/interfaces/jwt-payload.interface';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UsersService } from './users.service';

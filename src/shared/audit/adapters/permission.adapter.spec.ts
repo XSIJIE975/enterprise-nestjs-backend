@@ -2,8 +2,8 @@
  * PermissionAdapter 单元测试
  */
 
-import { PermissionAdapter } from './permission.adapter';
 import { AuditResource } from '@/common/constants/audit.constants';
+import { PermissionAdapter } from './permission.adapter';
 
 describe('PermissionAdapter', () => {
   let adapter: PermissionAdapter;
