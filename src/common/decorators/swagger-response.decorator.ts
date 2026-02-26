@@ -1,4 +1,4 @@
-import { applyDecorators, Type } from '@nestjs/common';
+import { applyDecorators, HttpCode, Type } from '@nestjs/common';
 import {
   ApiExtraModels,
   ApiOkResponse,
@@ -82,6 +82,7 @@ export const ApiSuccessResponseDecorator = <TModel extends Type<any>>(
 
     if (status === 200) {
       return applyDecorators(
+        HttpCode(status),
         ApiExtraModels(ApiSuccessResponse),
         ApiOkResponse({
           schema,
@@ -91,6 +92,7 @@ export const ApiSuccessResponseDecorator = <TModel extends Type<any>>(
     }
 
     return applyDecorators(
+      HttpCode(status),
       ApiExtraModels(ApiSuccessResponse),
       ApiResponse({
         status,
@@ -117,6 +119,7 @@ export const ApiSuccessResponseDecorator = <TModel extends Type<any>>(
   // 根据状态码选择使用 ApiOkResponse（200）或 ApiResponse（其他状态码）
   if (status === 200) {
     return applyDecorators(
+      HttpCode(status),
       ApiExtraModels(ApiSuccessResponse, model),
       ApiOkResponse({
         schema,
@@ -126,6 +129,7 @@ export const ApiSuccessResponseDecorator = <TModel extends Type<any>>(
   }
 
   return applyDecorators(
+    HttpCode(status),
     ApiExtraModels(ApiSuccessResponse, model),
     ApiResponse({
       status,
@@ -257,6 +261,7 @@ export const ApiSuccessResponseArrayDecorator = <TModel extends Type<any>>(
 
   if (status === 200) {
     return applyDecorators(
+      HttpCode(status),
       ApiExtraModels(ApiSuccessResponse, itemType),
       ApiOkResponse({
         schema,
@@ -266,6 +271,7 @@ export const ApiSuccessResponseArrayDecorator = <TModel extends Type<any>>(
   }
 
   return applyDecorators(
+    HttpCode(status),
     ApiExtraModels(ApiSuccessResponse, itemType),
     ApiResponse({
       status,

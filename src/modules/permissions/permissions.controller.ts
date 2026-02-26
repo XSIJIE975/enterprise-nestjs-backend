@@ -9,7 +9,6 @@ import {
   Query,
   UseGuards,
   ParseIntPipe,
-  HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import {
@@ -170,7 +169,6 @@ export class PermissionsController {
     description: '权限ID',
     type: Number,
   })
-  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiSuccessResponseDecorator(undefined, {
     status: HttpStatus.NO_CONTENT,
     description: '删除成功',
